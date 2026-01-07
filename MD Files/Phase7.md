@@ -10,7 +10,7 @@ Strict-Transport-Security
 Referrer-Policy
 [NEW]
 rate-limiter.ts
-Upstash-based rate limiting
+Middleware or MongoDB-based rate limiting
 Per-endpoint configuration
 Graceful degradation
 [NEW]

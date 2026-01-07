@@ -2,7 +2,7 @@ Phase 2: Authentication System (NextAuth.js)
 [NEW]
 auth.ts
 Configure NextAuth.js with Credentials and Google providers
-Implement JWT session strategy with Redis storage
+Implement JWT session strategy (stateless)
 Add email verification callback
 Secure session management per Security.md requirements
 [NEW]

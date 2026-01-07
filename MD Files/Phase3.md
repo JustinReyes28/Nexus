@@ -83,7 +83,6 @@ id String @id @default(auto()) @map("\_id") @db.ObjectId
 content String
 version Int
 createdAt DateTime @default(now())
-
 documentId String @db.ObjectId
 document Document @relation(fields: [documentId], references: [id])
 }

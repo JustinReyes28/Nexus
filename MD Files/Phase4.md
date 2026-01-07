@@ -3,8 +3,8 @@ Phase 4: AI Features (Google AI Studio)
 ai.ts
 Google AI Studio client configuration
 Streaming response handler
-Token usage tracking
-Rate limiting integration
+Token usage tracking (recorded in MongoDB)
+Basic rate limiting integration
 [NEW] AI API Routes
 Route Feature Description
 api/ai/ideas/route.ts Idea Generator Generate project ideas with feasibility scores
@@ -22,5 +22,5 @@ Security Considerations:
 ✅ Input sanitization before AI prompts
 ✅ Output content moderation checks
 ✅ Token budget management
-✅ Rate limiting per user (Upstash Redis)
+✅ Rate limiting per user (recorded in MongoDB)
 ✅ Audit logging of AI interactions

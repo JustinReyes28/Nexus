@@ -21,7 +21,6 @@ nexus/
 │ ├── lib/ # Utility libraries
 │ │ ├── auth.ts # NextAuth configuration
 │ │ ├── db.ts # Prisma client
-│ │ ├── redis.ts # Upstash client
 │ │ ├── ai.ts # Google AI client
 │ │ └── email.ts # Nodemailer config
 │ ├── hooks/ # Custom React hooks
