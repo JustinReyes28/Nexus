@@ -39,3 +39,17 @@ export class RateLimiter {
 }
 
 export const rateLimiter = RateLimiter.getInstance();
+
+export function checkRateLimit(request: Request) {
+  // Get IP from headers (standard for Vercel/Next.js)
+  const ip = request.headers.get("x-forwarded-for") || "anonymous";
+  
+  if (rateLimiter.isRateLimited(ip)) {
+    return new Response(JSON.stringify({ error: "Too many requests. Please try again in a minute." }), {
+      status: 429,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  
+  return null;
+}

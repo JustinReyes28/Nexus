@@ -1,4 +1,0 @@
-src/components/ai/ChatInterface.tsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
-src/components/ai/IdeaCard.tsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
-src/components/ai/ProgressIndicator.tsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
-src/lib/auth.ts(5,31): error TS2307: Cannot find module '@next-auth/prisma-adapter' or its corresponding type declarations.
