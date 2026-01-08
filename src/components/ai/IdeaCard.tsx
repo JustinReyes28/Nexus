@@ -1,71 +1,71 @@
 "use client";
 
 import React from "react";
-import { Lightbulb, CheckCircle2, AlertTriangle, TrendingUp } from "lucide-react";
+import { AISparkleIcon } from "@/components/ui/AISparkleIcon";
+import { Sparkle, WavyUnderline } from "@/components/ui/HandDrawnElements";
 import { cn } from "@/lib/utils";
 
 interface IdeaCardProps {
-  title: string;
-  description: string;
-  feasibility: number;
-  methodology?: string;
-  className?: string;
+  idea: {
+    title: string;
+    description: string;
+    methodology?: string;
+    relevance?: string;
+  };
   onSelect?: () => void;
 }
 
-export const IdeaCard: React.FC<IdeaCardProps> = ({
-  title,
-  description,
-  feasibility,
-  methodology,
-  className,
-  onSelect,
-}) => {
-  const getFeasibilityColor = (score: number) => {
-    if (score >= 8) return "text-green-500 bg-green-50 dark:bg-green-950/30";
-    if (score >= 5) return "text-yellow-500 bg-yellow-50 dark:bg-yellow-950/30";
-    return "text-red-500 bg-red-50 dark:bg-red-950/30";
-  };
-
+export default function IdeaCard({ idea, onSelect }: IdeaCardProps) {
   return (
     <div 
-      className={cn(
-        "group relative border rounded-xl p-5 bg-card hover:shadow-md transition-all cursor-pointer border-border/50",
-        className
-      )}
+      className="bg-paper p-8 rounded-3xl border-2 border-gray-100 shadow-xl shadow-gray-200/40 relative overflow-hidden group hover:border-teal/40 hover:-translate-y-2 transition-all duration-500 cursor-pointer"
       onClick={onSelect}
     >
-      <div className="flex justify-between items-start mb-3">
-        <div className="p-2 bg-primary/10 text-primary rounded-lg group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-          <Lightbulb size={20} />
-        </div>
-        <div className={cn("px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5", getFeasibilityColor(feasibility))}>
-          <TrendingUp size={14} />
-          {feasibility}/10 Feasibility
-        </div>
+      {/* Texture bg */}
+      <div className="absolute inset-0 bg-paper opacity-60 pointer-events-none" />
+      <div className="absolute inset-0 bg-grain opacity-10 pointer-events-none" />
+      
+      {/* AI Sparkle floating header */}
+      <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-2 -translate-y-2 group-hover:translate-x-0 group-hover:translate-y-0">
+         <Sparkle className="w-6 h-6 text-sunny" />
       </div>
 
-      <h3 className="font-bold text-lg mb-2 line-clamp-1 group-hover:text-primary transition-colors">
-        {title}
-      </h3>
-      
-      <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
-        {description}
-      </p>
-
-      {methodology && (
-        <div className="mt-4 pt-4 border-t border-dashed flex flex-col gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <CheckCircle2 size={14} className="text-primary" />
-            Recommended Methodology
-          </span>
-          <p className="text-xs italic text-muted-foreground line-clamp-2">
-            {methodology}
-          </p>
+      <div className="relative z-10 flex flex-col h-full">
+        <div className="flex items-center gap-4 mb-6">
+           <div className="p-3 bg-teal/10 rounded-2xl text-teal group-hover:bg-teal group-hover:text-white transition-all duration-300 shadow-sm border border-teal/5">
+              <AISparkleIcon className="scale-110" />
+           </div>
+           <h3 className="text-2xl font-heading font-extrabold text-gray-900 group-hover:text-teal transition-colors leading-tight tracking-tight">
+             {idea.title}
+           </h3>
         </div>
-      )}
 
-      <div className="absolute inset-0 border-2 border-transparent group-hover:border-primary/20 rounded-xl transition-all" />
+        <p className="text-base text-gray-600 mb-8 font-body leading-relaxed flex-grow italic line-clamp-4">
+           "{idea.description}"
+        </p>
+
+        {idea.methodology && (
+          <div className="space-y-3 pt-6 border-t border-gray-100 border-dashed mb-8">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-sunny rounded-full animate-pulse-organic" />
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Recommended Approach</span>
+            </div>
+            <p className="text-xs text-gray-500 font-body leading-relaxed line-clamp-2">
+              {idea.methodology}
+            </p>
+          </div>
+        )}
+
+        <div className="mt-auto flex items-center justify-between">
+           <div className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-teal rounded-full" />
+              <span className="text-[10px] font-bold text-teal uppercase tracking-widest">AI Insight</span>
+           </div>
+           <button className="px-5 py-2.5 bg-crimson text-white rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-lg shadow-crimson/10 hover:bg-crimson/90 active:scale-95 transition-all">
+              Draft Proposal
+           </button>
+        </div>
+      </div>
     </div>
   );
-};
+}

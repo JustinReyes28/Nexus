@@ -1,27 +1,74 @@
+import { HeroSection } from "@/components/home/HeroSection";
+import { ProblemSolutionGrid } from "@/components/home/ProblemSolutionGrid";
+import { AICompanionPreview } from "@/components/home/AICompanionPreview";
+import { TeamFeaturePreview } from "@/components/home/TeamFeaturePreview";
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gradient-to-b from-white to-gray-50">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
-          Welcome to <span className="text-blue-600">Nexus</span>
-        </h1>
-      </div>
-      <p className="mt-6 text-lg leading-8 text-gray-600">
-        Your AI-powered companion for a successful capstone journey.
-      </p>
-      <div className="mt-10 flex items-center justify-center gap-x-6">
-        <Link
-          href="/login"
-          className="rounded-md bg-blue-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-        >
-          Get Started
-        </Link>
-        <Link href="/about" className="text-sm font-semibold leading-6 text-gray-900">
-          Learn more <span aria-hidden="true">→</span>
-        </Link>
-      </div>
+    <main className="flex min-h-screen flex-col bg-background font-body">
+      {/* Navigation Header (Simplified for Landing) */}
+      <nav className="fixed w-full z-50 bg-white/10 backdrop-blur-md border-b border-white/20 px-6 py-4">
+        <div className="container mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-crimson rounded-lg rotate-3" />
+            <span className="text-2xl font-heading font-extrabold tracking-tighter text-gray-900">NEXUS</span>
+          </div>
+          <div className="hidden md:flex items-center gap-8">
+            <Link href="#features" className="text-sm font-semibold text-gray-600 hover:text-crimson transition-colors">Features</Link>
+            <Link href="#community" className="text-sm font-semibold text-gray-600 hover:text-crimson transition-colors">Community</Link>
+            <Link href="/login">
+              <Button variant="ghost" size="sm">Sign In</Button>
+            </Link>
+            <Link href="/register">
+              <Button size="sm">Get Started</Button>
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <HeroSection />
+
+      {/* Problem/Solution Grid */}
+      <ProblemSolutionGrid />
+
+      {/* AI Companion Feature */}
+      <AICompanionPreview />
+
+      {/* Team Feature Hub */}
+      <TeamFeaturePreview />
+
+      {/* Call to Action Bottom */}
+      <section className="py-24 bg-crimson relative overflow-hidden text-center text-white">
+        <div className="absolute inset-0 bg-grain" />
+        <div className="container px-6 mx-auto relative z-10">
+          <h2 className="text-4xl lg:text-6xl font-heading font-extrabold mb-8 leading-tight">
+            Ready to finish your capstone<br />without the burnout?
+          </h2>
+          <Link href="/register">
+             <Button size="lg" variant="secondary" className="px-12">
+                Join the Nexus Today
+             </Button>
+          </Link>
+          <p className="mt-8 text-white/60 font-handwritten text-xl italic">
+            "Your digital campus library is open 24/7."
+          </p>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 bg-white border-t border-gray-100">
+        <div className="container px-6 mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+           <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-crimson rounded rotate-3" />
+              <span className="text-xl font-heading font-extrabold tracking-tighter text-gray-900">NEXUS</span>
+           </div>
+           <p className="text-sm text-gray-400">© 2026 Nexus AI. All rights reserved. Human-centric by design.</p>
+        </div>
+      </footer>
     </main>
   );
 }
+

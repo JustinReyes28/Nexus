@@ -1,8 +1,23 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Poppins, Caveat } from "next/font/google";
 import "@/styles/globals.css";
+import { cn } from "@/lib/utils";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ 
+  subsets: ["latin"],
+  variable: "--font-body",
+});
+
+const poppins = Poppins({
+  weight: ["400", "500", "600", "700", "800"],
+  subsets: ["latin"],
+  variable: "--font-heading",
+});
+
+const caveat = Caveat({
+  subsets: ["latin"],
+  variable: "--font-handwritten",
+});
 
 export const metadata: Metadata = {
   title: "Nexus - AI-Powered Capstone Companion",
@@ -16,7 +31,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={cn(
+        inter.variable, 
+        poppins.variable, 
+        caveat.variable,
+        "font-body antialiased"
+      )}>
+        {children}
+      </body>
     </html>
   );
 }
+

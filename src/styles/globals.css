@@ -4,26 +4,31 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 17% 98%;
     --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
+    --card: 210 16% 93%;
     --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
+    --popover: 210 17% 98%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
+    --primary: 0 92% 37%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 42 100% 70%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 16% 93%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 159 95% 43%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 0 92% 37%;
     --radius: 0.5rem;
+
+    /* Anti-AI Design Tokens */
+    --canvas-bg: 210 16% 93%;
+    --highlight: 42 100% 70%;
+    --ai-accent: 159 95% 43%;
   }
 
   .dark {
@@ -55,5 +60,24 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(#e9ecef 0.5px, transparent 0.5px);
+    background-size: 20px 20px;
   }
+}
+
+/* Texture Utilities */
+.bg-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.05;
+}
+
+.bg-paper {
+  background-color: #f8f9fa;
+  background-image: linear-gradient(
+      90deg,
+      rgba(179, 9, 9, 0.05) 1px,
+      transparent 1px
+    ),
+    linear-gradient(rgba(179, 9, 9, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
 }

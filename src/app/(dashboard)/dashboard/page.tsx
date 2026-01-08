@@ -5,9 +5,11 @@ import { db } from "@/lib/db";
 import ProjectCard from "@/components/dashboard/ProjectCard";
 import DeadlineWidget from "@/components/dashboard/DeadlineWidget";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
-import { Plus, LayoutGrid, ListTodo, History } from "lucide-react";
+import { Plus, LayoutGrid, ListTodo, History, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { ProjectStatus } from "@prisma/client";
+import { Button } from "@/components/ui/Button";
+import { AISparkleIcon } from "@/components/ui/AISparkleIcon";
+import { WavyUnderline } from "@/components/ui/HandDrawnElements";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -32,7 +34,6 @@ export default async function DashboardPage() {
     take: 6,
   });
 
-  // Fetch upcoming deadlines (next 30 days)
   const upcomingTasks = await db.task.findMany({
     where: {
       project: { ownerId: session.user.id },
@@ -51,22 +52,16 @@ export default async function DashboardPage() {
     take: 5,
   });
 
-  const upcomingProjects = projects
-    .filter((p: any) => p.deadline && p.deadline > new Date())
-    .map((p: any) => ({ id: p.id, title: p.title, dueDate: p.deadline as Date, type: "PROJECT" as const }));
-
   const deadlines = [
     ...upcomingTasks.map((t: any) => ({ id: t.id, title: t.title, dueDate: t.dueDate as Date, type: "TASK" as const })),
-    ...upcomingProjects
   ].sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime()).slice(0, 5);
 
-  // For Demo: Use mock activities if none found (In real app, we'd have an Activity model)
   const activities = [
     {
       id: "1",
       type: "PROJECT_CREATED" as const,
-      user: { name: session.user.name || "User" },
-      target: projects[0]?.title || "First Project",
+      user: { name: session.user.name?.split(" ")[0] || "Student" },
+      target: projects[0]?.title || "Visionary Project",
       timestamp: projects[0]?.createdAt || new Date(),
     }
   ].filter(a => projects.length > 0);
@@ -76,91 +71,92 @@ export default async function DashboardPage() {
     completedTasks: p.tasks.length
   }));
 
+  const greetings = ["Happy Brainstorming", "Focus Power On", "Creative Energy High", "Leveling Up"];
+  const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b-2 border-gray-100 border-dashed">
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Dashboard</h1>
-          <p className="text-gray-500 mt-1">Welcome back, {session.user?.name || session.user?.email}</p>
+          <div className="flex items-center gap-2 text-sunny font-handwritten text-xl mb-1">
+             <Sparkles className="w-5 h-5" />
+             {greeting}, {session.user?.name?.split(" ")[0]}!
+          </div>
+          <h1 className="text-4xl lg:text-5xl font-heading font-extrabold text-gray-900 tracking-tight relative inline-block">
+            Project Base Camp
+            <WavyUnderline className="text-crimson/20" />
+          </h1>
         </div>
-        <Link 
-          href="/projects/new"
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-sm shadow-blue-200 transition-all active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          New Project
+        <Link href="/projects/new">
+          <Button leftIcon={<Plus className="w-4 h-4" />} className="shadow-lg shadow-crimson/10 rotate-1 hover:rotate-0">
+            Create Project
+          </Button>
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* Left Column: Projects Grid */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-8">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-              <LayoutGrid className="w-5 h-5 text-blue-500" />
-              Active Projects
+            <h2 className="text-xl font-heading font-extrabold text-gray-900 flex items-center gap-2">
+              All Drafts
             </h2>
-            <Link href="/projects" className="text-sm font-medium text-blue-600 hover:underline">
-              View all
+            <Link href="/projects" className="text-xs font-bold text-gray-400 hover:text-crimson transition-colors uppercase tracking-widest">
+              Browse Archive
             </Link>
           </div>
           
           {processedProjects.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {processedProjects.map((project: any) => (
                 <ProjectCard key={project.id} project={project} />
               ))}
             </div>
           ) : (
-            <div className="bg-white border-2 border-dashed rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-4 group hover:border-blue-200 transition-colors">
-              <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center text-blue-200 group-hover:text-blue-500 group-hover:bg-blue-100 transition-all">
+            <div className="bg-white border-2 border-dashed rounded-2xl p-16 text-center flex flex-col items-center justify-center gap-6 group hover:border-sunny/50 transition-all bg-paper">
+              <div className="w-16 h-16 rounded-3xl bg-sunny/10 flex items-center justify-center text-sunny group-hover:bg-sunny/20 transition-all rotate-3">
                 <Plus className="w-8 h-8" />
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">No projects yet</h3>
-                <p className="text-gray-500 text-sm max-w-[200px] mx-auto mt-1">Start your first capstone project with AI assistance.</p>
+              <div className="max-w-[280px]">
+                <h3 className="text-xl font-heading font-extrabold text-gray-900">Your canvas is empty</h3>
+                <p className="text-sm text-gray-500 font-body italic mt-2">"Every masterpiece begins with a single research question."</p>
               </div>
-              <Link 
-                href="/projects/new"
-                className="mt-2 text-sm font-bold text-blue-600 hover:text-blue-700 underline underline-offset-4"
-              >
-                Create a project
+              <Link href="/projects/new">
+                <Button variant="outline" size="sm">Start Drafting</Button>
               </Link>
             </div>
           )}
 
-          {/* AI Quick Actions */}
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-xl shadow-blue-100 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl pointer-events-none" />
-             <div className="relative z-10 flex flex-col gap-2">
-                <h3 className="text-xl font-bold">Need a new idea?</h3>
-                <p className="text-blue-100 text-sm max-w-[300px]">Our AI Brainstormer can help you find the perfect capstone topic based on your interests.</p>
+          {/* AI Quick Actions (Anti-AI feel) */}
+          <div className="bg-canvas border-2 border-teal/20 rounded-2xl p-8 relative overflow-hidden group">
+             <div className="absolute -top-12 -right-12 w-48 h-48 bg-teal/5 rounded-full pointer-events-none group-hover:scale-150 transition-transform duration-700" />
+             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-start gap-4">
+                   <div className="mt-1">
+                      <AISparkleIcon className="scale-125" />
+                   </div>
+                   <div>
+                      <h3 className="text-xl font-heading font-extrabold text-gray-900">Need a spark?</h3>
+                      <p className="text-gray-500 text-sm max-w-[320px] font-body">The Guide can help you brainstorm actionable topics based on your research interests.</p>
+                   </div>
+                </div>
+                <Link href="/ai/ideas">
+                  <Button variant="ai" className="-rotate-1 hover:rotate-0">
+                    Summon Brainstormer
+                  </Button>
+                </Link>
              </div>
-             <Link 
-              href="/ai/ideas"
-              className="relative z-10 px-6 py-3 bg-white text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition-colors shadow-lg active:scale-95"
-             >
-              Brainstorm Now
-             </Link>
           </div>
         </div>
 
         {/* Right Column: Widgets */}
-        <div className="space-y-8">
-          <section className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-              <ListTodo className="w-5 h-5 text-orange-500" />
-              Deadlines
-            </h2>
+        <div className="space-y-10">
+          <section>
             <DeadlineWidget deadlines={deadlines} />
           </section>
 
-          <section className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-              <History className="w-5 h-5 text-purple-500" />
-              Activity
-            </h2>
+          <section>
             <ActivityFeed activities={activities as any} />
           </section>
         </div>
@@ -168,3 +164,4 @@ export default async function DashboardPage() {
     </div>
   );
 }
+

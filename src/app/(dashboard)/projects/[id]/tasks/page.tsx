@@ -168,7 +168,11 @@ export default function ProjectTasksPage() {
                       key={task.id} 
                       task={task} 
                       onEdit={(id) => { setEditingTask(tasks.find(t => t.id === id)); setShowForm(true); }}
+                      onStatusChange={(id, completed) => {
+                        setTasks(tasks.map(t => t.id === id ? { ...t, status: completed ? "COMPLETED" : "TODO" } : t));
+                      }}
                     />
+
                   ))}
                   <button 
                     onClick={() => { setShowForm(true); setEditingTask(null); }}

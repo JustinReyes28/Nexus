@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Loader2, User, Bot, Sparkles } from "lucide-react";
+import { Send, Loader2, Sparkles, Wand2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import DOMPurify from "dompurify";
+import { TheGuide } from "./TheGuide";
+
 
 interface Message {
   role: "user" | "bot";
@@ -23,7 +24,7 @@ interface ChatInterfaceProps {
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   endpoint,
-  placeholder = "Type your prompt...",
+  placeholder = "What's on your mind?",
   initialMessage,
   onResponse,
   additionalData = {},
@@ -34,7 +35,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (initialMessage) {
+    if (initialMessage && messages.length === 0) {
       setMessages([{ role: "bot", content: initialMessage }]);
     }
   }, [initialMessage]);
@@ -50,7 +51,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (!input.trim() || isLoading) return;
 
     const userMessage: Message = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev: Message[]) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
@@ -68,12 +69,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       }
 
       const botMessage: Message = { role: "bot", content: data.response };
-      setMessages((prev) => [...prev, botMessage]);
+      setMessages((prev: Message[]) => [...prev, botMessage]);
       if (onResponse) onResponse(data.response);
     } catch (error: any) {
-      setMessages((prev) => [
+      setMessages((prev: Message[]) => [
         ...prev,
-        { role: "bot", content: `Error: ${error.message}` },
+        { role: "bot", content: `**The Guide:** Oops! Something went wrong: *${error.message}*. Let's try again?` },
       ]);
     } finally {
       setIsLoading(false);
@@ -81,9 +82,24 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-[500px] border rounded-lg bg-card shadow-sm overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg, i) => (
+    <div className="flex flex-col h-[600px] border-2 border-gray-100 rounded-2xl bg-white shadow-xl shadow-gray-200/50 overflow-hidden relative">
+      {/* Texture bg */}
+      <div className="absolute inset-0 bg-grain pointer-events-none opacity-20" />
+      
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white/80 backdrop-blur-sm relative z-10">
+         <div className="flex items-center gap-3">
+            <TheGuide size="sm" expression={isLoading ? "thinking" : "idle"} />
+            <div>
+               <h4 className="text-sm font-heading font-extrabold text-gray-900">The Guide</h4>
+               <p className="text-[10px] text-teal font-bold uppercase tracking-widest">Always Active</p>
+            </div>
+         </div>
+         <Wand2 className="w-4 h-4 text-teal animate-sparkle" />
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 relative z-10">
+        {messages.map((msg: Message, i: number) => (
           <div
             key={i}
             className={cn(
@@ -93,21 +109,27 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           >
             <div
               className={cn(
-                "p-2 rounded-full",
-                msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+                "p-2 rounded-full shadow-sm",
+                msg.role === "user" ? "bg-white border-2 border-gray-100 text-gray-400" : "bg-teal text-white shadow-teal/20"
               )}
             >
-              {msg.role === "user" ? <User size={18} /> : <Bot size={18} />}
+              {msg.role === "user" ? <User size={16} /> : <Sparkles size={16} />}
             </div>
             <div
               className={cn(
-                "max-w-[80%] p-3 rounded-lg text-sm",
+                "max-w-[85%] p-4 rounded-2xl text-sm font-body leading-relaxed relative",
                 msg.role === "user"
-                  ? "bg-primary text-primary-foreground rounded-tr-none"
-                  : "bg-muted rounded-tl-none overflow-hidden"
+                  ? "bg-gray-50 text-gray-800 border-2 border-gray-100 rounded-tr-none hover:rotate-1 transition-transform"
+                  : "bg-teal text-white rounded-tl-none shadow-lg shadow-teal/10 -rotate-1 hover:rotate-0 transition-transform"
               )}
             >
-              <div className="prose prose-sm dark:prose-invert max-w-none">
+              {/* Speech bubble tail mockup */}
+              <div className={cn(
+                "absolute top-0 w-3 h-3 bg-inherit",
+                msg.role === "user" ? "-right-1" : "-left-1"
+              )} style={{ clipPath: msg.role === 'user' ? "polygon(0 0, 100% 0, 100% 100%)" : "polygon(0 0, 100% 0, 0 100%)" }} />
+
+              <div className="prose prose-sm prose-p:leading-relaxed max-w-none text-inherit">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {DOMPurify.sanitize(msg.content)}
                 </ReactMarkdown>
@@ -117,31 +139,31 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         ))}
         {isLoading && (
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded-full bg-muted">
-              <Bot size={18} />
+            <div className="p-2 rounded-full bg-teal text-white animate-pulse-organic">
+              <Sparkles size={16} />
             </div>
-            <div className="bg-muted p-3 rounded-lg rounded-tl-none flex items-center gap-2">
+            <div className="bg-teal/10 text-teal p-4 rounded-2xl rounded-tl-none flex items-center gap-3 border border-teal/20 -rotate-1">
               <Loader2 className="animate-spin" size={16} />
-              <span className="text-sm italic">Thinking...</span>
+              <span className="text-xs font-bold italic font-handwritten">The Guide is thinking creatively...</span>
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 border-t bg-background flex gap-2">
+      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-100 bg-white/80 backdrop-blur-sm flex gap-3 relative z-10">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 bg-muted rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+          className="flex-1 bg-gray-50 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal/30 border-2 border-transparent focus:border-teal/20 transition-all"
           disabled={isLoading}
         />
         <button
           type="submit"
           disabled={isLoading || !input.trim()}
-          className="bg-primary text-primary-foreground p-2 rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          className="bg-teal text-white p-3 rounded-xl hover:bg-teal/90 disabled:opacity-50 transition-all shadow-lg shadow-teal/20 active:scale-95 flex items-center justify-center min-w-[48px]"
         >
           {isLoading ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
         </button>
