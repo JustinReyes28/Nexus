@@ -187,11 +187,7 @@ Students face numerous challenges during capstone projects including unclear req
 - Prisma ORM for type-safe database queries
 - Collections: Users, Projects, Tasks, Documents, Conversations, Templates
 
-**Caching Strategy**
-
-- Upstash Redis for session storage
-- API response caching for frequently accessed data
-- Rate limiting metadata for AI API calls
+data for AI API calls
 
 **External Services**
 

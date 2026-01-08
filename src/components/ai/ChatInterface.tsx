@@ -4,6 +4,10 @@ import React, { useState, useRef, useEffect } from "react";
 import { Send, Loader2, User, Bot, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import DOMPurify from "dompurify";
+
 interface Message {
   role: "user" | "bot";
   content: string;
@@ -100,10 +104,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 "max-w-[80%] p-3 rounded-lg text-sm",
                 msg.role === "user"
                   ? "bg-primary text-primary-foreground rounded-tr-none"
-                  : "bg-muted rounded-tl-none whitespace-pre-wrap"
+                  : "bg-muted rounded-tl-none overflow-hidden"
               )}
             >
-              {msg.content}
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {DOMPurify.sanitize(msg.content)}
+                </ReactMarkdown>
+              </div>
             </div>
           </div>
         ))}
