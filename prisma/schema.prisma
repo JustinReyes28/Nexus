@@ -58,6 +58,23 @@ model User {
   documents     Document[]
   conversations AIConversation[]
   teamMemberships TeamMember[]
+  notificationPreferences NotificationPreference?
+}
+
+model NotificationPreference {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId @unique
+  emailProjectDeadlines Boolean @default(true)
+  emailTeamUpdates     Boolean @default(true)
+  emailAICompletions   Boolean @default(true)
+  emailFeatureAnnouncements Boolean @default(true)
+  inAppTaskUpdates     Boolean @default(true)
+  inAppMentions        Boolean @default(true)
+  inAppAINudges        Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
