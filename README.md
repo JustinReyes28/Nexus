@@ -1,20 +1,35 @@
-# Nexus - AI-Powered Capstone Companion
-
-![Nexus Logo](https://via.placeholder.com/150) <!-- Replace with actual logo -->
+# ✦ Nexus - AI-Powered Capstone Companion
 
 **Your AI-Powered Capstone Companion** - Guiding students through every stage of their capstone projects with intelligent assistance.
 
-## 🚀 About Nexus
+## ✦ About Nexus
 
 Nexus is an intelligent web platform designed to guide students through every stage of their capstone projects—from ideation to completion. By leveraging AI capabilities, Nexus provides personalized mentorship, research assistance, project management tools, and collaborative features to help students successfully navigate one of their most challenging academic milestones.
 
-## 🎯 Target Audience
+## ✦ Target Audience
 
 - Undergraduate and graduate students working on capstone projects
 - Academic institutions looking for student success tools
 - Student groups collaborating on team-based capstones
 
-## ✨ Key Features
+## ✦ Screenshots
+
+![Nexus Dashboard Preview](<images/img%20(1).png>)
+_Dashboard with progress tracking and AI tools_
+
+![Project Management View](<images/img%20(2).png>)
+_Task management with Gantt chart visualization_
+
+![AI Assistant Interface](<images/img%20(3).png>)
+_Interactive AI writing assistant_
+
+![Team Collaboration](<images/img%20(4).png>)
+_Real-time team collaboration features_
+
+![What Nexus Offers](<images/img%20(5).png>)
+_What Nexus Offers_
+
+## ✦ Key Features
 
 ### 🤖 AI-Powered Features
 
@@ -43,7 +58,7 @@ Nexus is an intelligent web platform designed to guide students through every st
 - **Knowledge Base**: Best practices and sample projects
 - **Video Tutorials**: Step-by-step guidance
 
-## 🛠️ Technical Stack
+## ✦ Technical Stack
 
 ### Frontend
 
@@ -57,7 +72,6 @@ Nexus is an intelligent web platform designed to guide students through every st
 
 - **Next.js API Routes**
 - **MongoDB** with **Prisma ORM**
-- **Upstash Redis** for caching
 - **Google AI Studio API** for AI features
 
 ### Authentication
@@ -66,27 +80,41 @@ Nexus is an intelligent web platform designed to guide students through every st
 - **Email/password authentication**
 - **Session management with secure tokens**
 
-## 📁 Project Structure
+## ✦ Project Structure
 
 ```
 nexus/
 ├── .gitignore
 ├── README.md
-├── PRD1.md          # Product Requirements Document
-├── PRD2.md          # Additional requirements (empty)
-├── PRD3.md          # Additional requirements (empty)
-├── PRD4.md          # Additional requirements (empty)
-├── Security.md      # Security requirements
-└── # Future directories will include:
-    ├── src/         # Source code
-    ├── public/      # Static assets
-    ├── prisma/      # Database schema
-    └── # etc.
+├── middleware.ts
+├── next.config.mjs
+├── package.json
+├── prisma/
+│   └── schema.prisma
+├── src/
+│   ├── app/
+│   │   ├── (auth)/          # Authentication routes
+│   │   ├── (dashboard)/     # Dashboard routes
+│   │   ├── api/             # API routes
+│   │   └── page.tsx         # Home page
+│   ├── components/          # React components
+│   ├── emails/              # Email templates
+│   ├── lib/                 # Utility functions
+│   └── styles/              # CSS files
+├── MD Files/                # Documentation
+│   ├── PRD1.md
+│   ├── PRD2.md
+│   ├── PRD3.md
+│   ├── PRD4.md
+│   ├── Security.md
+│   └── # Phase documents
+├── images/                  # Image assets
+└── public/                  # Static assets
 ```
 
-## 🚀 Getting Started
+## ✦ Getting Started
 
-### Prerequisites
+### ✦ Prerequisites
 
 - Node.js 18+
 - npm, yarn, or pnpm
@@ -94,7 +122,7 @@ nexus/
 - Google AI Studio API key
 - Vercel account (for deployment)
 
-### Installation
+### ✦ Installation
 
 1. Clone the repository:
 
@@ -130,9 +158,9 @@ nexus/
    pnpm dev
    ```
 
-## 🔧 Configuration
+## ✦ Configuration
 
-### Environment Variables
+### ✦ Environment Variables
 
 Create a `.env.local` file with the following variables:
 
@@ -147,10 +175,6 @@ GOOGLE_AI_API_KEY=your-api-key
 NEXTAUTH_SECRET=your-secret-key
 NEXTAUTH_URL=http://localhost:3000
 
-# Redis (Upstash)
-UPSTASH_REDIS_REST_URL=your-redis-url
-UPSTASH_REDIS_REST_TOKEN=your-redis-token
-
 # SMTP (for email)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -158,12 +182,12 @@ SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 ```
 
-## 📖 Documentation
+## ✦ Documentation
 
-- [PRD1.md](PRD1.md) - Complete Product Requirements Document
-- [Security.md](Security.md) - Security and Privacy Requirements
+- [MD Files/PRD1.md](MD Files/PRD1.md) - Complete Product Requirements Document
+- [MD Files/Security.md](MD Files/Security.md) - Security and Privacy Requirements
 
-## 🤝 Contributing
+## ✦ Contributing
 
 Contributions are welcome! Please follow these steps:
 
@@ -173,17 +197,17 @@ Contributions are welcome! Please follow these steps:
 4. Push to the branch: `git push origin feature/your-feature`
 5. Open a pull request
 
-## 📝 License
+## ✦ License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 📬 Contact
+## ✦ Contact
 
 For questions or support, please contact:
 
 - **Project Lead**: Justin Reyes
 - **GitHub**: [JustinReyes28](https://github.com/JustinReyes28)
-- **Email**: justin.reyes@example.com
+- **Email**: JustinReyes28@proton.me
 
 ---
 

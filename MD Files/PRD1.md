@@ -200,18 +200,16 @@ data for AI API calls
 **AI Interaction Pattern**
 
 1. User submits request through form (validated with Zod)
-2. Request cached check via Upstash to prevent duplicate processing
-3. Server Action sends prompt to Google AI Studio API
-4. Response streamed back to client with loading states
-5. Result cached and stored in MongoDB for history
-6. Usage tracked against user quotas
+2. Server Action sends prompt to Google AI Studio API
+3. Response streamed back to client with loading states
+4. Result stored in MongoDB for history
+5. Usage tracked against user quotas
 
 **Authentication Flow**
 
 1. NextAuth.js handles OAuth and credential providers
-2. Session stored in Upstash Redis for fast access
-3. JWT tokens for stateless authentication
-4. Protected routes with middleware checks
+2. JWT tokens for stateless authentication
+3. Protected routes with middleware checks
 
 **Document Management**
 
@@ -313,7 +311,7 @@ data for AI API calls
 
 **Rate Limiting**
 
-- Upstash-based rate limiting per user
+- Rate limiting per user
 - Graceful degradation with queue system
 - Clear user feedback on quota status
 
