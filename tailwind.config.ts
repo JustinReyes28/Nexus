@@ -100,6 +100,14 @@ const config: Config = {
         "sparkle": {
           "0%, 100%": { transform: "scale(0) rotate(0deg)", opacity: "0" },
           "50%": { transform: "scale(1) rotate(90deg)", opacity: "1" },
+        },
+        "fade-in-up": {
+          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "bounce-subtle": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-15px)" },
         }
       },
       animation: {
@@ -108,6 +116,8 @@ const config: Config = {
         "float": "float 3s ease-in-out infinite",
         "pulse-organic": "pulse-organic 2s ease-in-out infinite",
         "sparkle": "sparkle 0.5s ease-in-out forwards",
+        "fade-in-up": "fade-in-up 0.6s ease forwards",
+        "bounce-subtle": "bounce-subtle 1s infinite",
       },
     },
   },

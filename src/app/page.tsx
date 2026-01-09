@@ -2,6 +2,7 @@ import { HeroSection } from "@/components/home/HeroSection";
 import { ProblemSolutionGrid } from "@/components/home/ProblemSolutionGrid";
 import { AICompanionPreview } from "@/components/home/AICompanionPreview";
 import { TeamFeaturePreview } from "@/components/home/TeamFeaturePreview";
+import { FeaturesSection } from "@/components/home/FeaturesSection";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 
@@ -39,6 +40,9 @@ export default function Home() {
 
       {/* Team Feature Hub */}
       <TeamFeaturePreview />
+
+      {/* Features Section */}
+      <FeaturesSection />
 
       {/* Call to Action Bottom */}
       <section className="py-24 bg-crimson relative overflow-hidden text-center text-white">
