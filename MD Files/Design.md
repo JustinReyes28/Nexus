@@ -1,70 +1,626 @@
-Design PRD: Nexus
-Product Name: Nexus
-Tagline: "Your AI-Powered Capstone Companion"
-Design Theme: The Collaborative Canvas (Energetic, Human-Centric, Creative)
-Version: 1.0
+# Nexus - Visual Design Documentation
 
-1. Executive Summary
-   Nexus is an intelligent web platform serving as a comprehensive workspace for students undertaking capstone projects. It combines AI mentorship with project management and collaboration tools.[1] The design will reflect a "Collaborative Canvas" aesthetic—mimicking the energy of a bustling digital campus library or maker space. It prioritizes organic shapes, vibrant academic colors, and a layout that emphasizes human connection supported by AI.
-2. User Personas
-   The Overwhelmed Student: An undergraduate feeling lost in the scope of their project. Needs structure, encouragement, and clear starting points.[2][3][4]
-   The Team Collaborator: A student working in a group who struggles with version control and uneven participation. Needs visibility on who is doing what.[2][4][5]
-   The Institutional Partner: Professors or admin looking for tools that actually help students succeed. Needs to see professionalism and academic rigor alongside the "fun" elements.
-3. Design Principles
-   Human-First, AI-Supported: The interface emphasizes the student and their team first. AI elements are visual "helpers" (accented in Teal), not the dominators of the experience.
-   Organized Energy: The UI should feel vibrant and optimistic (Yellows) but grounded in academic seriousness (Crimson/Green). It creates a "focused flow" state.
-   Base Camp Mentality: The dashboard is the central hub. Users should feel anchored there, with all tools reachable within one click.
-4. Visual Identity System
-   4.1 Color Palette
-   Primary (Academic Grounding):
-   #B30909 Academic Crimson (Use for Primary Buttons, Headers, Key Actions)
-   OR #2E8B57 Forest Green (Alternate primary for a calmer, research-heavy vibe)
-   Secondary (Optimism):
-   #FFD166 Sunny Yellow (Use for notifications, highlights, success states, and hover effects)
-   Accent (The AI):
-   #06D6A0 Teal (Reserved strictly for AI elements: The Guide avatar, AI chat bubbles, AI-generated suggestions)
-   Neutrals (The Canvas):
-   #F8F9FA Off-White (Main background)
-   #E9ECEF Light Gray (Card backgrounds, sidebars)
-   4.2 Typography
-   Headings: Bold, Modern Sans-Serif (e.g., Montserrat or Poppins). approachable but structured.
-   Body Text: Clean Sans-Serif (e.g., Inter or Open Sans). High readability for long research documents.
-   Handwritten Elements: Script Font (e.g., Caveat). Used sparingly for "notes" on the collaborative canvas to feel like a whiteboard.
-5. Key Page Specifications
-   5.1 Homepage
-   Hero Section (Split Screen):
-   Left: High-quality photography of a student in a "flow state" (cafe/library setting).
-   Right: Abstract digital graphic showing nodes connecting (a mind map or neural network) representing the student's ideas expanding.
-   Headline: "You're not alone on your capstone journey."
-   Social Proof Strip:
-   Greyscale logos of partner universities or student organizations running horizontally below the hero.
-   Problem/Solution Grid:
-   Design: A 2-column layout.
-   Left (Problem): "Struggling with vague topics?" (Visual: A tangled knot icon).
-   Right (Solution): "Nexus helps by brainstorming actionable research questions." (Visual: An organized flowchart icon in Teal).
-   5.2 Feature: "Meet Your AI Companion"
-   Visuals: Personify the AI as "The Guide." Use a friendly, non-robotic avatar (e.g., a geometric Teal abstract shape or a stylized mascot).
-   UI Mockup: Display a chat interface floating over the page.
-   Chat Bubble 1 (Student): "I'm stuck on my methodology."
-   Chat Bubble 2 (The Guide - Teal): "Let's break it down. Are you leaning towards qualitative interviews or quantitative surveys? I can help you draft questions for both."
-   5.3 Feature: "Built for Teams"
-   Visuals: A mock-up of the "Collaboration Hub."
-   Key Elements to Highlight:
-   Cursor avatars with names attached (showing real-time collaboration).
-   A comment thread on the side of a document.[6]
-   A distinctive "Project Wall" background (grid pattern or corkboard texture).
-   5.4 The Dashboard (User Logged In)
-   Concept: "Project Base Camp."
-   Layout:
-   Left Sidebar: Navigation (My Drafts, Research, Schedule).
-   Right Sidebar: Team Members (Avatars with online status) + "The Guide" (AI) always accessible.
-   Center Stage: The "Project Feed"—a chronological stream of updates ("Sarah edited the Intro," "Task 'Lit Review' due in 2 days").
-   Visual Metaphor: Cards should look like they are pinned to a board.
-6. UI Components & Interactions
-   Buttons: Soft rounded corners (8px). Primary buttons have a solid Crimson/Green fill. Secondary buttons are outlined.[4]
-   AI Triggers: Anywhere the AI can help (e.g., inside a text editor), use a subtle Teal Sparkle Icon. Clicking it expands the AI menu.
-   Feedback Loops: When a task is marked "Complete," trigger a micro-interaction (e.g., a small burst of yellow confetti or a checkmark transforming into a star).
-7. Accessibility Checklist
-   Contrast: Ensure the White text on Teal/Yellow backgrounds meets WCAG AA standards.
-   Alt Text: The abstract "neural network" graphics must have descriptive alt text for screen readers.
-   Cognitive Load: Keep the "Dashboard" clean. Use whitespace effectively so the "vibrant" aesthetic doesn't become "cluttered."
+## Table of Contents
+
+1. [Color System](#color-system)
+2. [Typography](#typography)
+3. [Button Design](#button-design)
+4. [Component Visual Styles](#component-visual-styles)
+5. [Animations](#animations)
+6. [Layout & Spacing](#layout--spacing)
+7. [Visual Effects](#visual-effects)
+8. [Responsive Design](#responsive-design)
+
+## Color System
+
+### Primary Color Palette
+
+```css
+--crimson: #b30909; /* Academic grounding, primary actions */
+--sunny: #ffd166; /* Optimism, highlights, success states */
+--teal: #06d6a0; /* AI elements, The Guide branding */
+--canvas: #f8f9fa; /* Neutral background */
+```
+
+### Semantic Color Usage
+
+```css
+/* Primary Actions */
+.primary-button {
+  background-color: var(--crimson);
+  color: white;
+  border: 2px solid var(--crimson);
+}
+
+/* Secondary Actions */
+.secondary-button {
+  background-color: var(--sunny);
+  color: #1f2937;
+  border: 2px solid var(--sunny);
+}
+
+/* AI Elements */
+.ai-button {
+  background-color: var(--teal);
+  color: white;
+  border: 2px solid var(--teal);
+  animation: pulse-organic 2s ease-in-out infinite;
+}
+
+/* Neutral Backgrounds */
+.card-background {
+  background-color: var(--canvas);
+}
+
+/* Text Colors */
+.text-primary {
+  color: var(--crimson);
+}
+.text-secondary {
+  color: var(--sunny);
+}
+.text-ai {
+  color: var(--teal);
+}
+```
+
+## Typography
+
+### Font Families
+
+```css
+:root {
+  --font-heading: "Poppins", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-handwritten: "Caveat", cursive;
+}
+```
+
+### Font Usage Patterns
+
+```css
+/* Heading Styles */
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* Body Text */
+body,
+p,
+li,
+td,
+th {
+  font-family: var(--font-body);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* Handwritten Elements */
+.handwritten {
+  font-family: var(--font-handwritten);
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* Specific Heading Sizes */
+.h1 {
+  font-size: 3rem;
+}
+.h2 {
+  font-size: 2.25rem;
+}
+.h3 {
+  font-size: 1.875rem;
+}
+.h4 {
+  font-size: 1.5rem;
+}
+.h5 {
+  font-size: 1.25rem;
+}
+.h6 {
+  font-size: 1.125rem;
+}
+```
+
+## Button Design
+
+### Button Variants
+
+```css
+/* Base Button Styles */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  transition: all 200ms ease;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* Primary Button */
+.button-primary {
+  background-color: var(--crimson);
+  color: white;
+  border: 2px solid var(--crimson);
+}
+
+.button-primary:hover {
+  background-color: #a00808; /* Darker crimson */
+}
+
+/* Secondary Button */
+.button-secondary {
+  background-color: var(--sunny);
+  color: #1f2937;
+  border: 2px solid var(--sunny);
+}
+
+.button-secondary:hover {
+  background-color: #e6bf5d; /* Darker sunny */
+}
+
+/* AI Button */
+.button-ai {
+  background-color: var(--teal);
+  color: white;
+  border: 2px solid var(--teal);
+  animation: pulse-organic 2s ease-in-out infinite;
+}
+
+.button-ai:hover {
+  background-color: #05c290; /* Darker teal */
+}
+
+/* Outline Button */
+.button-outline {
+  background-color: transparent;
+  color: var(--crimson);
+  border: 2px solid var(--crimson);
+}
+
+.button-outline:hover {
+  background-color: rgba(179, 9, 9, 0.05);
+}
+
+/* Ghost Button */
+.button-ghost {
+  background-color: transparent;
+  color: #4b5563;
+  border: none;
+}
+
+.button-ghost:hover {
+  background-color: #f3f4f6;
+}
+```
+
+### Button Sizes
+
+```css
+.button-sm {
+  height: 36px;
+  padding: 0 16px;
+  font-size: 0.75rem;
+  border-radius: 6px;
+}
+
+.button-md {
+  height: 44px;
+  padding: 0 24px;
+  font-size: 0.875rem;
+  border-radius: 8px;
+}
+
+.button-lg {
+  height: 56px;
+  padding: 0 40px;
+  font-size: 1rem;
+  border-radius: 12px;
+}
+```
+
+## Component Visual Styles
+
+### The Guide (AI Companion)
+
+```css
+.the-guide {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Background Aura */
+.the-guide::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgba(6, 214, 160, 0.1);
+  border-radius: 50%;
+  filter: blur(24px);
+  animation: pulse-organic 4s infinite;
+}
+
+/* Guide Body */
+.the-guide-body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: var(--teal);
+  border-radius: 40% 60% 40% 60% / 60% 40% 60% 40%;
+  box-shadow: 0 10px 25px -5px rgba(6, 214, 160, 0.3), 0 8px 10px -6px rgba(6, 214, 160, 0.3);
+  transition: all 700ms ease;
+}
+
+/* Eyes */
+.the-guide-eyes {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 16px;
+}
+
+.the-guide-eye {
+  width: 10px;
+  height: 10px;
+  background-color: white;
+  border-radius: 50%;
+  transition: all 300ms ease;
+}
+
+/* Thinking State */
+.the-guide.thinking .the-guide-body {
+  border-radius: 50%;
+}
+
+.the-guide.thinking .the-guide-eye {
+  opacity: 0.3;
+  transform: scaleX(1.5);
+}
+
+/* Celebrating State */
+.the-guide.celebrating .the-guide-body {
+  animation: bounce 1s infinite;
+}
+```
+
+### Cards
+
+```css
+.card {
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  padding: 24px;
+  transition: all 200ms ease;
+}
+
+.card:hover {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  transform: translateY(-2px);
+}
+
+/* Project Card Specific */
+.project-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.project-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--crimson), var(--teal));
+}
+```
+
+### Input Fields
+
+```css
+.input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #d1d5db;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  transition: all 200ms ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(6, 214, 160, 0.1);
+}
+
+.input::placeholder {
+  color: #9ca3af;
+}
+```
+
+## Animations
+
+### Keyframe Animations
+
+```css
+@keyframes pulse-organic {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+@keyframes sparkle {
+  0%,
+  100% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1) rotate(90deg);
+    opacity: 1;
+  }
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+```
+
+### Animation Classes
+
+```css
+.animate-pulse-organic {
+  animation: pulse-organic 2s ease-in-out infinite;
+}
+
+.animate-sparkle {
+  animation: sparkle 0.5s ease-in-out forwards;
+}
+
+.animate-bounce {
+  animation: bounce 1s infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+```
+
+## Layout & Spacing
+
+### Container System
+
+```css
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+@media (min-width: 1400px) {
+  .container {
+    max-width: 1400px;
+  }
+}
+```
+
+### Grid System
+
+```css
+/* Responsive Grid */
+.grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .grid-cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+```
+
+### Spacing Scale
+
+```css
+/* Padding and Margin Scale */
+.p-6 {
+  padding: 1.5rem;
+}
+.py-8 {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+.mt-12 {
+  margin-top: 3rem;
+}
+.gap-4 {
+  gap: 1rem;
+}
+.gap-6 {
+  gap: 1.5rem;
+}
+.gap-8 {
+  gap: 2rem;
+}
+```
+
+## Visual Effects
+
+### Background Textures
+
+```css
+.bg-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.05;
+}
+
+.bg-paper {
+  background-color: #f8f9fa;
+  background-image: linear-gradient(
+      90deg,
+      rgba(179, 9, 9, 0.05) 1px,
+      transparent 1px
+    ), linear-gradient(rgba(179, 9, 9, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+```
+
+### Shadows & Depth
+
+```css
+.shadow-sm {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.shadow-md {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.shadow-xl {
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+```
+
+### Borders
+
+```css
+.border {
+  border-width: 1px;
+  border-color: #e5e7eb;
+}
+
+.border-2 {
+  border-width: 2px;
+}
+
+.border-crimson {
+  border-color: var(--crimson);
+}
+
+.border-teal {
+  border-color: var(--teal);
+}
+
+.rounded-lg {
+  border-radius: 8px;
+}
+
+.rounded-xl {
+  border-radius: 12px;
+}
+```
+
+## Responsive Design
+
+### Breakpoints
+
+```css
+/* Mobile-first breakpoints */
+@media (min-width: 640px) {
+  /* sm: */
+}
+
+@media (min-width: 768px) {
+  /* md: */
+}
+
+@media (min-width: 1024px) {
+  /* lg: */
+}
+
+@media (min-width: 1280px) {
+  /* xl: */
+}
+
+@media (min-width: 1400px) {
+  /* 2xl: */
+}
+```
+
+### Responsive Patterns
+
+```css
+/* Mobile Navigation */
+.nav-mobile {
+  display: flex;
+}
+
+.nav-desktop {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .nav-mobile {
+    display: none;
+  }
+
+  .nav-desktop {
+    display: flex;
+  }
+}
+
+/* Responsive Typography */
+.text-xl {
+  font-size: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .text-xl {
+    font-size: 1.5rem;
+  }
+}
+```
+
+This visual design documentation captures the literal design elements of Nexus, including CSS styles, button appearances, animations, and responsive patterns that create the "Collaborative Canvas" aesthetic.

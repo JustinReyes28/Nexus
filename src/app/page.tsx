@@ -17,7 +17,7 @@ export default function Home() {
           </div>
           <div className="hidden md:flex items-center gap-8">
             <Link href="#features" className="text-sm font-semibold text-gray-600 hover:text-crimson transition-colors">Features</Link>
-            <Link href="#community" className="text-sm font-semibold text-gray-600 hover:text-crimson transition-colors">Community</Link>
+            <Link href="https://github.com/JustinReyes28/Nexus" className="text-sm font-semibold text-gray-600 hover:text-crimson transition-colors">See the Code</Link>
             <Link href="/login">
               <Button variant="ghost" size="sm">Sign In</Button>
             </Link>
