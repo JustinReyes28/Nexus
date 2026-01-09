@@ -92,7 +92,7 @@ export default function DataManagement({ userId }: DataManagementProps) {
               variant="secondary"
               onClick={handleExportData}
               disabled={isLoading}
-              className="animate-float"
+              className="animate-float-slow"
             >
               {isLoading ? "Preparing Export..." : "Export All Data"}
             </Button>
@@ -144,7 +144,7 @@ export default function DataManagement({ userId }: DataManagementProps) {
                     variant="outline"
                     onClick={handleDeleteAccount}
                     disabled={isLoading}
-                    className="flex-1 border-crimson text-crimson hover:bg-crimson/5 animate-bounce"
+                    className="flex-1 border-crimson text-crimson hover:bg-crimson/5 animate-bounce-slow"
                   >
                     {isLoading ? "Deleting..." : "Permanently Delete Account"}
                   </Button>
@@ -155,7 +155,7 @@ export default function DataManagement({ userId }: DataManagementProps) {
                 variant="outline"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={isLoading}
-                className="border-crimson text-crimson hover:bg-crimson/5 animate-bounce"
+                className="border-crimson text-crimson hover:bg-crimson/5 animate-bounce-slow"
               >
                 Delete My Account
               </Button>

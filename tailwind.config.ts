@@ -93,6 +93,17 @@ const config: Config = {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-10px)" },
         },
+        "float-slow": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-8px)" },
+        },
+        "bounce-slow": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "25%": { transform: "translateY(-5px)" },
+          "50%": { transform: "translateY(0)" },
+          "75%": { transform: "translateY(-3px)" },
+          "100%": { transform: "translateY(0)" },
+        },
         "pulse-organic": {
           "0%, 100%": { transform: "scale(1)", opacity: "1" },
           "50%": { transform: "scale(1.05)", opacity: "0.8" },
@@ -114,6 +125,8 @@ const config: Config = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "float": "float 3s ease-in-out infinite",
+        "float-slow": "float-slow 6s ease-in-out infinite",
+        "bounce-slow": "bounce-slow 8s ease-in-out infinite",
         "pulse-organic": "pulse-organic 2s ease-in-out infinite",
         "sparkle": "sparkle 0.5s ease-in-out forwards",
         "fade-in-up": "fade-in-up 0.6s ease forwards",
