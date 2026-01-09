@@ -11,55 +11,161 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const ip = req.headers.get("x-forwarded-for") || "anonymous";
-    if (rateLimiter.isRateLimited(ip)) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    // Secure IP extraction with proxy trust validation
+    let ip = "anonymous";
 
-    const user = await db.user.findUnique({
-      where: { id: session.user.id as string },
-      select: { aiCreditsUsed: true, aiCreditsLimit: true },
-    });
+    // Check if we trust proxies based on environment variable
+    const trustProxy = process.env.TRUST_PROXY === "true";
 
-    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-    if (user.aiCreditsUsed >= user.aiCreditsLimit) {
-      return NextResponse.json({ error: "AI credit limit reached" }, { status: 403 });
+    if (trustProxy) {
+      // When trusting proxies, extract the first IP from X-Forwarded-For header
+      const forwarded = req.headers.get("x-forwarded-for");
+      if (forwarded) {
+        // Take only the first IP address to prevent spoofing
+        ip = forwarded.split(",")[0].trim() || "anonymous";
+      }
+    } else {
+      // When not trusting proxies, avoid using X-Forwarded-For as it can be spoofed by clients
+      // Instead, we'll use alternative headers that are typically set by infrastructure (not clients)
+      // These headers are less likely to be spoofed when not behind a trusted proxy
+      const xRealIP = req.headers.get('x-real-ip');
+      const cfConnectingIP = req.headers.get('cf-connecting-ip'); // Cloudflare
+      const xOriginalForwardedFor = req.headers.get('x-original-forwarded-for');
+
+      // Use alternative headers that are typically set by infrastructure, not clients
+      if (cfConnectingIP) {
+        ip = cfConnectingIP;
+      } else if (xRealIP) {
+        ip = xRealIP;
+      } else if (xOriginalForwardedFor) {
+        // If we have x-original-forwarded-for, take the first IP
+        ip = xOriginalForwardedFor.split(",")[0].trim() || "anonymous";
+      } else {
+        // If no trusted headers are present and we don't trust X-Forwarded-For,
+        // we'll default to anonymous since we can't securely determine the IP
+        // In a real Next.js environment, you might have access to the IP through other means
+        // but in the App Router API routes, direct socket access isn't available
+        ip = "anonymous";
+      }
     }
+
+    // Normalize IP address (remove IPv6 prefix if present)
+    if (ip && ip.startsWith('::ffff:')) {
+      ip = ip.substring(7); // Remove IPv6 to IPv4 mapping prefix
+    }
+
+    if (rateLimiter.isRateLimited(ip)) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
     const body = await req.json();
     const validatedData = methodologySchema.safeParse(body);
     if (!validatedData.success) return NextResponse.json({ error: validatedData.error.errors[0].message }, { status: 400 });
 
     const { researchType, discipline, problemStatement } = validatedData.data;
-    
+
+    // Format discipline and researchType for display in the prompt (replace hyphens with spaces and capitalize)
+    const formattedDiscipline = discipline.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const formattedResearchType = researchType.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
     const prompt = `
-      As a research methodology expert in ${discipline}, recommend a suitable ${researchType} methodology for the following problem:
+      As a research methodology expert in ${formattedDiscipline}, recommend a suitable ${formattedResearchType} methodology for the following problem:
       "${sanitizePrompt(problemStatement)}"
-      
+
       Structure your response:
       1. Recommended Methodology Type
       2. Data Collection Methods
       3. Data Analysis Techniques
       4. Ethical Considerations
       5. Potential Limitations
-      
+
       Format in clean markdown.
     `;
 
-    const result = await model.generateContent(prompt);
+    // Pre-check prompt size against model limits (assuming max ~30k tokens)
+    const promptTokens = estimateTokens(prompt);
+    if (promptTokens > 25000) { // Leave buffer for response
+      return NextResponse.json({
+        error: "Prompt too large. Please reduce the length of your problem statement."
+      }, { status: 400 });
+    }
+
+    // Set up timeout for AI model call
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    let result;
+    try {
+      // Using AbortController with the model call if supported, otherwise using Promise.race
+      result = await Promise.race([
+        model.generateContent(prompt),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Request timeout")), 30000)
+        )
+      ]);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("timeout")) {
+        return NextResponse.json({ error: "Request timed out. Please try again." }, { status: 408 });
+      }
+      throw error; // Re-throw other errors
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    // Validate the response exists and has text
+    if (!result || !result.response) {
+      return NextResponse.json({ error: "Invalid response from AI service" }, { status: 502 });
+    }
+
     const responseText = result.response.text();
+    if (typeof responseText !== 'string') {
+      return NextResponse.json({ error: "Invalid response format from AI service" }, { status: 502 });
+    }
+
     const tokensUsed = estimateTokens(prompt + responseText);
 
-    await db.$transaction([
-      db.user.update({ where: { id: session.user.id }, data: { aiCreditsUsed: { increment: 1 } } }),
-      db.aIConversation.create({
-        data: {
-          feature: "METHODOLOGY_ADVISOR",
-          prompt: `Type: ${researchType} | Problem: ${problemStatement.substring(0, 50)}...`,
-          response: responseText,
-          tokensUsed,
-          userId: session.user.id,
-        },
-      }),
-    ]);
+    // Perform atomic credit check and increment in a transaction to prevent race conditions
+    try {
+      const result = await db.$transaction(async (tx) => {
+        // Use raw SQL to atomically check and increment the credit in a single operation
+        // This prevents race conditions by performing the check and update atomically
+        const rawResult = await tx.$executeRaw`
+          UPDATE User
+          SET aiCreditsUsed = aiCreditsUsed + 1
+          WHERE id = ${session.user.id} AND aiCreditsUsed < aiCreditsLimit
+        `;
+
+        // If no rows were affected, it means the credit limit was reached or user doesn't exist
+        if (rawResult === 0) {
+          const user = await tx.user.findUnique({
+            where: { id: session.user.id as string },
+            select: { id: true }
+          });
+
+          if (!user) {
+            throw new Error("User not found");
+          }
+
+          throw new Error("Credit limit reached");
+        }
+
+        // If the update succeeded, create the conversation record
+        return await tx.aIConversation.create({
+          data: {
+            feature: "METHODOLOGY_ADVISOR",
+            prompt: `Type: ${researchType} | Discipline: ${discipline} | Problem: ${problemStatement.substring(0, 50)}...`,
+            response: responseText,
+            tokensUsed,
+            userId: session.user.id,
+          },
+        });
+      });
+    } catch (transactionError) {
+      // If the transaction failed because no records were updated (credit limit reached), return 403
+      if ((transactionError as any).message?.includes?.('Credit limit reached')) {
+        return NextResponse.json({ error: "AI credit limit reached" }, { status: 403 });
+      }
+      // Re-throw other errors
+      throw transactionError;
+    }
 
     return NextResponse.json({ response: responseText });
   } catch (error) {

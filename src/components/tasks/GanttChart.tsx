@@ -8,16 +8,19 @@ interface GanttChartProps {
   tasks: Array<{
     id: string;
     title: string;
-    status: string;
-    priority: string;
+    status: "TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED";
+    priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
     dueDate: Date | null;
+    startDate?: Date;
+    endDate?: Date;
     createdAt: Date;
+    description?: string;
   }>;
 }
 
 export default function GanttChart({ tasks }: GanttChartProps) {
   // Simple Gantt implementation for visualization
-  const sortedTasks = [...tasks].sort((a, b) => 
+  const sortedTasks = [...tasks].sort((a, b) =>
     new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   );
 
@@ -38,7 +41,7 @@ export default function GanttChart({ tasks }: GanttChartProps) {
       {/* Texture bg */}
       <div className="absolute inset-0 bg-paper opacity-40 pointer-events-none" />
       <div className="absolute inset-0 bg-grain opacity-20 pointer-events-none" />
-      
+
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-8">
            <h3 className="text-xl font-heading font-extrabold text-gray-900 flex items-center gap-2">
@@ -77,13 +80,13 @@ export default function GanttChart({ tasks }: GanttChartProps) {
                   </span>
                 </div>
                 <div className="flex-1 h-3 bg-gray-50 rounded-full relative overflow-hidden">
-                   <div 
+                   <div
                      className={cn(
                        "absolute h-full rounded-full border shadow-sm transition-all duration-700 ease-out",
                        getPriorityColor(task.priority)
                      )}
-                     style={{ 
-                       left: `${Math.max(5, (idx * 15) % 40)}%`, 
+                     style={{
+                       left: `${Math.max(5, (idx * 15) % 40)}%`,
                        width: `${Math.max(20, 80 - (idx * 10) % 60)}%`,
                        opacity: task.status === "COMPLETED" ? 0.4 : 1
                      }}
@@ -93,7 +96,7 @@ export default function GanttChart({ tasks }: GanttChartProps) {
             ))}
           </div>
         </div>
-        
+
         <div className="mt-8 pt-6 border-t border-gray-100 border-dashed text-center">
            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest italic">
               "The best way to predict the future is to create it."

@@ -12,11 +12,11 @@ interface TaskCardProps {
     id: string;
     title: string;
     description: string | null;
-    status: string;
-    priority: string;
+    status: "TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED";
+    priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
     dueDate: Date | null;
   };
-  onStatusChange?: (id: string, completed: boolean) => void;
+  onStatusChange?: (id: string, newStatus: "TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED") => void;
   onEdit?: (id: string) => void;
 }
 
@@ -32,8 +32,24 @@ export default function TaskCard({ task, onStatusChange, onEdit }: TaskCardProps
     URGENT: "danger",
   };
 
+  // Function to cycle to the next status in the workflow
+  const getNextStatus = (): "TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED" => {
+    switch (task.status) {
+      case "TODO":
+        return "IN_PROGRESS";
+      case "IN_PROGRESS":
+        return "REVIEW";
+      case "REVIEW":
+        return "COMPLETED";
+      case "COMPLETED":
+        return "TODO";
+      default:
+        return "TODO";
+    }
+  };
+
   return (
-    <div 
+    <div
       className={cn(
         "bg-paper p-5 rounded-xl border-2 border-gray-100 shadow-sm transition-all duration-300 relative group hover:shadow-xl hover:-translate-y-1",
         isOverdue ? "border-l-4 border-l-crimson" : "border-l-4 border-l-teal",
@@ -53,10 +69,10 @@ export default function TaskCard({ task, onStatusChange, onEdit }: TaskCardProps
       )}
 
       <div className="flex items-start gap-4 relative z-10">
-        <Checkbox 
-          id={task.id} 
+        <Checkbox
+          id={task.id}
           checked={isCompleted}
-          onCheckedChange={(checked: boolean) => onStatusChange?.(task.id, checked)}
+          onCheckedChange={() => onStatusChange?.(task.id, getNextStatus())}
           className="mt-1.5"
           onClick={(e) => e.stopPropagation()}
         />

@@ -1,14 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { 
-  ArrowLeft, 
-  Layout, 
-  List, 
-  Plus, 
-  Search, 
+import {
+  ArrowLeft,
+  Layout,
+  List,
+  Plus,
+  Search,
   Filter,
   BarChart2
 } from "lucide-react";
@@ -17,8 +17,21 @@ import TaskForm from "@/components/tasks/TaskForm";
 import GanttChart from "@/components/tasks/GanttChart";
 import { Badge } from "@/components/ui/Badge";
 
+interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  status: "TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  dueDate: Date | null;
+  startDate: Date;
+  endDate: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Mock data for initial implementation
-const MOCK_TASKS: any[] = [
+const MOCK_TASKS: Task[] = [
   {
     id: "1",
     title: "Research existing solutions",
@@ -28,6 +41,8 @@ const MOCK_TASKS: any[] = [
     dueDate: new Date(Date.now() - 86400000 * 2),
     startDate: new Date(Date.now() - 86400000 * 5),
     endDate: new Date(Date.now() - 86400000 * 2),
+    createdAt: new Date(Date.now() - 86400000 * 7),
+    updatedAt: new Date(Date.now() - 86400000 * 2),
   },
   {
     id: "2",
@@ -38,6 +53,8 @@ const MOCK_TASKS: any[] = [
     dueDate: new Date(Date.now() + 86400000 * 3),
     startDate: new Date(Date.now()),
     endDate: new Date(Date.now() + 86400000 * 3),
+    createdAt: new Date(Date.now() - 86400000 * 1),
+    updatedAt: new Date(Date.now()),
   },
   {
     id: "3",
@@ -48,41 +65,62 @@ const MOCK_TASKS: any[] = [
     dueDate: new Date(Date.now() + 86400000 * 7),
     startDate: new Date(Date.now() + 86400000 * 4),
     endDate: new Date(Date.now() + 86400000 * 7),
+    createdAt: new Date(Date.now()),
+    updatedAt: new Date(Date.now()),
   }
 ];
 
 export default function ProjectTasksPage() {
   const params = useParams();
   const projectId = params.id as string;
-  
+
   const [view, setView] = useState<"list" | "kanban" | "gantt">("kanban");
-  const [tasks, setTasks] = useState(MOCK_TASKS);
+  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
   const [showForm, setShowForm] = useState(false);
-  const [editingTask, setEditingTask] = useState<any>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredTasks = tasks.filter(t => 
+  const filteredTasks = tasks.filter(t =>
     t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     t.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSaveTask = (data: any) => {
+  const handleSaveTask = (data: {
+    title: string;
+    description: string;
+    status: "TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED";
+    priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+    dueDate: string;
+  }) => {
+    const now = new Date();
     if (editingTask) {
-      setTasks(tasks.map(t => t.id === editingTask.id ? { ...t, ...data } : t));
+      setTasks(tasks.map(t => t.id === editingTask.id ? {
+        ...t,
+        ...data,
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        description: data.description,
+        updatedAt: now
+      } as Task : t));
     } else {
       const newTask = {
-        ...data,
-        id: Math.random().toString(36).substr(2, 9),
+        id: crypto.randomUUID(),
+        title: data.title,
+        description: data.description,
+        status: data.status,
+        priority: data.priority,
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
         startDate: new Date(),
-        endDate: new Date(data.dueDate),
-      };
+        endDate: data.dueDate ? new Date(data.dueDate) : new Date(),
+        createdAt: now,
+        updatedAt: now
+      } as Task;
       setTasks([...tasks, newTask]);
     }
     setShowForm(false);
     setEditingTask(null);
   };
 
-  const statusColumns: any[] = ["TODO", "IN_PROGRESS", "REVIEW", "COMPLETED"];
+  const statusColumns: ("TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED")[] = ["TODO", "IN_PROGRESS", "REVIEW", "COMPLETED"];
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
@@ -96,7 +134,7 @@ export default function ProjectTasksPage() {
             <p className="text-sm text-gray-500">Manage your progress and upcoming milestones</p>
           </div>
         </div>
-        <button 
+        <button
           onClick={() => { setShowForm(true); setEditingTask(null); }}
           className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-sm transition-all active:scale-95"
         >
@@ -108,21 +146,21 @@ export default function ProjectTasksPage() {
       {/* Toolbar */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
         <div className="flex items-center gap-1 p-1 bg-gray-50 rounded-lg w-full md:w-auto">
-          <button 
+          <button
             onClick={() => setView("kanban")}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold transition-all ${view === "kanban" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
           >
             <Layout className="w-4 h-4" />
             Board
           </button>
-          <button 
+          <button
             onClick={() => setView("list")}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold transition-all ${view === "list" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
           >
             <List className="w-4 h-4" />
             List
           </button>
-          <button 
+          <button
             onClick={() => setView("gantt")}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold transition-all ${view === "gantt" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
           >
@@ -134,9 +172,9 @@ export default function ProjectTasksPage() {
         <div className="flex items-center gap-4 w-full md:w-auto">
           <div className="relative flex-grow md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search tasks..." 
+            <input
+              type="text"
+              placeholder="Search tasks..."
               className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-blue-100 outline-none transition-all"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -164,17 +202,17 @@ export default function ProjectTasksPage() {
                 </div>
                 <div className="flex flex-col gap-4 min-h-[100px] p-2 rounded-xl bg-gray-50/50 border border-dashed border-gray-200">
                   {filteredTasks.filter(t => t.status === status).map(task => (
-                    <TaskCard 
-                      key={task.id} 
-                      task={task} 
+                    <TaskCard
+                      key={task.id}
+                      task={task}
                       onEdit={(id) => { setEditingTask(tasks.find(t => t.id === id)); setShowForm(true); }}
-                      onStatusChange={(id, completed) => {
-                        setTasks(tasks.map(t => t.id === id ? { ...t, status: completed ? "COMPLETED" : "TODO" } : t));
+                      onStatusChange={(id, newStatus) => {
+                        setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus } : t));
                       }}
                     />
 
                   ))}
-                  <button 
+                  <button
                     onClick={() => { setShowForm(true); setEditingTask(null); }}
                     className="py-2 text-xs font-bold text-gray-400 hover:text-blue-500 transition-colors flex items-center justify-center gap-1 border border-dashed rounded-lg hover:border-blue-200 hover:bg-blue-50/30"
                   >
@@ -223,13 +261,20 @@ export default function ProjectTasksPage() {
         )}
 
         {view === "gantt" && (
-          <GanttChart tasks={tasks as any} />
+          <GanttChart tasks={tasks} />
         )}
       </div>
 
       {showForm && (
-        <TaskForm 
-          initialData={editingTask}
+        <TaskForm
+          initialData={editingTask ? {
+            id: editingTask.id,
+            title: editingTask.title,
+            description: editingTask.description,
+            status: editingTask.status,
+            priority: editingTask.priority,
+            dueDate: editingTask.dueDate
+          } : undefined}
           onSave={handleSaveTask}
           onCancel={() => { setShowForm(false); setEditingTask(null); }}
         />
