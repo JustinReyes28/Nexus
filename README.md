@@ -4,7 +4,7 @@
 
 ## ✦ About Nexus
 
-Nexus is an intelligent web platform designed to guide students through every stage of their capstone projects—from ideation to completion. By leveraging AI capabilities, Nexus provides personalized mentorship, research assistance, project management tools, and collaborative features to help students successfully navigate one of their most challenging academic milestones.
+Nexus is an intelligent web platform designed to guide students through every stage of their capstone projects—from ideation to completion. By leveraging AI capabilities, Nexus provides personalized mentorship, research assistance, project management tools, and collaborative features to help students successfully navigate one of their most challenging academic milestones. The platform includes an AI-powered idea generator, writing assistant, progress analyzer, and comprehensive project management tools with deadline tracking and team collaboration features.
 
 ## ✦ Target Audience
 
@@ -33,24 +33,27 @@ _What Nexus Offers_
 
 ### 🤖 AI-Powered Features
 
-- **Idea Generator & Validator**: Generate and validate capstone project ideas
+- **Idea Generator & Validator**: Generate and validate capstone project ideas with AI assistance
 - **Research Assistant**: Get literature review suggestions and research guidance
 - **Proposal Writer**: Interactive proposal builder with AI suggestions
 - **Methodology Advisor**: Recommendations for research methodologies
 - **Progress Analyzer**: Identify bottlenecks and suggest next steps
-- **Writing Assistant**: Grammar, style, and academic tone improvements
+- **Writing Assistant**: Grammar, style, and academic tone improvements with AI-powered editing
+- **The Guide**: Interactive AI companion with visual feedback for different AI states (thinking, celebrating, etc.)
 
 ### 📊 Project Management
 
-- **Dashboard**: Visual progress tracking with milestones
-- **Task & Milestone Manager**: Gantt chart visualization with deadline reminders
-- **Document Repository**: Version-controlled document storage
+- **Dashboard**: Visual progress tracking with milestones and project cards
+- **Task & Milestone Manager**: Task management with status tracking (TODO, IN_PROGRESS, REVIEW, COMPLETED)
+- **Project Tracking**: Track project status across different phases (IDEATION, PROPOSAL, RESEARCH, DEVELOPMENT, WRITING, REVIEW, COMPLETED)
+- **Deadline Widget**: Visual deadline tracking and reminders
+- **Activity Feed**: Real-time activity tracking for projects
 
 ### 👥 Collaboration Features
 
-- **Team Workspaces**: Shared project spaces with role-based permissions
+- **Team Workspaces**: Shared project spaces with role-based permissions (OWNER, ADMIN, MEMBER, VIEWER)
 - **Advisor Communication**: Structured feedback request system
-- **Real-time Collaboration**: Team chat and discussion threads
+- **User Management**: Role-based access control with STUDENT, ADVISOR, and ADMIN roles
 
 ### 📚 Resource Library
 
@@ -58,27 +61,45 @@ _What Nexus Offers_
 - **Knowledge Base**: Best practices and sample projects
 - **Video Tutorials**: Step-by-step guidance
 
+### 🔐 Security & Access Control
+
+- **Rate Limiting**: Built-in rate limiting (30 requests per minute per IP)
+- **AI Credit System**: Credit-based AI usage tracking with limits
+- **Authentication**: Secure authentication with session management
+- **Data Validation**: Comprehensive input validation using Zod schemas
+
 ## ✦ Technical Stack
 
 ### Frontend
 
 - **Next.js** (App Router) with **React 18+**
 - **TypeScript** for type safety
-- **Tailwind CSS** for responsive design
+- **Tailwind CSS** for responsive design with custom styling
 - **TanStack Query** for server state management
 - **Zod** for runtime type validation
+- **Lucide React** for UI icons
+- **React Markdown** for markdown rendering
 
 ### Backend
 
-- **Next.js API Routes**
-- **MongoDB** with **Prisma ORM**
-- **Google AI Studio API** for AI features
+- **Next.js API Routes** for server-side logic
+- **MongoDB** with **Prisma ORM** for database management
+- **Google AI Studio API** (Gemini 1.5 Flash) for AI features
+- **NextAuth.js** for authentication
 
 ### Authentication
 
 - **NextAuth.js** with Google OAuth
-- **Email/password authentication**
-- **Session management with secure tokens**
+- **Email/password authentication** with bcrypt hashing
+- **Session management** with secure tokens
+- **Prisma Adapter** for database integration
+
+### Security
+
+- **Rate Limiting**: Custom implementation with token bucket algorithm
+- **Input Sanitization**: Prompt sanitization to prevent injection attacks
+- **Token Estimation**: Built-in token usage tracking
+- **Zod Validation**: Comprehensive request validation schemas
 
 ## ✦ Project Structure
 
@@ -89,27 +110,62 @@ nexus/
 ├── middleware.ts
 ├── next.config.mjs
 ├── package.json
-├── prisma/
-│   └── schema.prisma
-├── src/
-│   ├── app/
-│   │   ├── (auth)/          # Authentication routes
-│   │   ├── (dashboard)/     # Dashboard routes
-│   │   ├── api/             # API routes
-│   │   └── page.tsx         # Home page
-│   ├── components/          # React components
-│   ├── emails/              # Email templates
-│   ├── lib/                 # Utility functions
-│   └── styles/              # CSS files
+├── postcss.config.js
+├── tailwind.config.ts
+├── tsconfig.json
+├── images/                  # Image assets
 ├── MD Files/                # Documentation
+│   ├── Design.md
+│   ├── DesignPRD.md
+│   ├── Phase1.md
+│   ├── Phase2.md
+│   ├── Phase3.md
+│   ├── Phase4.md
+│   ├── Phase5.md
+│   ├── Phase6.md
+│   ├── Phase7.md
 │   ├── PRD1.md
 │   ├── PRD2.md
 │   ├── PRD3.md
 │   ├── PRD4.md
 │   ├── Security.md
-│   └── # Phase documents
-├── images/                  # Image assets
-└── public/                  # Static assets
+│   └── SettingsPage.md
+├── prisma/
+│   └── schema.prisma         # Database schema with MongoDB models
+├── src/
+│   ├── app/                  # Next.js app router pages
+│   │   ├── (auth)/          # Authentication routes (login, register, etc.)
+│   │   ├── (dashboard)/     # Dashboard routes with protected layout
+│   │   ├── api/             # API routes for backend functionality
+│   │   ├── ai/          # AI feature endpoints (ideas, research, writing, etc.)
+│   │   │   ├── auth/        # Authentication API routes
+│   │   │   ├── dashboard/   # Dashboard statistics API
+│   │   │   ├── email/       # Email sending functionality
+│   │   │   └── projects/    # Project management API
+│   │   └── page.tsx         # Home page
+│   ├── components/          # React components organized by feature
+│   │   ├── ai/              # AI-related components (TheGuide, ChatInterface, etc.)
+│   │   ├── auth/            # Authentication components
+│   │   ├── dashboard/       # Dashboard components (Sidebar, ProjectCard, etc.)
+│   │   ├── home/            # Landing page components
+│   │   ├── settings/        # User settings components
+│   │   ├── tasks/           # Task management components
+│   │   └── ui/              # Reusable UI components (Button, etc.)
+│   ├── emails/              # Email templates for notifications
+│   ├── lib/                 # Utility functions and libraries
+│   │   ├── ai.ts            # AI integration with Google Gemini
+│   │   ├── auth.ts          # Authentication configuration
+│   │   ├── db.ts            # Database connection
+│   │   ├── email-queue.ts   # Email queue management
+│   │   ├── email.ts         # Email sending utilities
+│   │   ├── featureColors.ts # UI color definitions
+│   │   ├── featuresData.ts  # Feature data configuration
+│   │   ├── rate-limit.ts    # Rate limiting implementation
+│   │   ├── utils.ts         # General utility functions
+│   │   ├── validation.ts    # Validation utilities
+│   │   └── validations/     # Zod validation schemas
+│   ├── styles/              # CSS files
+│   └── types/               # TypeScript type definitions
 ```
 
 ## ✦ Getting Started
@@ -120,6 +176,7 @@ nexus/
 - npm, yarn, or pnpm
 - MongoDB Atlas account
 - Google AI Studio API key
+- Google OAuth credentials (for Google login)
 - Vercel account (for deployment)
 
 ### ✦ Installation
@@ -147,9 +204,16 @@ nexus/
    cp .env.example .env.local
    ```
 
-   (Create `.env.example` with required variables)
+   Update the `.env.local` file with your configuration (see Environment Variables section below)
 
-4. Run the development server:
+4. Run database migrations (if needed):
+
+   ```bash
+   npx prisma db push
+   npx prisma generate
+   ```
+
+5. Run the development server:
    ```bash
    npm run dev
    # or
@@ -171,6 +235,10 @@ DATABASE_URL=mongodb+srv://<username>:<password>@cluster.mongodb.net/nexus
 # Google AI
 GOOGLE_AI_API_KEY=your-api-key
 
+# Google OAuth (for NextAuth)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
 # Authentication
 NEXTAUTH_SECRET=your-secret-key
 NEXTAUTH_URL=http://localhost:3000
@@ -186,6 +254,8 @@ SMTP_PASSWORD=your-app-password
 
 - [MD Files/PRD1.md](MD Files/PRD1.md) - Complete Product Requirements Document
 - [MD Files/Security.md](MD Files/Security.md) - Security and Privacy Requirements
+- [MD Files/Design.md](MD Files/Design.md) - Design documentation
+- [MD Files/Phase*.md](MD Files/) - Phase-specific documentation files
 
 ## ✦ Contributing
 

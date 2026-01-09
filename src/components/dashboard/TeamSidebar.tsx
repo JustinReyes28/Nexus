@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { User, MessageCircle, Sparkles } from "lucide-react";
+import { MessageCircle, Sparkles, X, PanelLeftClose, PanelRightClose } from "lucide-react";
 
 const teamMembers = [
   { name: "Sarah", status: "online", image: null, initial: "S" },
@@ -11,54 +11,149 @@ const teamMembers = [
 ];
 
 export default function TeamSidebar({ className }: { className?: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
+  }, []);
+
+  // Close on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [handleClose]);
+
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   return (
-    <aside className={cn("flex flex-col py-8 px-6", className)}>
-      <div className="mb-8 px-2">
-        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">The Team</h3>
-        <div className="space-y-4">
-           {teamMembers.map((member) => (
-             <div key={member.name} className="flex items-center justify-between group cursor-pointer">
+    <>
+      {/* Hamburger Toggle Button */}
+      <button
+        onClick={() => setIsOpen(true)}
+        className={cn(
+          "fixed top-20 right-4 z-50 p-3 bg-white border-2 border-sunny",
+          "rounded-xl hover:border-sunny hover:shadow-md transition-all shadow-sm",
+          "focus:outline-none focus:ring-2 focus:ring-sunny/20",
+          isOpen && "opacity-0 pointer-events-none"
+        )}
+        aria-label="Open team sidebar"
+      >
+        <PanelRightClose className="w-5 h-5 text-gray-700" />
+      </button>
+
+      {/* Backdrop Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 
+                     transition-opacity duration-300"
+          onClick={handleClose}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Slide-in Panel */}
+      <aside
+        className={cn(
+          "fixed top-0 right-0 z-50 h-full w-[320px] bg-white shadow-xl",
+          "flex flex-col py-8 px-6 border-l border-gray-200",
+          "transition-transform duration-300 ease-out",
+          isOpen ? "translate-x-0" : "translate-x-full",
+          className
+        )}
+        role="dialog"
+        aria-label="Team sidebar"
+      >
+        {/* Close Button */}
+        <button
+          onClick={handleClose}
+          className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg 
+                     transition-colors focus:outline-none focus:ring-2 focus:ring-crimson/20"
+          aria-label="Close sidebar"
+        >
+          <X className="w-5 h-5 text-gray-500" />
+        </button>
+
+        {/* Content - "The Team" Section */}
+        <div className="mb-8 px-2 mt-4">
+          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
+            The Team
+          </h3>
+          <div className="space-y-4">
+            {teamMembers.map((member) => (
+              <div
+                key={member.name}
+                className="flex items-center justify-between group cursor-pointer"
+              >
                 <div className="flex items-center gap-3">
-                   <div className="relative">
-                      <div className={cn(
+                  <div className="relative">
+                    <div
+                      className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2",
-                        member.status === "online" ? "border-sunny bg-white text-gray-900" : "border-gray-200 bg-gray-50 text-gray-400"
-                      )}>
-                         {member.initial}
-                      </div>
-                      <div className={cn(
+                        member.status === "online"
+                          ? "border-sunny bg-white text-gray-900"
+                          : "border-gray-200 bg-gray-50 text-gray-400"
+                      )}
+                    >
+                      {member.initial}
+                    </div>
+                    <div
+                      className={cn(
                         "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white",
-                        member.status === "online" ? "bg-sunny animate-pulse-organic" : "bg-gray-300"
-                      )} />
-                   </div>
-                   <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">{member.name}</span>
+                        member.status === "online"
+                          ? "bg-sunny animate-pulse-organic"
+                          : "bg-gray-300"
+                      )}
+                    />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
+                    {member.name}
+                  </span>
                 </div>
                 <MessageCircle className="w-4 h-4 text-gray-300 group-hover:text-crimson opacity-0 group-hover:opacity-100 transition-all" />
-             </div>
-           ))}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="mt-auto">
-        {/* "The Guide" Personality Card */}
-        <div className="bg-canvas p-6 rounded-2xl border-2 border-dashed border-teal/30 relative overflow-hidden text-center">
+        {/* Content - "The Guide" Section */}
+        <div className="mt-auto">
+          <div className="bg-canvas p-6 rounded-2xl border-2 border-dashed border-teal/30 relative overflow-hidden text-center">
             {/* Breathing Mascot Preview */}
-            <div className="w-20 h-20 bg-teal/10 rounded-[35% 65% 45% 55% / 55% 45% 65% 35%] animate-[pulse-organic_4s_infinite] mx-auto mb-4 flex items-center justify-center">
-               <div className="flex gap-4">
-                  <div className="w-1.5 h-1.5 bg-teal rounded-full" />
-                  <div className="w-1.5 h-1.5 bg-teal rounded-full" />
-               </div>
+            <div className="w-20 h-20 bg-teal/10 rounded-[35% 65% 45% 5% / 5% 45% 65% 35%] animate-[pulse-organic_4s_infinite] mx-auto mb-4 flex items-center justify-center">
+              <div className="flex gap-4">
+                <div className="w-1.5 h-1.5 bg-teal rounded-full" />
+                <div className="w-1.5 h-1.5 bg-teal rounded-full" />
+              </div>
             </div>
-            
-            <h4 className="font-heading font-extrabold text-gray-900 mb-2">The Guide</h4>
-            <p className="text-[10px] text-gray-500 font-body italic mb-4">"Ready whenever you are."</p>
-            
+
+            <h4 className="font-heading font-extrabold text-gray-900 mb-2">
+              The Guide
+            </h4>
+            <p className="text-[10px] text-gray-500 font-body italic mb-4">
+              "Ready whenever you are."
+            </p>
+
             <button className="flex items-center justify-center gap-2 w-full py-3 bg-white border-2 border-teal text-teal font-bold rounded-xl text-xs hover:bg-teal hover:text-white transition-all shadow-sm">
-                <Sparkles className="w-3 h-3" />
-                Start Chat
+              <Sparkles className="w-3 h-3" />
+              Start Chat
             </button>
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

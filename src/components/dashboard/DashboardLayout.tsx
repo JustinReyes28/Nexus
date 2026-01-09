@@ -16,8 +16,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Texture Overlay for the whole dashboard */}
       <div className="fixed inset-0 bg-grain pointer-events-none z-0" />
       
-      {/* Left Navigation Sidebar (240px) */}
-      <Sidebar className="z-20 w-60 hidden lg:flex border-r border-gray-200 bg-white" />
+      {/* Left Navigation Sidebar (collapsible mobile, static desktop) */}
+      <Sidebar className="border-r border-gray-200 bg-white" />
 
       {/* Main Content Area (Fluid) */}
       <main className="flex-1 overflow-y-auto relative z-10 px-4 md:px-8 py-8">
@@ -26,8 +26,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
       </main>
 
-      {/* Right Team/AI Sidebar (300px) */}
-      <TeamSidebar className="z-20 w-[320px] hidden xl:flex border-l border-gray-200 bg-white" />
-    </div>
-  );
+     {/* TeamSidebar - now contains its own hamburger menu */}
+     <TeamSidebar />
+   </div>
+ );
 }
