@@ -28,10 +28,10 @@ export default function Sidebar({ className }: { className?: string }) {
 
   return (
     <aside className={cn("flex flex-col py-8 px-6", className)}>
-      <div className="flex items-center gap-3 mb-12 px-2">
+      <Link href="/" className="flex items-center gap-3 mb-12 px-2">
         <div className="w-8 h-8 bg-crimson rounded-lg rotate-3" />
         <span className="text-xl font-heading font-extrabold tracking-tighter text-gray-900">NEXUS</span>
-      </div>
+      </Link>
 
       <nav className="flex-1 space-y-2">
         {navItems.map((item) => {

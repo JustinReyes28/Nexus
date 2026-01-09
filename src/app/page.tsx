@@ -12,10 +12,10 @@ export default function Home() {
       {/* Navigation Header (Simplified for Landing) */}
       <nav className="fixed w-full z-50 bg-white/10 backdrop-blur-md border-b border-white/20 px-6 py-4">
         <div className="container mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-crimson rounded-lg rotate-3" />
             <span className="text-2xl font-heading font-extrabold tracking-tighter text-gray-900">NEXUS</span>
-          </div>
+          </Link>
           <div className="hidden md:flex items-center gap-8">
             <Link href="#features" className="text-sm font-semibold text-gray-600 hover:text-crimson transition-colors">Features</Link>
             <Link href="https://github.com/JustinReyes28/Nexus" className="text-sm font-semibold text-gray-600 hover:text-crimson transition-colors">See the Code</Link>
