@@ -95,6 +95,11 @@ export default function NotificationSettings({ preferences, userId }: Notificati
       <div className="px-6 py-4 border-b border-gray-200">
         <h3 className="text-xl font-heading font-bold text-primary">Notification Settings</h3>
         <p className="text-sm text-gray-500 mt-1">Control how you receive updates and alerts</p>
+        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-700">
+            <strong>Note:</strong> Notification settings are not yet fully implemented. This feature is coming soon!
+          </p>
+        </div>
       </div>
 
       <div className="p-6">

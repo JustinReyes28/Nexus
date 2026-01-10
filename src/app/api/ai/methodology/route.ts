@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { model, sanitizePrompt, estimateTokens } from "@/lib/ai";
+import { model, sanitizePrompt, estimateTokens, calculateCredits } from "@/lib/ai";
 import { rateLimiter } from "@/lib/rate-limit";
 import { methodologySchema } from "@/lib/validations/ai";
 
@@ -92,10 +92,10 @@ export async function POST(req: NextRequest) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-    let result;
+    let aiResult: any;
     try {
       // Using AbortController with the model call if supported, otherwise using Promise.race
-      result = await Promise.race([
+      aiResult = await Promise.race([
         model.generateContent(prompt),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error("Request timeout")), 30000)
@@ -110,50 +110,39 @@ export async function POST(req: NextRequest) {
       clearTimeout(timeoutId);
     }
 
-    // Validate the response exists and has text
-    if (!result || !result.response) {
-      return NextResponse.json({ error: "Invalid response from AI service" }, { status: 502 });
-    }
+    const responseText = aiResult.response.text() as string;
+    const usage = aiResult.usage;
 
-    const responseText = result.response.text();
-    if (typeof responseText !== 'string') {
-      return NextResponse.json({ error: "Invalid response format from AI service" }, { status: 502 });
-    }
+    const creditsToDeduct = usage 
+      ? calculateCredits(usage.promptTokens, usage.completionTokens)
+      : calculateCredits(estimateTokens(prompt), estimateTokens(responseText));
 
-    const tokensUsed = estimateTokens(prompt + responseText);
-
-    // Perform atomic credit check and increment in a transaction to prevent race conditions
+    // Perform credit check and increment in a transaction
     try {
-      const result = await db.$transaction(async (tx) => {
-        // Use raw SQL to atomically check and increment the credit in a single operation
-        // This prevents race conditions by performing the check and update atomically
-        const rawResult = await tx.$executeRaw`
-          UPDATE User
-          SET aiCreditsUsed = aiCreditsUsed + 1
-          WHERE id = ${session.user.id} AND aiCreditsUsed < aiCreditsLimit
-        `;
+      await db.$transaction(async (tx) => {
+        // First check if user still has credits (extra safety)
+        const user = await tx.user.findUnique({
+          where: { id: session.user.id },
+          select: { aiCreditsUsed: true, aiCreditsLimit: true }
+        });
 
-        // If no rows were affected, it means the credit limit was reached or user doesn't exist
-        if (rawResult === 0) {
-          const user = await tx.user.findUnique({
-            where: { id: session.user.id as string },
-            select: { id: true }
-          });
-
-          if (!user) {
-            throw new Error("User not found");
-          }
-
+        if (!user || user.aiCreditsUsed >= user.aiCreditsLimit) {
           throw new Error("Credit limit reached");
         }
 
-        // If the update succeeded, create the conversation record
+        // Increment credits
+        await tx.user.update({
+          where: { id: session.user.id },
+          data: { aiCreditsUsed: { increment: creditsToDeduct } }
+        });
+
+        // Create the conversation record
         return await tx.aIConversation.create({
           data: {
             feature: "METHODOLOGY_ADVISOR",
             prompt: `Type: ${researchType} | Discipline: ${discipline} | Problem: ${problemStatement.substring(0, 50)}...`,
             response: responseText,
-            tokensUsed,
+            tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
             userId: session.user.id,
           },
         });

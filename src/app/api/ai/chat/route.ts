@@ -4,11 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { model, sanitizePrompt, estimateTokens, calculateCredits } from "@/lib/ai";
 import { rateLimiter } from "@/lib/rate-limit";
-import { ideaGeneratorSchema } from "@/lib/validations/ai";
 
 export async function POST(req: NextRequest) {
   try {
-    console.log("[AI_IDEAS_START] Request received");
+    console.log("[AI_CHAT_START] Request received");
     // 1. Authentication Check
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -37,39 +36,44 @@ export async function POST(req: NextRequest) {
 
     // 4. Input Validation
     const body = await req.json();
-    console.log("[AI_IDEAS_BODY]", JSON.stringify(body, null, 2));
-    const validatedData = ideaGeneratorSchema.safeParse(body);
+    console.log("[AI_CHAT_BODY]", JSON.stringify(body, null, 2));
 
-    if (!validatedData.success) {
-      console.log("[AI_IDEAS_VALIDATION_ERROR]", validatedData.error.errors);
-      return NextResponse.json({ error: validatedData.error.errors[0].message }, { status: 400 });
+    // For chat, we just need a topic/message field
+    const { topic, message, context } = body;
+    if (!topic && !message) {
+      return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
-    const { discipline, topic, constraints } = validatedData.data;
-    console.log("[AI_IDEAS_VALIDATED]", { discipline, topic, constraints });
+    const userMessage = topic || message || "";
+    if (userMessage.length < 1) {
+      return NextResponse.json({ error: "Message cannot be empty" }, { status: 400 });
+    }
+
+    console.log("[AI_CHAT_VALIDATED]", { userMessage, context });
 
     // 5. Generate Prompt
-    const sanitizedTopic = sanitizePrompt(topic);
-    const sanitizedDiscipline = sanitizePrompt(discipline);
+    const sanitizedMessage = sanitizePrompt(userMessage);
+    const sanitizedContext = context ? sanitizePrompt(context) : "";
+
     const prompt = `
-      As an expert academic advisor in ${sanitizedDiscipline}, generate 3-5 unique and feasible research project ideas for the topic: "${sanitizedTopic}".
-      ${constraints ? `Constraints: ${sanitizePrompt(constraints)}` : ""}
+      As "The Guide", an AI academic assistant, engage in a helpful conversation with the user about their capstone project or academic work.
       
-      For each idea, provide:
-      1. Title
-      2. Brief Description (2-3 sentences)
-      3. Feasibility Score (1-10)
-      4. Potential Methodology
+      User message: "${sanitizedMessage}"
+      ${sanitizedContext ? `Additional context: ${sanitizedContext}` : ""}
       
-      Format the output as a clean markdown structure.
+      Provide a helpful, friendly, and informative response that addresses their question or continues the conversation naturally.
+      Keep responses concise but informative, and maintain a supportive tone appropriate for academic guidance.
+      If the user asks about a specific academic topic, provide insights that would be valuable for a student working on a capstone project.
+      
+      Format your response in clear markdown.
     `;
 
-    // 6. Call AI (Non-streaming for now to track tokens easily, will implement streaming in components)
-    console.log("[AI_IDEAS_PROMPT]", prompt);
+    // 6. Call AI
+    console.log("[AI_CHAT_PROMPT]", prompt);
     const result = await model.generateContent(prompt);
     const responseText = result.response.text() as string;
     const usage = result.usage;
-    console.log("[AI_IDEAS_RESPONSE]", responseText);
+    console.log("[AI_CHAT_RESPONSE]", responseText);
 
     const creditsToDeduct = usage 
       ? calculateCredits(usage.promptTokens, usage.completionTokens)
@@ -83,8 +87,8 @@ export async function POST(req: NextRequest) {
       }),
       db.aIConversation.create({
         data: {
-          feature: "IDEA_GENERATOR",
-          prompt: sanitizedTopic as string,
+          feature: "CHAT" as const,
+          prompt: sanitizedMessage as string,
           response: responseText,
           tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
           userId: session.user.id,
@@ -94,7 +98,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ response: responseText });
   } catch (error) {
-    console.error("[AI_IDEAS_ERROR]", error);
+    console.error("[AI_CHAT_ERROR]", error);
 
     if (error instanceof Error) {
       if (error.message.includes("API key not valid") || error.message.includes("Invalid API key")) {

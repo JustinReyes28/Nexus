@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { model, sanitizePrompt, estimateTokens } from "@/lib/ai";
+import { model, sanitizePrompt, estimateTokens, calculateCredits } from "@/lib/ai";
 import { rateLimiter } from "@/lib/rate-limit";
 import { progressSchema } from "@/lib/validations/ai";
 
@@ -56,17 +56,21 @@ export async function POST(req: NextRequest) {
     `;
 
     const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
-    const tokensUsed = estimateTokens(prompt + responseText);
+    const responseText = result.response.text() as string;
+    const usage = result.usage;
+
+    const creditsToDeduct = usage 
+      ? calculateCredits(usage.promptTokens, usage.completionTokens)
+      : calculateCredits(estimateTokens(prompt), estimateTokens(responseText));
 
     await db.$transaction([
-      db.user.update({ where: { id: session.user.id }, data: { aiCreditsUsed: { increment: 1 } } }),
+      db.user.update({ where: { id: session.user.id }, data: { aiCreditsUsed: { increment: creditsToDeduct } } }),
       db.aIConversation.create({
         data: {
           feature: "PROGRESS_ANALYZER",
           prompt: `Project: ${project.title}`,
           response: responseText,
-          tokensUsed,
+          tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
           userId: session.user.id,
           projectId: project.id,
         },

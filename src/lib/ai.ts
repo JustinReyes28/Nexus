@@ -1,15 +1,43 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Mistral } from "@mistralai/mistralai";
 
-const apiKey = process.env.GOOGLE_AI_API_KEY;
-const genAI = new GoogleGenerativeAI(apiKey || "");
+const apiKey = process.env.MISTRAL_API_KEY;
+const client = new Mistral({ apiKey });
 
-export const model = genAI.getGenerativeModel({ 
-  model: "gemini-1.5-flash",
-  generationConfig: {
-    maxOutputTokens: 2048,
-    temperature: 0.7,
+export const model = {
+  generateContent: async (prompt: string) => {
+    const response = await client.chat.complete({
+      model: "ministral-3b-2512",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        }
+      ],
+      maxTokens: 2048,
+      temperature: 0.7,
+    });
+
+    return {
+      response: {
+        text: () => response.choices[0].message?.content || ""
+      },
+      usage: response.usage
+    };
   }
-});
+};
+
+/**
+ * Calculates credits based on token usage.
+ * 1 credit = 1000 input tokens
+ * 1 credit = 500 output tokens
+ */
+export function calculateCredits(promptTokens: number | undefined, completionTokens: number | undefined): number {
+  const pTokens = promptTokens ?? 0;
+  const cTokens = completionTokens ?? 0;
+  const inputCredits = pTokens / 1000;
+  const outputCredits = cTokens / 500;
+  return Number((inputCredits + outputCredits).toFixed(4));
+}
 
 /**
  * Sanitizes input for AI prompts to prevent prompt injection 

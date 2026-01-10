@@ -16,7 +16,7 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  // Fetch user data
+  // Fetch user data with tier and statistics
   const user = await db.user.findUnique({
     where: { id: session.user.id },
     select: {
@@ -29,14 +29,41 @@ export default async function SettingsPage() {
       image: true,
       aiCreditsUsed: true,
       aiCreditsLimit: true,
+      tier: true,
       emailVerified: true,
       accounts: {
         select: {
           provider: true,
         }
+      },
+      projects: {
+        where: {
+          status: { not: "COMPLETED" }
+        },
+        select: {
+          id: true
+        }
+      },
+      tasks: {
+        where: {
+          status: "COMPLETED"
+        },
+        select: {
+          id: true
+        }
+      },
+      conversations: {
+        select: {
+          feature: true
+        }
       }
     }
   });
+
+  // Calculate stats
+  const activeProjectsCount = user?.projects?.length || 0;
+  const uniqueFeaturesUsed = new Set(user?.conversations?.map(c => c.feature) || []).size;
+  const tasksCompleted = user?.tasks?.length || 0;
 
   // Fetch notification preferences
   const notificationPreferences = await db.notificationPreference.findUnique({
@@ -67,6 +94,10 @@ export default async function SettingsPage() {
           aiCreditsUsed={user?.aiCreditsUsed || 0}
           aiCreditsLimit={user?.aiCreditsLimit || 100}
           userId={session.user.id}
+          tier={user?.tier || "FREE"}
+          activeProjectsCount={activeProjectsCount}
+          uniqueFeaturesUsed={uniqueFeaturesUsed}
+          tasksCompleted={tasksCompleted}
         />
         <NotificationSettings
           preferences={notificationPreferences}

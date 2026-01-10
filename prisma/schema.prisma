@@ -46,8 +46,8 @@ model User {
   year          String?
   role          Role      @default(STUDENT)
   tier          Tier      @default(FREE)
-  aiCreditsUsed Int       @default(0)
-  aiCreditsLimit Int       @default(100)
+  aiCreditsUsed Float       @default(0)
+  aiCreditsLimit Float       @default(100)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
@@ -229,13 +229,14 @@ enum Priority {
 }
 
 enum AIFeature {
-  IDEA_GENERATOR
-  RESEARCH_ASSISTANT
-  PROPOSAL_WRITER
-  METHODOLOGY_ADVISOR
-  PROGRESS_ANALYZER
-  WRITING_ASSISTANT
-}
+   IDEA_GENERATOR
+   RESEARCH_ASSISTANT
+   PROPOSAL_WRITER
+   METHODOLOGY_ADVISOR
+   PROGRESS_ANALYZER
+   WRITING_ASSISTANT
+   CHAT
+ }
 
 enum TeamRole {
   OWNER

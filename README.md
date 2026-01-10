@@ -153,7 +153,7 @@ nexus/
 │   │   └── ui/              # Reusable UI components (Button, etc.)
 │   ├── emails/              # Email templates for notifications
 │   ├── lib/                 # Utility functions and libraries
-│   │   ├── ai.ts            # AI integration with Google Gemini
+│   │   ├── ai.ts            # AI integration with Mistral AI
 │   │   ├── auth.ts          # Authentication configuration
 │   │   ├── db.ts            # Database connection
 │   │   ├── email-queue.ts   # Email queue management

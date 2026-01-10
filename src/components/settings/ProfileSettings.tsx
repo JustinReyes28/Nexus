@@ -43,6 +43,7 @@ export default function ProfileSettings({ user, session }: ProfileSettingsProps)
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.accessToken || ''}` // Include token if available
         },
         body: JSON.stringify({
           name: formData.name,
@@ -53,13 +54,17 @@ export default function ProfileSettings({ user, session }: ProfileSettingsProps)
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update profile");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update profile");
       }
 
+      const result = await response.json();
+      
       // Simple toast notification fallback
-      alert("Profile updated successfully!");
+      alert(result.message || "Profile updated successfully!");
       router.refresh();
     } catch (error) {
+      console.error("Update profile error:", error);
       alert(error instanceof Error ? error.message : "Failed to update profile");
     } finally {
       setIsLoading(false);

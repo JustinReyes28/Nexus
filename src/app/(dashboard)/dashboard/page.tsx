@@ -141,7 +141,7 @@ export default async function DashboardPage() {
                       <p className="text-gray-500 text-sm max-w-[320px] font-body">The Guide can help you brainstorm actionable topics based on your research interests.</p>
                    </div>
                 </div>
-                <Link href="/ai/ideas">
+                <Link href="/capstone-assistant">
                   <Button variant="ai" className="-rotate-1 hover:rotate-0">
                     Summon Brainstormer
                   </Button>
