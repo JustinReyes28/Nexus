@@ -11,37 +11,54 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, institution, program, year } = await req.json();
+    const { name, institution, program, year, tier } = await req.json();
 
     // Validate input - ensure we only accept the expected fields
     if (
-      typeof name !== 'string' ||
-      typeof institution !== 'string' ||
-      typeof program !== 'string' ||
-      typeof year !== 'string'
+      (name !== undefined && typeof name !== 'string') ||
+      (institution !== undefined && typeof institution !== 'string') ||
+      (program !== undefined && typeof program !== 'string') ||
+      (year !== undefined && typeof year !== 'string') ||
+      (tier !== undefined && typeof tier !== 'string')
     ) {
       return NextResponse.json({ error: "Invalid input types" }, { status: 400 });
     }
 
     // Optional: Add length validation for security
     if (
-      name.length > 100 ||
-      institution.length > 100 ||
-      program.length > 100 ||
-      year.length > 20
+      (name && name.length > 100) ||
+      (institution && institution.length > 100) ||
+      (program && program.length > 100) ||
+      (year && year.length > 20) ||
+      (tier && !['FREE', 'PREMIUM'].includes(tier))
     ) {
       return NextResponse.json({ error: "Input fields too long" }, { status: 400 });
     }
 
     // Update user profile
+    const updateData: any = {};
+    
+    if (name !== undefined) updateData.name = name;
+    if (institution !== undefined) updateData.institution = institution;
+    if (program !== undefined) updateData.program = program;
+    if (year !== undefined) updateData.year = year;
+    
+    // If tier is being updated, also update the credit limit
+    if (tier !== undefined) {
+      updateData.tier = tier;
+      
+      // Dynamically import the credit limits module
+      const creditLimitsModule = await import('@/lib/creditLimits');
+      const getCreditLimitForTier = creditLimitsModule.getCreditLimitForTier;
+      updateData.aiCreditsLimit = getCreditLimitForTier(tier as any);
+      
+      // Reset credits used when changing tiers
+      updateData.aiCreditsUsed = 0;
+    }
+
     const updatedUser = await db.user.update({
       where: { id: session.user.id },
-      data: {
-        name,
-        institution,
-        program,
-        year,
-      },
+      data: updateData,
     });
 
     // Return success response with updated user data

@@ -23,11 +23,17 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Import credit limits to set appropriate default
+    const creditLimitsModule = await import('@/lib/creditLimits');
+    const getCreditLimitForTier = creditLimitsModule.getCreditLimitForTier;
+    
     const user = await db.user.create({
       data: {
         email,
         name,
         password: hashedPassword,
+        tier: 'FREE', // Default tier for new users
+        aiCreditsLimit: getCreditLimitForTier('FREE'), // Set appropriate credit limit based on tier
       },
     });
 

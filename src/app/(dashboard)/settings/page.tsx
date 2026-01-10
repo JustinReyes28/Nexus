@@ -7,6 +7,7 @@ import SecuritySettings from "@/components/settings/SecuritySettings";
 import AISettings from "@/components/settings/AISettings";
 import NotificationSettings from "@/components/settings/NotificationSettings";
 import DataManagement from "@/components/settings/DataManagement";
+import BillingSettings from "@/components/settings/BillingSettings";
 import { WavyUnderline } from "@/components/ui/HandDrawnElements";
 
 export default async function SettingsPage() {
@@ -99,6 +100,7 @@ export default async function SettingsPage() {
           uniqueFeaturesUsed={uniqueFeaturesUsed}
           tasksCompleted={tasksCompleted}
         />
+        <BillingSettings />
         <NotificationSettings
           preferences={notificationPreferences}
           userId={session.user.id}

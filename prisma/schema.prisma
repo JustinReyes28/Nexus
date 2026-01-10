@@ -47,7 +47,8 @@ model User {
   role          Role      @default(STUDENT)
   tier          Tier      @default(FREE)
   aiCreditsUsed Float       @default(0)
-  aiCreditsLimit Float       @default(100)
+  // Default is 25 for FREE users, updated to 1000 for PREMIUM users via application logic
+  aiCreditsLimit Float       @default(25)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   

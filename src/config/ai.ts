@@ -29,7 +29,7 @@ export const AI_TIERS = {
     features: [
       "Advanced Research Assistant",
       "Priority Writing Support",
-      "Unlimited Idea Generation",
+      "Enhanced Idea Generation (1000 credits)",
       "Deep Progress Analytics",
       "Custom Methodology Advice",
     ],

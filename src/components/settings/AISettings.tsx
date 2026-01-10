@@ -34,8 +34,20 @@ export default function AISettings({
   const handleUpgrade = async () => {
     setIsLoading(true);
     try {
-      // This would typically redirect to a premium upgrade flow
-      alert("Premium upgrade would be handled by payment flow");
+      const response = await fetch('/api/user/upgrade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upgrade account');
+      }
+
+      // Refresh the page or update the UI to reflect the new tier
+      window.location.reload(); // Simple approach to refresh the UI with new tier info
     } catch (error) {
       alert(error instanceof Error ? error.message : "Failed to process upgrade");
     } finally {
@@ -82,29 +94,27 @@ export default function AISettings({
               <p className="text-sm text-gray-500">{AI_SETTINGS_LABELS.monthlyCredits}</p>
               <p className="font-semibold text-gray-800">
                 {tier === "PREMIUM" ? (
-                  <span className="text-teal">Unlimited</span>
+                  `${aiCreditsUsed} / ${aiCreditsLimit} credits used`
                 ) : (
                   `${aiCreditsUsed} / ${aiCreditsLimit} credits used`
                 )}
               </p>
             </div>
 
-            {tier !== "PREMIUM" && (
-              <>
-                <div className="w-full bg-gray-100 rounded-full h-3 mb-2 overflow-hidden">
-                  <div
-                    className="bg-teal h-full rounded-full animate-pulse-organic"
-                    style={{ width: `${usagePercentage}%` }}
-                  />
-                </div>
+            <>
+              <div className="w-full bg-gray-100 rounded-full h-3 mb-2 overflow-hidden">
+                <div
+                  className="bg-teal h-full rounded-full animate-pulse-organic"
+                  style={{ width: `${usagePercentage}%` }}
+                />
+              </div>
 
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>0</span>
-                  <span>50</span>
-                  <span>100</span>
-                </div>
-              </>
-            )}
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>0</span>
+                <span>{Math.floor(aiCreditsLimit / 2)}</span>
+                <span>{aiCreditsLimit}</span>
+              </div>
+            </>
           </div>
         </div>
 
