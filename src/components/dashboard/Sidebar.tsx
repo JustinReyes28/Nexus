@@ -238,9 +238,11 @@ export default function Sidebar({ className }: { className?: string }) {
               <p className="text-xs font-heading font-bold text-gray-900 mb-3">
                 Ask The Guide
               </p>
-              <button className="w-full py-2 bg-teal text-white rounded-lg text-xs font-bold shadow-sm shadow-teal/20 hover:bg-teal/90 transition-colors">
-                Summon Guide
-              </button>
+              <Link href="/capstone-assistant" className="block w-full">
+                <button className="w-full py-2 bg-teal text-white rounded-lg text-xs font-bold shadow-sm shadow-teal/20 hover:bg-teal/90 transition-colors">
+                  Summon Guide
+                </button>
+              </Link>
             </>
            )}
         </div>
