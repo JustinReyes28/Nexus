@@ -84,7 +84,7 @@ _What Nexus Offers_
 
 - **Next.js API Routes** for server-side logic
 - **MongoDB** with **Prisma ORM** for database management
-- **Google AI Studio API** (Gemini 1.5 Flash) for AI features
+- **Mistral AI API** (ministral-14b-2512) for AI features
 - **NextAuth.js** for authentication
 
 ### Authentication
@@ -175,7 +175,7 @@ nexus/
 - Node.js 18+
 - npm, yarn, or pnpm
 - MongoDB Atlas account
-- Google AI Studio API key
+- Mistral AI API key
 - Google OAuth credentials (for Google login)
 - Vercel account (for deployment)
 
@@ -232,8 +232,8 @@ Create a `.env.local` file with the following variables:
 # Database
 DATABASE_URL=mongodb+srv://<username>:<password>@cluster.mongodb.net/nexus
 
-# Google AI
-GOOGLE_AI_API_KEY=your-api-key
+# Mistral AI
+MISTRAL_API_KEY=your-api-key
 
 # Google OAuth (for NextAuth)
 GOOGLE_CLIENT_ID=your-google-client-id

@@ -8,6 +8,7 @@ import { ideaGeneratorSchema } from "@/lib/validations/ai";
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("[AI_IDEAS_START] Request received");
     // 1. Authentication Check
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -36,13 +37,16 @@ export async function POST(req: NextRequest) {
 
     // 4. Input Validation
     const body = await req.json();
+    console.log("[AI_IDEAS_BODY]", JSON.stringify(body, null, 2));
     const validatedData = ideaGeneratorSchema.safeParse(body);
 
     if (!validatedData.success) {
+      console.log("[AI_IDEAS_VALIDATION_ERROR]", validatedData.error.errors);
       return NextResponse.json({ error: validatedData.error.errors[0].message }, { status: 400 });
     }
 
     const { discipline, topic, constraints } = validatedData.data;
+    console.log("[AI_IDEAS_VALIDATED]", { discipline, topic, constraints });
 
     // 5. Generate Prompt
     const sanitizedTopic = sanitizePrompt(topic);
@@ -61,8 +65,10 @@ export async function POST(req: NextRequest) {
     `;
 
     // 6. Call AI (Non-streaming for now to track tokens easily, will implement streaming in components)
+    console.log("[AI_IDEAS_PROMPT]", prompt);
     const result = await model.generateContent(prompt);
     const responseText = result.response.text();
+    console.log("[AI_IDEAS_RESPONSE]", responseText);
 
     const tokensUsed = estimateTokens(prompt + responseText);
 
@@ -86,6 +92,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ response: responseText });
   } catch (error) {
     console.error("[AI_IDEAS_ERROR]", error);
+
+    if (error instanceof Error) {
+      if (error.message.includes("API key not valid") || error.message.includes("Invalid API key")) {
+        return NextResponse.json({ error: "Invalid AI API configuration" }, { status: 500 });
+      } else if (error.message.includes("network") || error.message.includes("fetch")) {
+        return NextResponse.json({ error: "AI service unavailable. Please try again later." }, { status: 503 });
+      }
+    }
+
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

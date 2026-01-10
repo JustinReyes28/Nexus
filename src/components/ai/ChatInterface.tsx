@@ -20,6 +20,7 @@ interface ChatInterfaceProps {
   initialMessage?: string;
   onResponse?: (response: string) => void;
   additionalData?: Record<string, any>;
+  discipline?: string;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -28,6 +29,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   initialMessage,
   onResponse,
   additionalData = {},
+  discipline,
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -59,19 +61,31 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...additionalData, topic: input, content: input, problemStatement: input }),
+        body: JSON.stringify({ ...additionalData, topic: input, ...(discipline && { discipline }) }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to get response");
+        const errorMessage = data.error || "Failed to get response";
+        if (response.status === 400) {
+          throw new Error(`Input validation error: ${errorMessage}`);
+        } else if (response.status === 401) {
+          throw new Error("Authentication required. Please log in.");
+        } else if (response.status === 403) {
+          throw new Error("AI credit limit reached. Please upgrade your plan.");
+        } else if (response.status === 429) {
+          throw new Error("Too many requests. Please try again later.");
+        } else {
+          throw new Error(errorMessage);
+        }
       }
 
       const botMessage: Message = { role: "bot", content: data.response };
       setMessages((prev: Message[]) => [...prev, botMessage]);
       if (onResponse) onResponse(data.response);
     } catch (error: any) {
+      console.error("ChatInterface error:", error);
       setMessages((prev: Message[]) => [
         ...prev,
         { role: "bot", content: `**The Guide:** Oops! Something went wrong: *${error.message}*. Let's try again?` },

@@ -16,6 +16,7 @@ import {
   X,
   PanelLeftClose,
   PanelLeftOpen,
+  MessageCircle,
 } from "lucide-react";
 import { WavyUnderline } from "@/components/ui/HandDrawnElements";
 
@@ -24,6 +25,7 @@ const navItems = [
   { label: "My Drafts", icon: FileText, href: "/drafts" },
   { label: "Research", icon: Search, href: "/research" },
   { label: "Schedule", icon: Calendar, href: "/schedule" },
+  { label: "Chat Mode", icon: MessageCircle, href: "/chat" },
 ];
 
 export default function Sidebar({ className }: { className?: string }) {
