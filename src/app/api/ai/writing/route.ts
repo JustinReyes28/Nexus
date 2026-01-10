@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { model, sanitizePrompt, estimateTokens, calculateCredits } from "@/lib/ai";
 import { rateLimiter } from "@/lib/rate-limit";
 import { writingSchema } from "@/lib/validations/ai";
+import { getConversationExpirationDate, CONVERSATION_RETENTION_POLICY } from "@/config/ai";
 
 export async function POST(req: NextRequest) {
   try {
@@ -55,6 +56,12 @@ export async function POST(req: NextRequest) {
       ? calculateCredits(usage.promptTokens, usage.completionTokens)
       : calculateCredits(estimateTokens(prompt), estimateTokens(responseText));
 
+    // 7. Get user tier for retention policy
+    const userWithTier = await db.user.findUnique({
+      where: { id: session.user.id as string },
+      select: { tier: true },
+    });
+
     await db.$transaction([
       db.user.update({ where: { id: session.user.id }, data: { aiCreditsUsed: { increment: creditsToDeduct } } }),
       db.aIConversation.create({
@@ -64,6 +71,7 @@ export async function POST(req: NextRequest) {
           response: responseText,
           tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
           userId: session.user.id,
+          expiresAt: getConversationExpirationDate(userWithTier?.tier || 'FREE'),
         },
       }),
     ]);

@@ -160,12 +160,15 @@ model AIConversation {
   response    String
   tokensUsed  Int
   createdAt   DateTime  @default(now())
+  expiresAt   DateTime?  // TTL index for automatic cleanup, nullable to support existing data
   
   userId      String    @db.ObjectId
   user        User      @relation(fields: [userId], references: [id])
   
   projectId   String?   @db.ObjectId
   project     Project?  @relation(fields: [projectId], references: [id])
+
+  @@index([expiresAt]) // TTL index for automatic cleanup
 }
 
 model TeamMember {
