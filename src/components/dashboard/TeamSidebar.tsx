@@ -3,20 +3,78 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { MessageCircle, Sparkles, X, PanelLeftClose, PanelRightClose } from "lucide-react";
+import { useRouter } from "next/navigation";
 
-const teamMembers = [
-  { name: "Sarah", status: "online", image: null, initial: "S" },
-  { name: "James", status: "offline", image: null, initial: "J" },
-  { name: "Mia", status: "online", image: null, initial: "M" },
-];
+interface TeamMember {
+  id: string;
+  name: string;
+  status: string;
+  image: string | null;
+  initial: string;
+}
 
 export default function TeamSidebar({ className }: { className?: string }) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const handleStartChat = () => {
+    router.push('/chat');
+    setIsOpen(false); // Close the sidebar after navigating
+  };
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
   }, []);
+
+  // Type guard to validate API response
+  const isValidTeamMemberResponse = (data: unknown): data is TeamMember[] => {
+    if (!Array.isArray(data)) return false;
+    
+    return data.every(member =>
+      typeof member === 'object' &&
+      member !== null &&
+      typeof member.id === 'string' &&
+      typeof member.name === 'string' &&
+      typeof member.status === 'string' &&
+      (member.image === null || typeof member.image === 'string') &&
+      typeof member.initial === 'string'
+    );
+  };
+
+  // Fetch team members
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      try {
+        const response = await fetch('/api/team/members');
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (isValidTeamMemberResponse(data)) {
+            setTeamMembers(data);
+          } else {
+            console.error('Invalid team members data received from API');
+            setTeamMembers([]);
+          }
+        } else {
+          console.error('Failed to fetch team members:', response.statusText);
+          setTeamMembers([]);
+        }
+      } catch (error) {
+        console.error('Error fetching team members:', error);
+        setTeamMembers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isOpen) {
+      setLoading(true); // Reset loading state when opening
+      fetchTeamMembers();
+    }
+  }, [isOpen]);
 
   // Close on escape key
   useEffect(() => {
@@ -93,39 +151,52 @@ export default function TeamSidebar({ className }: { className?: string }) {
             The Team
           </h3>
           <div className="space-y-4">
-            {teamMembers.map((member) => (
-              <div
-                key={member.name}
-                className="flex items-center justify-between group cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <div
-                      className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2",
-                        member.status === "online"
-                          ? "border-sunny bg-white text-gray-900"
-                          : "border-gray-200 bg-gray-50 text-gray-400"
-                      )}
-                    >
-                      {member.initial}
-                    </div>
-                    <div
-                      className={cn(
-                        "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white",
-                        member.status === "online"
-                          ? "bg-sunny animate-pulse-organic"
-                          : "bg-gray-300"
-                      )}
-                    />
+            {loading ? (
+              <div className="flex flex-col space-y-3">
+                {[...Array(3)].map((_, index) => (
+                  <div key={index} className="flex items-center gap-3 animate-pulse">
+                    <div className="w-10 h-10 rounded-full bg-gray-200"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                   </div>
-                  <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
-                    {member.name}
-                  </span>
-                </div>
-                <MessageCircle className="w-4 h-4 text-gray-300 group-hover:text-crimson opacity-0 group-hover:opacity-100 transition-all" />
+                ))}
               </div>
-            ))}
+            ) : teamMembers.length > 0 ? (
+              teamMembers.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between group cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2",
+                          member.status === "online"
+                            ? "border-sunny bg-white text-gray-900"
+                            : "border-gray-200 bg-gray-50 text-gray-400"
+                        )}
+                      >
+                        {member.initial}
+                      </div>
+                      <div
+                        className={cn(
+                          "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white",
+                          member.status === "online"
+                            ? "bg-sunny animate-pulse-organic"
+                            : "bg-gray-300"
+                        )}
+                      />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">
+                      {member.name}
+                    </span>
+                  </div>
+                  <MessageCircle className="w-4 h-4 text-gray-300 group-hover:text-crimson opacity-0 group-hover:opacity-100 transition-all" />
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500 italic">No team members found</p>
+            )}
           </div>
         </div>
 
@@ -147,7 +218,10 @@ export default function TeamSidebar({ className }: { className?: string }) {
               "Ready whenever you are."
             </p>
 
-            <button className="flex items-center justify-center gap-2 w-full py-3 bg-white border-2 border-teal text-teal font-bold rounded-xl text-xs hover:bg-teal hover:text-white transition-all shadow-sm">
+            <button
+              onClick={handleStartChat}
+              className="flex items-center justify-center gap-2 w-full py-3 bg-white border-2 border-teal text-teal font-bold rounded-xl text-xs hover:bg-teal hover:text-white transition-all shadow-sm"
+            >
               <Sparkles className="w-3 h-3" />
               Start Chat
             </button>

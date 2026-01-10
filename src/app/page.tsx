@@ -69,7 +69,12 @@ export default function Home() {
               <div className="w-6 h-6 bg-crimson rounded rotate-3" />
               <span className="text-xl font-heading font-extrabold tracking-tighter text-gray-900">NEXUS</span>
            </div>
-           <p className="text-sm text-gray-400">© 2026 Nexus AI. All rights reserved. Human-centric by design.</p>
+           <div className="flex flex-col md:flex-row items-center gap-6">
+             <p className="text-sm text-gray-400">© 2026 Nexus AI. All rights reserved. Human-centric by design.</p>
+             <div className="flex gap-4">
+               <Link href="/privacy" className="text-sm text-gray-500 hover:text-crimson transition-colors">Privacy Policy</Link>
+             </div>
+           </div>
         </div>
       </footer>
     </main>

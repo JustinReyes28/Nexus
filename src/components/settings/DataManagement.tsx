@@ -183,6 +183,11 @@ export default function DataManagement({ userId }: DataManagementProps) {
               <span className="text-gray-500">Storage Used</span>
               <span className="font-semibold">Data not available</span>
             </div>
+            <div className="pt-3 mt-3 border-t border-gray-200">
+              <a href="/privacy" className="text-sm text-blue-600 hover:text-blue-800 underline">
+                View Privacy Policy
+              </a>
+            </div>
           </div>
         </div>
       </div>
