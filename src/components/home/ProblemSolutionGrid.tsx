@@ -6,10 +6,10 @@ import { HandDrawnArrow, Sparkle } from "@/components/ui/HandDrawnElements";
 
 const FeatureCard = ({ title, description, icon: Icon, isSolution }: any) => (
   <div className={cn(
-    "relative p-8 rounded-xl bg-white shadow-sm border-2 transition-all duration-300 group",
-    isSolution ? "border-teal/30 rotate-1 hover:rotate-0" : "border-gray-100 -rotate-1 hover:rotate-0",
-    "bg-paper"
-  )}>
+        "relative p-8 rounded-xl bg-white shadow-sm border-2 transition-all duration-300 group",
+        isSolution ? "border-teal/30 rotate-1 hover:rotate-0" : "border-yellow-400 -rotate-1 hover:rotate-0",
+        "bg-paper"
+      )}>
     <div className={cn(
       "w-12 h-12 rounded-lg flex items-center justify-center mb-6",
       isSolution ? "bg-teal/10 text-teal" : "bg-gray-100 text-gray-400"

@@ -145,6 +145,7 @@ export const IdeaGeneratorView: React.FC = () => {
           <div className="lg:col-span-8">
             <ChatInterface 
               endpoint="/api/ai/ideas"
+              feature="IDEA_GENERATOR"
               placeholder="Ask for more ideas or deeper validation..."
               initialMessage={`Hello! I've analyzed your interest in **${formData.topic}** within the **${formData.discipline}** field. Here are some high-potential capstone project ideas we can explore together...`}
               additionalData={formData}

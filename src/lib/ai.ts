@@ -14,7 +14,7 @@ export const model = {
         }
       ],
       maxTokens: 2048,
-      temperature: 0.7,
+      temperature: 0.9,
     });
 
     return {
@@ -35,7 +35,7 @@ export function calculateCredits(promptTokens: number | undefined, completionTok
   const pTokens = promptTokens ?? 0;
   const cTokens = completionTokens ?? 0;
   const inputCredits = pTokens / 1000;
-  const outputCredits = cTokens / 500;
+  const outputCredits = cTokens / 300;
   return Number((inputCredits + outputCredits).toFixed(4));
 }
 

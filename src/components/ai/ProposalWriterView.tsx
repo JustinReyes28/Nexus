@@ -144,6 +144,7 @@ export const ProposalWriterView: React.FC = () => {
           <div className="lg:col-span-8">
             <ChatInterface 
               endpoint="/api/ai/proposal"
+              feature="PROPOSAL_WRITER"
               placeholder="Ask for revisions or specific improvements..."
               initialMessage={`Great! I'm ready to help you craft a top-tier **${section}** for your proposal. I've analyzed your context. Let's start by structuring your thoughts into a clear, academic framework.`}
               additionalData={{ section, context }}

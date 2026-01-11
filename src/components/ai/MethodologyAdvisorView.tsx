@@ -165,6 +165,7 @@ export const MethodologyAdvisorView: React.FC = () => {
           <div className="lg:col-span-8">
             <ChatInterface 
               endpoint="/api/ai/methodology"
+              feature="METHODOLOGY_ADVISOR"
               placeholder="Ask about data collection, analysis, or tools..."
               initialMessage={`I've analyzed your **${formData.researchType}** approach for **${formData.discipline.replace("-", " ")}**. Based on your problem statement, I have some specific recommendations for your research design and data collection methods.`}
               additionalData={formData}

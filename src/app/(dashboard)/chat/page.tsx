@@ -21,6 +21,7 @@ export default function ChatModePage() {
         <div className="mt-8">
           <ChatInterface
             endpoint="/api/ai/chat"
+            feature="CHAT"
             placeholder="Ask The Guide anything about your project..."
             initialMessage="**The Guide:** Hello! I'm here to help with your capstone project. What would you like to discuss today?"
             additionalData={{ discipline: "general" }}

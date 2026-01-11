@@ -158,6 +158,7 @@ export const ProgressAnalyzerView: React.FC = () => {
           <div className="lg:col-span-8">
             <ChatInterface 
               endpoint="/api/ai/progress"
+              feature="PROGRESS_ANALYZER"
               placeholder="Ask for next steps or deadline checks..."
               initialMessage={`Analysis complete for **${selectedProject?.title}**. Based on your update, I've identified some core strengths and a few areas where we might need to adjust the pace. How would you like to proceed?`}
               additionalData={{ projectId: selectedProjectId, currentStatus }}

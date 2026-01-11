@@ -21,11 +21,11 @@ export const featureColors = {
     button: "bg-sunny hover:bg-sunny/90",
   },
   research: {
-    icon: "text-gray-600",
-    background: "bg-gray-100",
-    border: "border-gray-200",
-    hover: "hover:bg-gray-50",
-    button: "bg-gray-600 hover:bg-gray-700",
+    icon: "text-indigo-600",
+    background: "bg-indigo-50",
+    border: "border-indigo-100",
+    hover: "hover:bg-indigo-100/50",
+    button: "bg-indigo-600 hover:bg-indigo-700",
   },
 } as const;
 

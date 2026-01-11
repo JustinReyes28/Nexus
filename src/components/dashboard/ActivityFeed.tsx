@@ -47,14 +47,14 @@ export default function ActivityFeed({ activities }: ActivityFeedProps) {
   };
 
   return (
-    <div className="bg-paper p-6 rounded-3xl border-2 border-gray-100 shadow-xl relative overflow-hidden flex flex-col h-full">
+    <div className="bg-paper p-6 rounded-3xl border-2 border-yellow-400 shadow-xl relative overflow-hidden flex flex-col h-full">
       {/* Texture bg */}
       <div className="absolute inset-0 bg-paper opacity-50 pointer-events-none" />
       <div className="absolute inset-0 bg-grain opacity-10 pointer-events-none" />
       
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-8 border-b border-gray-100 border-dashed pb-4">
-          <h3 className="font-heading font-extrabold text-gray-900 text-lg">Project Pulsar</h3>
+          <h3 className="font-heading font-extrabold text-gray-900 text-lg">Chat Messages</h3>
           <div className="px-2 py-0.5 bg-sunny/20 border border-sunny/30 rounded-full">
              <span className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">Live Feed</span>
           </div>

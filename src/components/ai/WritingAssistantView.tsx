@@ -166,6 +166,7 @@ export const WritingAssistantView: React.FC = () => {
           <div className="lg:col-span-8">
             <ChatInterface 
               endpoint="/api/ai/writing"
+              feature="WRITING_ASSISTANT"
               placeholder="Ask for further refinements or alternatives..."
               initialMessage={`I've received your text and I'm applying **${style}** style enhancements with a focus on **${type}**. Here is the improved version...`}
               additionalData={{ content, style, type }}

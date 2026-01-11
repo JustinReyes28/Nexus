@@ -154,6 +154,7 @@ export const ResearchAssistantView: React.FC = () => {
           <div className="lg:col-span-8">
             <ChatInterface 
               endpoint="/api/ai/research"
+              feature="RESEARCH_ASSISTANT"
               placeholder="Ask for literature suggestions or summaries..."
               initialMessage={`Hello! I'm your Research Assistant. I've noted your interest in **${topic}**. Where should we start? I can suggest relevant papers, summarize key concepts, or help identify gaps in current research.`}
               additionalData={{ topic, focusAreas }}

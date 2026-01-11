@@ -84,7 +84,7 @@ _What Nexus Offers_
 
 - **Next.js API Routes** for server-side logic
 - **MongoDB** with **Prisma ORM** for database management
-- **Mistral AI API** (ministral-14b-2512) for AI features
+- **Mistral AI API** (ministral-3b-2512) for AI features
 - **NextAuth.js** for authentication
 
 ### Authentication

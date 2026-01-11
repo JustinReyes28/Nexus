@@ -63,7 +63,7 @@ export const AICompanionPreview = () => {
 
             <div className="space-y-6">
                {/* Chat Bubbles Mockup */}
-               <div className="flex gap-4">
+               <div className="flex flex-row-reverse gap-4">
                   <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 border border-gray-200">
                      <span className="text-xs font-bold">You</span>
                   </div>
@@ -72,7 +72,7 @@ export const AICompanionPreview = () => {
                   </div>
                </div>
 
-               <div className="flex flex-row-reverse gap-4">
+               <div className="flex gap-4">
                   <div className="w-10 h-10 rounded-full bg-teal flex items-center justify-center flex-shrink-0 shadow-md">
                      <span className="text-xs font-bold text-white">G</span>
                   </div>

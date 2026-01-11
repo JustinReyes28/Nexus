@@ -63,16 +63,29 @@ export const FeatureCard: React.FC<FeatureCardProps> = ({
         ...style,
       }}
       className={cn(
-        "group relative flex flex-col p-6 rounded-xl border bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2",
+        "group relative flex flex-col p-6 rounded-xl border bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2",
         colors.border,
+        variant === "management" && "border-sunny/40",
         onClick || href ? "cursor-pointer" : "",
         variant === "ai" && "hover:border-teal/50",
+        variant === "research" && "hover:border-indigo/50",
+        variant === "collaboration" && "hover:border-crimson/50",
+        variant === "management" && "hover:border-sunny/70 border-2",
         className
       )}
     >
-      {/* Background Glow for AI Variant */}
+      {/* Background Glow for different Variants */}
       {variant === "ai" && (
         <div className="absolute inset-0 bg-teal/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl -z-10 blur-xl" />
+      )}
+      {variant === "collaboration" && (
+        <div className="absolute inset-0 bg-crimson/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl -z-10 blur-xl" />
+      )}
+      {variant === "research" && (
+        <div className="absolute inset-0 bg-indigo/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl -z-10 blur-xl" />
+      )}
+      {variant === "management" && (
+        <div className="absolute inset-0 bg-sunny/5 opacity-100 group-hover:opacity-100 transition-opacity rounded-xl -z-10 blur-2xl" />
       )}
 
       {/* Card Header: Icon + Title */}
@@ -82,7 +95,10 @@ export const FeatureCard: React.FC<FeatureCardProps> = ({
             "flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 group-hover:scale-110",
             colors.background,
             colors.icon,
-            variant === "ai" && "animate-pulse-organic"
+            variant === "ai" && "animate-pulse-organic",
+            variant === "research" && "animate-pulse-organic",
+            variant === "collaboration" && "animate-pulse-organic",
+            variant === "management" && "animate-pulse-organic group-hover:bg-sunny/20 group-hover:shadow-md"
           )}
         >
           <Icon className="w-6 h-6" />

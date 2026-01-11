@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Loader2, Sparkles, Wand2, User } from "lucide-react";
+import { Send, Loader2, Sparkles, Wand2, User, History as HistoryIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import DOMPurify from "dompurify";
 import { TheGuide } from "./TheGuide";
+import { ChatHistoryPanel } from "./ChatHistoryPanel";
+import { AIFeature } from "@prisma/client";
 
 
 interface Message {
@@ -21,6 +23,7 @@ interface ChatInterfaceProps {
   onResponse?: (response: string) => void;
   additionalData?: Record<string, any>;
   discipline?: string;
+  feature?: AIFeature;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -30,10 +33,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onResponse,
   additionalData = {},
   discipline,
+  feature,
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,6 +47,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setMessages([{ role: "bot", content: initialMessage }]);
     }
   }, [initialMessage]);
+
+  // Exposed method to update messages externally if needed, or we can use another prop
+  // For now, let's add a way to set messages from parent
+  useEffect(() => {
+    if (additionalData?.historyMessages) {
+      setMessages(additionalData.historyMessages);
+    }
+  }, [additionalData?.historyMessages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -109,7 +123,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                <p className="text-[10px] text-teal font-bold uppercase tracking-widest">Always Active</p>
             </div>
          </div>
-         <Wand2 className="w-4 h-4 text-teal animate-sparkle" />
+         <div className="flex items-center gap-2">
+            {feature && (
+               <button
+                  type="button"
+                  onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                  className={cn(
+                     "p-2 rounded-xl transition-all duration-300",
+                     isHistoryOpen ? "bg-teal text-white shadow-lg shadow-teal/20" : "bg-gray-100 text-gray-400 hover:text-teal hover:bg-teal/5"
+                  )}
+                  title="View History"
+               >
+                  <HistoryIcon size={16} />
+               </button>
+            )}
+            <Wand2 className="w-4 h-4 text-teal animate-sparkle" />
+         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6 relative z-10">
@@ -182,6 +211,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           {isLoading ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
         </button>
       </form>
+
+      {feature && (
+        <ChatHistoryPanel
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          onSelect={(conv) => {
+            setActiveHistoryId(conv.id);
+            setMessages([
+              { role: "user", content: conv.prompt },
+              { role: "bot", content: conv.response }
+            ]);
+            setIsHistoryOpen(false);
+          }}
+          featureFilter={feature}
+          activeId={activeHistoryId}
+        />
+      )}
     </div>
   );
 };
