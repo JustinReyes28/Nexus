@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { ChatInterface } from "./ChatInterface";
+import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { Button } from "@/components/ui/Button";
-import { FlaskConical, Beaker, FileText, AlertTriangle, Sparkles } from "lucide-react";
+import { FlaskConical, Beaker, FileText, AlertTriangle, Sparkles, History } from "lucide-react";
 
 const RESEARCH_TYPES = [
   "Quantitative",
@@ -31,6 +32,19 @@ export const MethodologyAdvisorView: React.FC = () => {
     problemStatement: "",
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyMessages, setHistoryMessages] = useState<any[] | undefined>();
+  const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
+
+  const handleHistorySelect = (conv: any) => {
+    setActiveHistoryId(conv.id);
+    setHistoryMessages([
+      { role: "user", content: conv.prompt },
+      { role: "bot", content: conv.response }
+    ]);
+    setIsSubmitted(true);
+    setIsHistoryOpen(false);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +56,18 @@ export const MethodologyAdvisorView: React.FC = () => {
     <div className="space-y-10">
       {!isSubmitted ? (
         <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-2 relative">
+            <div className="absolute top-0 right-0">
+               <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsHistoryOpen(true)}
+                  className="text-xs text-gray-400 hover:text-purple-600 font-bold"
+                  leftIcon={<History size={14} />}
+               >
+                  History
+               </Button>
+            </div>
             <div className="w-16 h-16 bg-purple-500/10 text-purple-600 rounded-3xl flex items-center justify-center mx-auto -rotate-6">
               <FlaskConical size={32} />
             </div>
@@ -167,12 +192,21 @@ export const MethodologyAdvisorView: React.FC = () => {
               endpoint="/api/ai/methodology"
               feature="METHODOLOGY_ADVISOR"
               placeholder="Ask about data collection, analysis, or tools..."
-              initialMessage={`I've analyzed your **${formData.researchType}** approach for **${formData.discipline.replace("-", " ")}**. Based on your problem statement, I have some specific recommendations for your research design and data collection methods.`}
-              additionalData={formData}
+              submitOnMount={true}
+              initialInput={formData.problemStatement}
+              additionalData={{ ...formData, historyMessages }}
             />
           </div>
         </div>
       )}
+
+      <ChatHistoryPanel
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        onSelect={handleHistorySelect}
+        featureFilter="METHODOLOGY_ADVISOR"
+        activeId={activeHistoryId}
+      />
     </div>
   );
 };

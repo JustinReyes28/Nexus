@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { ChatInterface } from "./ChatInterface";
+import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { Button } from "@/components/ui/Button";
-import { FileEdit, ClipboardList, CheckCircle, Info, Sparkles } from "lucide-react";
+import { FileEdit, ClipboardList, CheckCircle, Info, Sparkles, History } from "lucide-react";
 
 const SECTIONS = [
   "Introduction",
@@ -19,6 +20,19 @@ export const ProposalWriterView: React.FC = () => {
   const [section, setSection] = useState("Introduction");
   const [context, setContext] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyMessages, setHistoryMessages] = useState<any[] | undefined>();
+  const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
+
+  const handleHistorySelect = (conv: any) => {
+    setActiveHistoryId(conv.id);
+    setHistoryMessages([
+      { role: "user", content: conv.prompt },
+      { role: "bot", content: conv.response }
+    ]);
+    setIsSubmitted(true);
+    setIsHistoryOpen(false);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +44,18 @@ export const ProposalWriterView: React.FC = () => {
     <div className="space-y-10">
       {!isSubmitted ? (
         <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-2 relative">
+             <div className="absolute top-0 right-0">
+               <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsHistoryOpen(true)}
+                  className="text-xs text-gray-400 hover:text-crimson font-bold"
+                  leftIcon={<History size={14} />}
+               >
+                  History
+               </Button>
+            </div>
             <div className="w-16 h-16 bg-crimson/10 text-crimson rounded-3xl flex items-center justify-center mx-auto rotate-6">
               <FileEdit size={32} />
             </div>
@@ -146,12 +171,21 @@ export const ProposalWriterView: React.FC = () => {
               endpoint="/api/ai/proposal"
               feature="PROPOSAL_WRITER"
               placeholder="Ask for revisions or specific improvements..."
-              initialMessage={`Great! I'm ready to help you craft a top-tier **${section}** for your proposal. I've analyzed your context. Let's start by structuring your thoughts into a clear, academic framework.`}
-              additionalData={{ section, context }}
+              submitOnMount={true}
+              initialInput={`Draft the ${section} section based on this context.`}
+              additionalData={{ section, context, historyMessages }}
             />
           </div>
         </div>
       )}
+
+      <ChatHistoryPanel
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        onSelect={handleHistorySelect}
+        featureFilter="PROPOSAL_WRITER"
+        activeId={activeHistoryId}
+      />
     </div>
   );
 };

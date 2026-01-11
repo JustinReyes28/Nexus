@@ -37,13 +37,13 @@ export const AI_TIERS = {
 };
 
 // Retention policy constants for chat history retention
-// FREE users: 1-day retention
+// FREE users: 14-day retention
 // PREMIUM users: 30-day retention
 export const CONVERSATION_RETENTION_POLICY = {
   FREE: {
-    days: 1,
-    milliseconds: 1 * 24 * 60 * 60 * 1000, // 1 day in ms
-    description: "Conversations retained for 1 day for FREE users"
+    days: 14,
+    milliseconds: 14 * 24 * 60 * 60 * 1000, // 14 days in ms
+    description: "Conversations retained for 14 days for FREE users"
   },
   PREMIUM: {
     days: 30,

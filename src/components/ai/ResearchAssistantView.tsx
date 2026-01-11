@@ -2,14 +2,28 @@
 
 import React, { useState } from "react";
 import { ChatInterface } from "./ChatInterface";
+import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { Button } from "@/components/ui/Button";
-import { BookOpen, Search, Tags, Beaker, Quote, Sparkles } from "lucide-react";
+import { BookOpen, Search, Tags, Beaker, Quote, Sparkles, History } from "lucide-react";
 
 export const ResearchAssistantView: React.FC = () => {
   const [topic, setTopic] = useState("");
   const [focusArea, setFocusArea] = useState("");
   const [focusAreas, setFocusAreas] = useState<string[]>([]);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyMessages, setHistoryMessages] = useState<any[] | undefined>();
+  const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
+
+  const handleHistorySelect = (conv: any) => {
+    setActiveHistoryId(conv.id);
+    setHistoryMessages([
+      { role: "user", content: conv.prompt },
+      { role: "bot", content: conv.response }
+    ]);
+    setIsSubmitted(true);
+    setIsHistoryOpen(false);
+  };
 
   const handleAddFocusArea = () => {
     if (focusArea.trim() && !focusAreas.includes(focusArea.trim())) {
@@ -32,7 +46,18 @@ export const ResearchAssistantView: React.FC = () => {
     <div className="space-y-10">
       {!isSubmitted ? (
         <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-2 relative">
+            <div className="absolute top-0 right-0">
+               <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsHistoryOpen(true)}
+                  className="text-xs text-gray-400 hover:text-blue-500 font-bold"
+                  leftIcon={<History size={14} />}
+               >
+                  History
+               </Button>
+            </div>
             <div className="w-16 h-16 bg-blue-500/10 text-blue-500 rounded-3xl flex items-center justify-center mx-auto -rotate-3">
               <BookOpen size={32} />
             </div>
@@ -156,12 +181,21 @@ export const ResearchAssistantView: React.FC = () => {
               endpoint="/api/ai/research"
               feature="RESEARCH_ASSISTANT"
               placeholder="Ask for literature suggestions or summaries..."
-              initialMessage={`Hello! I'm your Research Assistant. I've noted your interest in **${topic}**. Where should we start? I can suggest relevant papers, summarize key concepts, or help identify gaps in current research.`}
-              additionalData={{ topic, focusAreas }}
+              submitOnMount={true}
+              initialInput={topic}
+              additionalData={{ topic, focusAreas, historyMessages }}
             />
           </div>
         </div>
       )}
+
+      <ChatHistoryPanel
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        onSelect={handleHistorySelect}
+        featureFilter="RESEARCH_ASSISTANT"
+        activeId={activeHistoryId}
+      />
     </div>
   );
 };

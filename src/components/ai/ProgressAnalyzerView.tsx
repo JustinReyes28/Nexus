@@ -2,14 +2,28 @@
 
 import React, { useState, useEffect } from "react";
 import { ChatInterface } from "./ChatInterface";
+import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { Button } from "@/components/ui/Button";
-import { TrendingUp, Activity, CheckCircle2, Clock, AlertCircle, Sparkles } from "lucide-react";
+import { TrendingUp, Activity, CheckCircle2, Clock, AlertCircle, Sparkles, History } from "lucide-react";
 
 export const ProgressAnalyzerView: React.FC = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [currentStatus, setCurrentStatus] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyMessages, setHistoryMessages] = useState<any[] | undefined>();
+  const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
+
+  const handleHistorySelect = (conv: any) => {
+    setActiveHistoryId(conv.id);
+    setHistoryMessages([
+      { role: "user", content: conv.prompt },
+      { role: "bot", content: conv.response }
+    ]);
+    setIsSubmitted(true);
+    setIsHistoryOpen(false);
+  };
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
 
   useEffect(() => {
@@ -42,7 +56,18 @@ export const ProgressAnalyzerView: React.FC = () => {
     <div className="space-y-10">
       {!isSubmitted ? (
         <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-2 relative">
+            <div className="absolute top-0 right-0">
+               <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsHistoryOpen(true)}
+                  className="text-xs text-gray-400 hover:text-teal font-bold"
+                  leftIcon={<History size={14} />}
+               >
+                  History
+               </Button>
+            </div>
             <div className="w-16 h-16 bg-teal/10 text-teal rounded-3xl flex items-center justify-center mx-auto rotate-3">
               <Activity size={32} />
             </div>
@@ -160,12 +185,21 @@ export const ProgressAnalyzerView: React.FC = () => {
               endpoint="/api/ai/progress"
               feature="PROGRESS_ANALYZER"
               placeholder="Ask for next steps or deadline checks..."
-              initialMessage={`Analysis complete for **${selectedProject?.title}**. Based on your update, I've identified some core strengths and a few areas where we might need to adjust the pace. How would you like to proceed?`}
-              additionalData={{ projectId: selectedProjectId, currentStatus }}
+              submitOnMount={true}
+              initialInput={`Analyze the progress for ${selectedProject?.title}.`}
+              additionalData={{ projectId: selectedProjectId, currentStatus, historyMessages }}
             />
           </div>
         </div>
       )}
+
+      <ChatHistoryPanel
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        onSelect={handleHistorySelect}
+        featureFilter="PROGRESS_ANALYZER"
+        activeId={activeHistoryId}
+      />
     </div>
   );
 };

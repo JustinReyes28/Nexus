@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { ChatInterface } from "./ChatInterface";
+import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { Button } from "@/components/ui/Button";
-import { Sparkles, Brain, Target, ShieldCheck } from "lucide-react";
+import { Sparkles, Brain, Target, ShieldCheck, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DISCIPLINES = [
@@ -25,6 +26,19 @@ export const IdeaGeneratorView: React.FC = () => {
     constraints: "",
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyMessages, setHistoryMessages] = useState<any[] | undefined>();
+  const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
+
+  const handleHistorySelect = (conv: any) => {
+    setActiveHistoryId(conv.id);
+    setHistoryMessages([
+      { role: "user", content: conv.prompt },
+      { role: "bot", content: conv.response }
+    ]);
+    setIsSubmitted(true);
+    setIsHistoryOpen(false);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +50,18 @@ export const IdeaGeneratorView: React.FC = () => {
     <div className="space-y-10">
       {!isSubmitted ? (
         <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-2 relative">
+            <div className="absolute top-0 right-0">
+               <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsHistoryOpen(true)}
+                  className="text-xs text-gray-400 hover:text-teal font-bold"
+                  leftIcon={<History size={14} />}
+               >
+                  History
+               </Button>
+            </div>
             <div className="w-16 h-16 bg-sunny/10 text-sunny rounded-3xl flex items-center justify-center mx-auto rotate-3 group-hover:rotate-0 transition-transform">
               <Brain size={32} />
             </div>
@@ -147,12 +172,21 @@ export const IdeaGeneratorView: React.FC = () => {
               endpoint="/api/ai/ideas"
               feature="IDEA_GENERATOR"
               placeholder="Ask for more ideas or deeper validation..."
-              initialMessage={`Hello! I've analyzed your interest in **${formData.topic}** within the **${formData.discipline}** field. Here are some high-potential capstone project ideas we can explore together...`}
-              additionalData={formData}
+              submitOnMount={true}
+              initialInput={formData.topic}
+              additionalData={{ ...formData, historyMessages }}
             />
           </div>
         </div>
       )}
+
+      <ChatHistoryPanel
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        onSelect={handleHistorySelect}
+        featureFilter="IDEA_GENERATOR"
+        activeId={activeHistoryId}
+      />
     </div>
   );
 };

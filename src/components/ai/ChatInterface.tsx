@@ -24,6 +24,8 @@ interface ChatInterfaceProps {
   additionalData?: Record<string, any>;
   discipline?: string;
   feature?: AIFeature;
+  submitOnMount?: boolean;
+  initialInput?: string;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -34,6 +36,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   additionalData = {},
   discipline,
   feature,
+  submitOnMount = false,
+  initialInput = "",
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -41,12 +45,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasAutoSubmitted = useRef(false);
 
   useEffect(() => {
-    if (initialMessage && messages.length === 0) {
+    if (initialMessage && messages.length === 0 && !submitOnMount) {
       setMessages([{ role: "bot", content: initialMessage }]);
     }
-  }, [initialMessage]);
+  }, [initialMessage, submitOnMount]);
 
   // Exposed method to update messages externally if needed, or we can use another prop
   // For now, let's add a way to set messages from parent
@@ -62,11 +67,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   useEffect(scrollToBottom, [messages]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isLoading) return;
 
-    const userMessage: Message = { role: "user", content: input };
+    const userMessage: Message = { role: "user", content: text };
     setMessages((prev: Message[]) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
@@ -75,7 +79,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...additionalData, topic: input, ...(discipline && { discipline }) }),
+        body: JSON.stringify({ ...additionalData, topic: text, ...(discipline && { discipline }) }),
       });
 
       const data = await response.json();
@@ -108,6 +112,19 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setIsLoading(false);
     }
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendMessage(input);
+  };
+
+  // Handle auto-submit on mount
+  useEffect(() => {
+    if (submitOnMount && initialInput && !hasAutoSubmitted.current) {
+      hasAutoSubmitted.current = true;
+      sendMessage(initialInput);
+    }
+  }, [submitOnMount, initialInput]);
 
   return (
     <div className="flex flex-col h-[600px] border-2 border-gray-100 rounded-2xl bg-white shadow-xl shadow-gray-200/50 overflow-hidden relative">

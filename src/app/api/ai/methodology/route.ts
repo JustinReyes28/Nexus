@@ -117,43 +117,39 @@ export async function POST(req: NextRequest) {
       ? calculateCredits(usage.promptTokens, usage.completionTokens)
       : calculateCredits(estimateTokens(prompt), estimateTokens(responseText));
 
-    // Perform credit check and increment in a transaction
+    // Perform credit check and increment sequentially
     try {
-      await db.$transaction(async (tx) => {
-        // First check if user still has credits (extra safety)
-        const user = await tx.user.findUnique({
-          where: { id: session.user.id },
-          select: { aiCreditsUsed: true, aiCreditsLimit: true }
-        });
-
-        if (!user || user.aiCreditsUsed >= user.aiCreditsLimit) {
-          throw new Error("Credit limit reached");
-        }
-
-        // Increment credits
-        await tx.user.update({
-          where: { id: session.user.id },
-          data: { aiCreditsUsed: { increment: creditsToDeduct } }
-        });
-
-        // Create the conversation record
-        return await tx.aIConversation.create({
-          data: {
-            feature: "METHODOLOGY_ADVISOR",
-            prompt: `Type: ${researchType} | Discipline: ${discipline} | Problem: ${problemStatement.substring(0, 50)}...`,
-            response: responseText,
-            tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
-            userId: session.user.id,
-          },
-        });
+      // First check if user still has credits (extra safety)
+      const user = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { aiCreditsUsed: true, aiCreditsLimit: true }
       });
-    } catch (transactionError) {
-      // If the transaction failed because no records were updated (credit limit reached), return 403
-      if ((transactionError as any).message?.includes?.('Credit limit reached')) {
+
+      if (!user || user.aiCreditsUsed >= user.aiCreditsLimit) {
         return NextResponse.json({ error: "AI credit limit reached" }, { status: 403 });
       }
-      // Re-throw other errors
-      throw transactionError;
+
+      // Increment credits
+      await db.user.update({
+        where: { id: session.user.id },
+        data: { aiCreditsUsed: { increment: creditsToDeduct } }
+      });
+
+      // Create the conversation record
+      await db.aIConversation.create({
+        data: {
+          feature: "METHODOLOGY_ADVISOR",
+          prompt: `Type: ${researchType} | Discipline: ${discipline} | Problem: ${problemStatement.substring(0, 50)}...`,
+          response: responseText,
+          tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
+          userId: session.user.id,
+        },
+      });
+    } catch (dbError) {
+      console.error("[AI_METHODOLOGY_DB_ERROR]", dbError);
+      // Even if saving failed, we might want to return the response if credits were already deducted, 
+      // but usually we want to know it failed.
+      throw dbError;
     }
 
     return NextResponse.json({ response: responseText });

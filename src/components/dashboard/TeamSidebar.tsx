@@ -103,7 +103,7 @@ export default function TeamSidebar({ className }: { className?: string }) {
       <button
         onClick={() => setIsOpen(true)}
         className={cn(
-          "fixed top-20 right-4 z-50 p-3 bg-white border-2 border-sunny",
+          "fixed top-50 right-4 z-50 p-3 bg-white border-2 border-sunny",
           "rounded-xl hover:border-sunny hover:shadow-md transition-all shadow-sm",
           "focus:outline-none focus:ring-2 focus:ring-sunny/20",
           isOpen && "opacity-0 pointer-events-none"

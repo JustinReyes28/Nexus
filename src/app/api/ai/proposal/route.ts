@@ -60,19 +60,17 @@ export async function POST(req: NextRequest) {
     });
 
     // 8. Deduct Credits & Log Interaction
-    await db.$transaction([
-      db.user.update({ where: { id: session.user.id }, data: { aiCreditsUsed: { increment: creditsToDeduct } } }),
-      db.aIConversation.create({
-        data: {
-          feature: "PROPOSAL_WRITER",
-          prompt: `Section: ${section} | Context: ${context.substring(0, 50)}...`,
-          response: responseText,
-          tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
-          userId: session.user.id,
-          expiresAt: getConversationExpirationDate(userWithTier?.tier || 'FREE'),
-        },
-      }),
-    ]);
+    await db.user.update({ where: { id: session.user.id }, data: { aiCreditsUsed: { increment: creditsToDeduct } } });
+    await db.aIConversation.create({
+      data: {
+        feature: "PROPOSAL_WRITER",
+        prompt: `Section: ${section} | Context: ${context.substring(0, 50)}...`,
+        response: responseText,
+        tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
+        userId: session.user.id,
+        expiresAt: getConversationExpirationDate(userWithTier?.tier || 'FREE'),
+      },
+    });
 
     return NextResponse.json({ response: responseText });
   } catch (error) {
