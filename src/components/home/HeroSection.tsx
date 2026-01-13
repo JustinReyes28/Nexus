@@ -81,7 +81,7 @@ export const HeroSection = () => {
                 </div>
                 
                 {/* Floating "Note" Card */}
-                <div className="absolute -bottom-4 -right-4 bg-white p-4 shadow-xl rounded-lg rotate-3 border-2 border-sunny/20 max-w-[180px] hidden md:block">
+                <div className="absolute -bottom-4 -right-4 bg-white p-4 shadow-xl rounded-lg rotate-3 border-2 border-sunny/20 max-w-[180px] hidden lg:block">
                    <p className="font-handwritten text-sm text-gray-800 leading-tight">
                      "The first step is always the hardest. Let's draft your intro today!"
                    </p>

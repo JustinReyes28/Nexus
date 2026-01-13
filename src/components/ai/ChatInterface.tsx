@@ -180,7 +180,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 "max-w-[85%] p-4 rounded-2xl text-sm font-body leading-relaxed relative",
                 msg.role === "user"
                   ? "bg-gray-50 text-gray-800 border-2 border-gray-100 rounded-tr-none hover:rotate-1 transition-transform"
-                  : "bg-teal text-white rounded-tl-none shadow-lg shadow-teal/10 -rotate-1 hover:rotate-0 transition-transform"
+                  : "bg-teal text-white rounded-tl-none shadow-lg shadow-teal/10 rotate-0"
               )}
             >
               {/* Speech bubble tail mockup */}
@@ -217,7 +217,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 bg-gray-50 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal/30 border-2 border-transparent focus:border-teal/20 transition-all"
+          className="flex-1 bg-gray-50 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:ring-2 focus:ring-teal/30 border-4 border-gray-300 focus:border-teal-500 transition-all"
           disabled={isLoading}
         />
         <button
