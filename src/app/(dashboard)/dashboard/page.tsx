@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { AISparkleIcon } from "@/components/ui/AISparkleIcon";
 import { WavyUnderline } from "@/components/ui/HandDrawnElements";
+import EmptyDashboardState from "@/components/dashboard/EmptyDashboardState";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -114,18 +115,7 @@ export default async function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="bg-white border-2 border-dashed rounded-2xl p-16 text-center flex flex-col items-center justify-center gap-6 group hover:border-sunny/50 transition-all bg-paper">
-              <div className="w-16 h-16 rounded-3xl bg-sunny/10 flex items-center justify-center text-sunny group-hover:bg-sunny/20 transition-all rotate-3">
-                <Plus className="w-8 h-8" />
-              </div>
-              <div className="max-w-[280px]">
-                <h3 className="text-xl font-heading font-extrabold text-gray-900">Your canvas is empty</h3>
-                <p className="text-sm text-gray-500 font-body italic mt-2">"Every masterpiece begins with a single research question."</p>
-              </div>
-              <Link href="/projects/new">
-                <Button variant="outline" size="sm">Start Drafting</Button>
-              </Link>
-            </div>
+            <EmptyDashboardState />
           )}
 
           {/* AI Quick Actions (Anti-AI feel) */}
