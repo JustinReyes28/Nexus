@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
     const responseText = result.response.text() as string;
     if (!responseText) {
       console.log("[AI_RESEARCH_DEBUG] Warning: responseText is empty");
+      throw new Error("Web search returned empty results. Please try again or disable web search.");
     }
     const usage = result.usage;
     console.log("[AI_RESEARCH_DEBUG] Usage:", JSON.stringify(usage));
@@ -85,8 +86,10 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ response: responseText });
-  } catch (error) {
-    console.error("[AI_RESEARCH_ERROR]", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  } catch (error: any) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorBody = error.body ? JSON.stringify(error.body) : "";
+    console.error("[AI_RESEARCH_ERROR]", errorMessage, errorBody);
+    return NextResponse.json({ error: errorMessage || "Internal Server Error" }, { status: 500 });
   }
 }

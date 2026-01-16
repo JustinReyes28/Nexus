@@ -145,7 +145,7 @@ export default function CapstoneAssistantPage() {
                       Unsure where to start?
                    </h3>
                    <p className="text-gray-600 font-body max-w-md md:max-w-lg leading-relaxed text-sm md:text-base">
-                      "Each tool above is designed for a specific phase. If you're just starting, the **Idea Generator** is your best friend. If you're polishing, the **Writing Assistant** will help you cross the finish line!"
+                      "Each tool above is designed for a specific phase. If you're just starting, the Idea Generator is your best friend. If you're polishing, the Writing Assistant will help you cross the finish line!"
                    </p>
                    <div className="flex flex-wrap gap-3 md:gap-4 justify-center">
                       <Button variant="ai" size="sm" onClick={() => setActiveTool("ideas")}>

@@ -5,32 +5,10 @@ const client = new Mistral({ apiKey });
 
 export const model = {
   generateContent: async (prompt: string) => {
-    const response = await client.chat.complete({
-      model: "ministral-3b-2512",
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        }
-      ],
-      maxTokens: 2048,
-      temperature: 0.9,
-    });
-
-    return {
-      response: {
-        text: () => response.choices[0].message?.content || ""
-      },
-      usage: response.usage
-    };
-  },
-  generateResearchContent: async (prompt: string, webSearchEnabled?: boolean) => {
+    console.log("[AI_SDK] Calling Mistral API with model: mistral-small-latest");
     try {
-      const selectedModel = webSearchEnabled ? "mistral-small-latest" : "ministral-3b-2512";
-      console.log(`[AI_SDK] Calling mistral with model: ${selectedModel}, webSearch: ${webSearchEnabled}`);
-      
       const response = await client.chat.complete({
-        model: selectedModel,
+        model: "mistral-small-latest",
         messages: [
           {
             role: "user",
@@ -38,13 +16,67 @@ export const model = {
           }
         ],
         maxTokens: 2048,
-        temperature: 0.7,
-        // Disable tools for a moment to verify if it resolves the JSON issue
-        // tools: webSearchEnabled ? [{ type: "web_search" }] : undefined,
-      } as any);
+        temperature: 0.9,
+      });
+      console.log("[AI_SDK_SUCCESS] Response received:", response);
 
-      const text = response.choices && response.choices.length > 0 
-        ? response.choices[0].message?.content || "" 
+      return {
+        response: {
+          text: () => response.choices[0].message?.content || ""
+        },
+        usage: response.usage
+      };
+    } catch (error) {
+      console.error("[AI_SDK_ERROR]", error);
+      throw error;
+    }
+  },
+  generateResearchContent: async (prompt: string, webSearchEnabled?: boolean) => {
+    try {
+      if (webSearchEnabled) {
+        console.log(`[AI_SDK] Creating web search agent with model: mistral-small-2506`);
+        // Use Agents API for web search as required by Mistral for this tool
+        const agent = await (client as any).beta.agents.create({
+          model: "mistral-small-2506",
+          description: "Agent able to search information over the web",
+          name: "Websearch Agent",
+          instructions: "You have the ability to perform web searches with `web_search` to find up-to-date information.",
+          tools: [{ type: "web_search" }],
+          completionArgs: {
+            temperature: 0.3,
+            topP: 0.95,
+          }
+        });
+
+        console.log(`[AI_SDK] Calling agent: ${agent.id}`);
+        const response = await (client as any).agents.complete({
+          agentId: agent.id,
+          messages: [{ role: "user", content: prompt }]
+        });
+
+        const text = response.choices && response.choices.length > 0
+          ? response.choices[0].message?.content || ""
+          : "";
+
+        return {
+          response: {
+            text: () => text
+          },
+          usage: response.usage
+        };
+      }
+
+      // Default path without web search
+      console.log(`[AI_SDK] Calling mistral with model: mistral-small-latest`);
+      const response = await client.chat.complete({
+        model: "mistral-small-latest",
+        messages: [{ role: "user", content: prompt }],
+        maxTokens: 2048,
+        temperature: 0.7,
+      });
+
+      const text = response.choices && response.choices.length > 0
+        ? response.choices[0].message?.content || ""
         : "";
 
       return {
@@ -53,9 +85,13 @@ export const model = {
         },
         usage: response.usage
       };
-    } catch (error) {
-      console.error("[MISTRAL_SDK_ERROR]", error);
-      throw error;
+    } catch (error: any) {
+      // Safe error logging to prevent TypeError: Cannot read properties of undefined (reading 'value')
+      // occurring during util.inspect(error)
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorBody = error.body ? JSON.stringify(error.body) : "";
+      console.error("[MISTRAL_SDK_ERROR]", errorMessage, errorBody);
+      throw new Error(errorMessage);
     }
   }
 };
