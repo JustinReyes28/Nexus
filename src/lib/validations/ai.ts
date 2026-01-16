@@ -9,6 +9,7 @@ export const ideaGeneratorSchema = z.object({
 export const researchSchema = z.object({
   topic: z.string().min(3, "Topic is required").max(500),
   focusAreas: z.array(z.string()).optional(),
+  webSearchEnabled: z.boolean().optional(),
 });
 
 export const proposalSchema = z.object({

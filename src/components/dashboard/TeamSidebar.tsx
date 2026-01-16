@@ -103,9 +103,9 @@ export default function TeamSidebar({ className }: { className?: string }) {
       <button
         onClick={() => setIsOpen(true)}
         className={cn(
-          "fixed top-50 right-4 z-50 p-3 bg-white border-2 border-sunny",
-          "rounded-xl hover:border-sunny hover:shadow-md transition-all shadow-sm",
-          "focus:outline-none focus:ring-2 focus:ring-sunny/20",
+          "fixed top-1/2 -translate-y-1/2 right-4 z-50 p-3 bg-white border-2 border-teal",
+          "rounded-xl hover:border-teal hover:shadow-md transition-all shadow-sm",
+          "focus:outline-none focus:ring-2 focus:ring-teal/20",
           isOpen && "opacity-0 pointer-events-none"
         )}
         aria-label="Open team sidebar"

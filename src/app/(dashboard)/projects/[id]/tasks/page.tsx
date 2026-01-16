@@ -205,7 +205,7 @@ export default function ProjectTasksPage() {
                     <TaskCard
                       key={task.id}
                       task={task}
-                      onEdit={(id) => { setEditingTask(tasks.find(t => t.id === id)); setShowForm(true); }}
+                      onEdit={(id) => { setEditingTask(tasks.find(t => t.id === id) || null); setShowForm(true); }}
                       onStatusChange={(id, newStatus) => {
                         setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus } : t));
                       }}
@@ -261,7 +261,7 @@ export default function ProjectTasksPage() {
         )}
 
         {view === "gantt" && (
-          <GanttChart tasks={tasks} />
+          <GanttChart tasks={tasks.map(t => ({ ...t, description: t.description ?? undefined }))} />
         )}
       </div>
 
@@ -270,7 +270,7 @@ export default function ProjectTasksPage() {
           initialData={editingTask ? {
             id: editingTask.id,
             title: editingTask.title,
-            description: editingTask.description,
+            description: editingTask.description ?? null,
             status: editingTask.status,
             priority: editingTask.priority,
             dueDate: editingTask.dueDate

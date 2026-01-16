@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+export const dynamic = 'force-dynamic';
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -9,6 +10,7 @@ import { getConversationExpirationDate, CONVERSATION_RETENTION_POLICY } from "@/
 
 export async function POST(req: NextRequest) {
   try {
+    console.log("[AI_RESEARCH_DEBUG] Starting request");
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -26,10 +28,14 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+    console.log("[AI_RESEARCH_DEBUG] Body received:", JSON.stringify(body));
     const validatedData = researchSchema.safeParse(body);
-    if (!validatedData.success) return NextResponse.json({ error: validatedData.error.errors[0].message }, { status: 400 });
+    if (!validatedData.success) {
+      console.log("[AI_RESEARCH_DEBUG] Validation failed:", validatedData.error.errors);
+      return NextResponse.json({ error: validatedData.error.errors[0].message }, { status: 400 });
+    }
 
-    const { topic, focusAreas } = validatedData.data;
+    const { topic, focusAreas, webSearchEnabled } = validatedData.data;
     const sanitizedTopic = sanitizePrompt(topic);
     
     const prompt = `
@@ -45,9 +51,15 @@ export async function POST(req: NextRequest) {
       Format in clean markdown.
     `;
 
-    const result = await model.generateContent(prompt);
+    console.log("[AI_RESEARCH_DEBUG] Generating content for topic:", sanitizedTopic, "webSearchEnabled:", webSearchEnabled);
+    const result = await model.generateResearchContent(prompt, webSearchEnabled);
+    console.log("[AI_RESEARCH_DEBUG] Content generation result received");
     const responseText = result.response.text() as string;
+    if (!responseText) {
+      console.log("[AI_RESEARCH_DEBUG] Warning: responseText is empty");
+    }
     const usage = result.usage;
+    console.log("[AI_RESEARCH_DEBUG] Usage:", JSON.stringify(usage));
 
     const creditsToDeduct = usage 
       ? calculateCredits(usage.promptTokens, usage.completionTokens)

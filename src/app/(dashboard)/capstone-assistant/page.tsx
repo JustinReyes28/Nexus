@@ -119,7 +119,7 @@ export default function CapstoneAssistantPage() {
 
       {!activeTool ? (
         /* Tool Selection Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 container px-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 container px-4 md:px-0">
           {TOOLS.map((tool, index) => (
             <ToolCard
               key={tool.id}
@@ -133,21 +133,21 @@ export default function CapstoneAssistantPage() {
           ))}
 
           {/* Guide Banner */}
-          <div className="lg:col-span-3 mt-12 bg-canvas border-2 border-teal/20 rounded-3xl p-10 relative overflow-hidden group shadow-xl shadow-teal/5">
-             <div className="absolute top-0 right-0 w-64 h-64 bg-teal/5 rounded-full -mr-20 -mt-20 blur-3xl" />
-             <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
+          <div className="col-span-1 md:col-span-2 lg:col-span-3 mt-12 bg-canvas border-2 border-teal/20 rounded-3xl p-6 md:p-10 relative overflow-hidden group shadow-xl shadow-teal/5">
+             <div className="absolute top-0 right-0 w-48 md:w-64 h-48 md:h-64 bg-teal/5 rounded-full -mr-16 md:-mr-20 -mt-16 md:-mt-20 blur-3xl" />
+             <div className="relative z-10 flex flex-col items-center gap-6 md:gap-10">
                 <div className="relative">
-                   <TheGuide size="lg" className="scale-110" />
+                   <TheGuide size="md" className="md:scale-110" />
                    <div className="absolute -inset-4 bg-teal/20 rounded-full blur-2xl -z-10 animate-pulse-organic" />
                 </div>
-                <div className="space-y-4 text-center md:text-left">
-                   <h3 className="text-2xl font-heading font-extrabold text-gray-900">
+                <div className="space-y-4 text-center">
+                   <h3 className="text-xl md:text-2xl font-heading font-extrabold text-gray-900">
                       Unsure where to start?
                    </h3>
-                   <p className="text-gray-600 font-body max-w-lg leading-relaxed">
+                   <p className="text-gray-600 font-body max-w-md md:max-w-lg leading-relaxed text-sm md:text-base">
                       "Each tool above is designed for a specific phase. If you're just starting, the **Idea Generator** is your best friend. If you're polishing, the **Writing Assistant** will help you cross the finish line!"
                    </p>
-                   <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+                   <div className="flex flex-wrap gap-3 md:gap-4 justify-center">
                       <Button variant="ai" size="sm" onClick={() => setActiveTool("ideas")}>
                          Brainstorm Ideas
                       </Button>

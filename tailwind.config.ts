@@ -52,7 +52,7 @@ const config: Config = {
         },
         crimson: "#B30909",
         sunny: "#FFD166",
-        teal: "#06D6A0",
+        teal: "#EF4444",
         canvas: "#F8F9FA",
       },
       fontFamily: {

@@ -23,6 +23,40 @@ export const model = {
       },
       usage: response.usage
     };
+  },
+  generateResearchContent: async (prompt: string, webSearchEnabled?: boolean) => {
+    try {
+      const selectedModel = webSearchEnabled ? "mistral-small-latest" : "ministral-3b-2512";
+      console.log(`[AI_SDK] Calling mistral with model: ${selectedModel}, webSearch: ${webSearchEnabled}`);
+      
+      const response = await client.chat.complete({
+        model: selectedModel,
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          }
+        ],
+        maxTokens: 2048,
+        temperature: 0.7,
+        // Disable tools for a moment to verify if it resolves the JSON issue
+        // tools: webSearchEnabled ? [{ type: "web_search" }] : undefined,
+      } as any);
+
+      const text = response.choices && response.choices.length > 0 
+        ? response.choices[0].message?.content || "" 
+        : "";
+
+      return {
+        response: {
+          text: () => text
+        },
+        usage: response.usage
+      };
+    } catch (error) {
+      console.error("[MISTRAL_SDK_ERROR]", error);
+      throw error;
+    }
   }
 };
 
