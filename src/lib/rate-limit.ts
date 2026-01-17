@@ -1,7 +1,7 @@
 export class RateLimiter {
   private static instance: RateLimiter;
   private requests: Map<string, { count: number; lastReset: number }>;
-  private readonly limit: number = 30;
+  private readonly limit: number = 5;
   private readonly interval: number = 60 * 1000; // 1 minute
 
   private constructor() {
