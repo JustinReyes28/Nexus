@@ -65,7 +65,7 @@ export default function ProjectDetailHeader({ project }: ProjectDetailHeaderProp
           </h1>
         </div>
 
-        <div className="flex items-center gap-4 bg-white p-3 rounded-xl shadow-sm border border-gray-100 -rotate-1">
+        <div className="flex items-center gap-4 bg-white p-3 rounded-xl shadow-sm border border-gray-100 -rotate-0">
           <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest px-2">
             <Calendar className="w-4 h-4 text-sunny" />
             <span>

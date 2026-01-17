@@ -79,7 +79,7 @@ export default function ProjectActions({ projectId, status, onEdit }: ProjectAct
         
         <div className="grid grid-cols-1 gap-3">
           <Link href={`/projects/${projectId}/tasks`}>
-            <Button variant="primary" className="w-full justify-start gap-3 h-12 rotate-1 hover:rotate-0">
+            <Button variant="primary" className="w-full justify-start gap-3 h-12 rotate-0">
                <ListTodo className="w-5 h-5" />
                View Task Board
                <ExternalLink className="w-4 h-4 ml-auto opacity-50" />
