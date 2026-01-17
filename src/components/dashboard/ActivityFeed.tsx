@@ -54,7 +54,7 @@ export default function ActivityFeed({ activities }: ActivityFeedProps) {
       
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-8 border-b border-gray-100 border-dashed pb-4">
-          <h3 className="font-heading font-extrabold text-gray-900 text-lg">Chat Messages</h3>
+          <h3 className="font-heading font-extrabold text-gray-900 text-lg">Activity Feed</h3>
           <div className="px-2 py-0.5 bg-sunny/20 border border-sunny/30 rounded-full">
              <span className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">Live Feed</span>
           </div>
