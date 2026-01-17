@@ -19,9 +19,12 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  // Fetch projects with task counts
-  const projects = await db.project.findMany({
-    where: { ownerId: session.user.id },
+  // Fetch active projects (excluding drafts)
+  const activeProjects = await db.project.findMany({
+    where: { 
+      ownerId: session.user.id,
+      status: { not: "IDEATION" }
+    },
     include: {
       _count: {
         select: { tasks: true }
@@ -33,6 +36,25 @@ export default async function DashboardPage() {
     },
     orderBy: { updatedAt: "desc" },
     take: 6,
+  });
+
+  // Fetch recent drafts
+  const recentDrafts = await db.project.findMany({
+    where: { 
+      ownerId: session.user.id,
+      status: "IDEATION"
+    },
+    include: {
+      _count: {
+        select: { tasks: true }
+      },
+      tasks: {
+        where: { status: "COMPLETED" },
+        select: { id: true }
+      }
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 3,
   });
 
   const upcomingTasks = await db.task.findMany({
@@ -62,12 +84,17 @@ export default async function DashboardPage() {
       id: "1",
       type: "PROJECT_CREATED" as const,
       user: { name: session.user.name?.split(" ")[0] || "Student" },
-      target: projects[0]?.title || "Visionary Project",
-      timestamp: projects[0]?.createdAt || new Date(),
+      target: activeProjects[0]?.title || recentDrafts[0]?.title || "Visionary Project",
+      timestamp: activeProjects[0]?.createdAt || recentDrafts[0]?.createdAt || new Date(),
     }
-  ].filter(a => projects.length > 0);
+  ].filter(a => activeProjects.length > 0 || recentDrafts.length > 0);
 
-  const processedProjects = projects.map((p: any) => ({
+  const processedProjects = activeProjects.map((p: any) => ({
+    ...p,
+    completedTasks: p.tasks.length
+  }));
+
+  const processedDrafts = recentDrafts.map((p: any) => ({
     ...p,
     completedTasks: p.tasks.length
   }));
@@ -98,25 +125,52 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* Left Column: Projects Grid */}
-        <div className="lg:col-span-2 space-y-8">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-heading font-extrabold text-gray-900 flex items-center gap-2">
-              All Drafts
-            </h2>
-            <Link href="/projects" className="text-xs font-bold text-gray-400 hover:text-crimson transition-colors uppercase tracking-widest">
-              Browse Archive
-            </Link>
-          </div>
+        <div className="lg:col-span-2 space-y-10">
           
-          {processedProjects.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {processedProjects.map((project: any) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
+          {/* Recent Drafts Section */}
+          {processedDrafts.length > 0 && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-heading font-extrabold text-gray-900 flex items-center gap-2">
+                  Recent Drafts
+                </h2>
+                <Link href="/drafts" className="text-xs font-bold text-gray-400 hover:text-teal transition-colors uppercase tracking-widest">
+                  View All Drafts
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {processedDrafts.map((draft: any) => (
+                  <ProjectCard key={draft.id} project={draft} />
+                ))}
+              </div>
             </div>
-          ) : (
-            <EmptyDashboardState />
           )}
+
+          {/* Active Projects Section */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-heading font-extrabold text-gray-900 flex items-center gap-2">
+                Active Projects
+              </h2>
+              <Link href="/projects" className="text-xs font-bold text-gray-400 hover:text-crimson transition-colors uppercase tracking-widest">
+                Browse Archive
+              </Link>
+            </div>
+            
+            {processedProjects.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {processedProjects.map((project: any) => (
+                  <ProjectCard key={project.id} project={project} />
+                ))}
+              </div>
+            ) : processedDrafts.length === 0 ? (
+              <EmptyDashboardState />
+            ) : (
+              <div className="bg-canvas border-2 border-dashed border-gray-100 rounded-2xl p-8 text-center">
+                <p className="text-gray-500 font-body italic text-sm">No active projects yet. Publish a draft to see it here!</p>
+              </div>
+            )}
+          </div>
 
           {/* AI Quick Actions (Anti-AI feel) */}
           <div className="bg-canvas border-2 border-teal/20 rounded-2xl p-8 relative overflow-hidden group">

@@ -1,31 +1,108 @@
-import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import ProjectCard from "@/components/dashboard/ProjectCard";
+import DraftActions from "@/components/dashboard/DraftActions";
+import { Plus, Sparkles, Pencil } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
+import { WavyUnderline } from "@/components/ui/HandDrawnElements";
 
 export default async function DraftsPage() {
   const session = await getServerSession(authOptions);
 
-  if (!session) {
+  if (!session || !session.user?.id) {
     redirect("/login");
   }
 
+  // Fetch drafts (projects with IDEATION status)
+  const drafts = await db.project.findMany({
+    where: { 
+      ownerId: session.user.id,
+      status: "IDEATION"
+    },
+    include: {
+      _count: {
+        select: { tasks: true }
+      },
+      tasks: {
+        where: { status: "COMPLETED" },
+        select: { id: true }
+      }
+    },
+    orderBy: { updatedAt: "desc" }
+  });
+
+  const processedDrafts = drafts.map((p: any) => ({
+    ...p,
+    completedTasks: p.tasks.length
+  }));
+
   return (
-    <div className="space-y-6">
-      <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">My Drafts</h1>
-        <p className="text-gray-600">Manage your unpublished articles and drafts</p>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Header section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b-2 border-gray-100 border-dashed">
+        <div>
+          <div className="flex items-center gap-2 text-sunny font-handwritten text-xl mb-1">
+             <Pencil className="w-5 h-5" />
+             Workbench
+          </div>
+          <h1 className="text-4xl lg:text-5xl font-heading font-extrabold text-gray-900 tracking-tight relative inline-block">
+            My Drafts
+            <WavyUnderline className="text-teal/20" />
+          </h1>
+        </div>
+        <Link href="/projects/new">
+          <Button leftIcon={<Plus className="w-4 h-4" />} className="shadow-lg shadow-teal/10 rotate-1 hover:rotate-0" variant="secondary">
+            New Draft
+          </Button>
+        </Link>
       </div>
 
-      <div className="bg-white shadow-sm rounded-lg border border-gray-200 p-12">
-        <div className="text-center">
-          <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No drafts yet</h3>
-          <p className="text-gray-500 mb-4">Create your first draft to get started</p>
-          <button className="inline-flex items-center px-4 py-2 bg-teal-600 text-white font-medium rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
-            Create New Draft
-          </button>
+      <div className="space-y-8">
+        {processedDrafts.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {processedDrafts.map((draft: any) => (
+              <div key={draft.id} className="flex flex-col">
+                <ProjectCard project={draft} />
+                <DraftActions projectId={draft.id} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white border-2 border-dashed rounded-3xl p-16 text-center flex flex-col items-center justify-center gap-6 bg-paper shadow-sm">
+            <div className="w-20 h-20 rounded-3xl bg-teal/10 flex items-center justify-center text-teal rotate-3 transition-all duration-500">
+              <Pencil className="w-10 h-10" />
+            </div>
+            <div className="max-w-[400px]">
+              <h3 className="text-2xl font-heading font-extrabold text-gray-900">No drafts found</h3>
+              <p className="text-base text-gray-500 font-body italic mt-2">
+                "Every great idea starts as a rough draft."
+              </p>
+            </div>
+            <Link href="/projects/new">
+              <Button className="shadow-lg shadow-teal/10 rotate-1 hover:rotate-0 px-8" variant="secondary">
+                Start Drafting
+              </Button>
+            </Link>
+          </div>
+        )}
+
+        {/* AI Quick Actions */}
+        <div className="bg-canvas border-2 border-teal/20 rounded-2xl p-8 relative overflow-hidden group">
+           <div className="absolute -top-12 -right-12 w-48 h-48 bg-teal/5 rounded-full pointer-events-none group-hover:scale-150 transition-transform duration-700" />
+           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-start gap-4">
+                 <div className="mt-1">
+                    <Sparkles className="w-8 h-8 text-sunny animate-pulse" />
+                 </div>
+                 <div>
+                    <h3 className="text-xl font-heading font-extrabold text-gray-900">Ready to publish?</h3>
+                    <p className="text-gray-500 text-sm max-w-[400px] font-body">Once you're happy with your draft, you can publish it to move it to your main dashboard and start collaborating.</p>
+                 </div>
+              </div>
+           </div>
         </div>
       </div>
     </div>

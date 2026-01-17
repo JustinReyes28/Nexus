@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Poppins, Caveat } from "next/font/google";
 import "@/styles/globals.css";
 import { cn } from "@/lib/utils";
+import { Toaster } from "sonner";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -38,6 +39,7 @@ export default function RootLayout({
         "font-body antialiased"
       )}>
         {children}
+        <Toaster position="bottom-right" richColors />
       </body>
     </html>
   );

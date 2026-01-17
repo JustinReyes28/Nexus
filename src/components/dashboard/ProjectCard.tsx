@@ -41,19 +41,23 @@ export default function ProjectCard({ project }: ProjectCardProps) {
 
   // Anti-AI: Random subtle rotation for pinned feel
   const rotations = ["rotate-1", "-rotate-1", "rotate-0", "rotate-[0.5deg]", "-rotate-[0.5deg]"];
+  const isDraft = project.status === "IDEATION";
   const rotation = rotations[Math.floor(Math.random() * rotations.length)];
 
   return (
     <Link href={`/projects/${project.id}`} className={cn("block transition-all duration-300 hover:scale-[1.02] hover:z-20", rotation)}>
-      <div className="bg-paper p-6 rounded-lg shadow-md border border-gray-100 relative group flex flex-col h-full min-h-[220px]">
+      <div className={cn(
+        "bg-paper p-6 rounded-lg shadow-md border border-gray-100 relative group flex flex-col h-full min-h-[220px]",
+        isDraft && "border-dashed border-gray-300 bg-gray-50/50"
+      )}>
         {/* Pushpin decor */}
         <PushPin className="absolute -top-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
         
         <div className="flex justify-between items-start mb-4">
-          <Badge variant={statusVariants[project.status] || "default"}>
-            {project.status.replace("_", " ")}
+          <Badge variant={isDraft ? "default" : (statusVariants[project.status] || "default")}>
+            {isDraft ? "Draft" : project.status.replace("_", " ")}
           </Badge>
-          <ProgressRing value={completionPercentage} size={36} strokeWidth={3} className="text-crimson" />
+          <ProgressRing value={completionPercentage} size={36} strokeWidth={3} className={isDraft ? "text-gray-400" : "text-crimson"} />
         </div>
         
         <h3 className="text-lg font-heading font-extrabold mb-2 text-gray-900 group-hover:text-crimson transition-colors leading-tight">
