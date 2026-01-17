@@ -127,7 +127,7 @@ export default async function DashboardPage() {
         {/* Left Column: Projects Grid */}
         <div className="lg:col-span-2 space-y-10">
           
-          {/* Recent Drafts Section */}
+{/* Recent Drafts Section */}
           {processedDrafts.length > 0 && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -138,10 +138,12 @@ export default async function DashboardPage() {
                   View All Drafts
                 </Link>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {processedDrafts.map((draft: any) => (
-                  <ProjectCard key={draft.id} project={draft} />
-                ))}
+              <div className="border-2 border-gray-400 rounded-2xl p-6 bg-gray-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {processedDrafts.map((draft: any) => (
+                    <ProjectCard key={draft.id} project={draft} />
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -157,11 +159,13 @@ export default async function DashboardPage() {
               </Link>
             </div>
             
-            {processedProjects.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {processedProjects.map((project: any) => (
-                  <ProjectCard key={project.id} project={project} />
-                ))}
+{processedProjects.length > 0 ? (
+              <div className="border-2 border-gray-400 rounded-2xl p-6 bg-gray-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {processedProjects.map((project: any) => (
+                    <ProjectCard key={project.id} project={project} />
+                  ))}
+                </div>
               </div>
             ) : processedDrafts.length === 0 ? (
               <EmptyDashboardState />
