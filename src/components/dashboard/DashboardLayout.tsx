@@ -32,7 +32,7 @@ function MainContent({ children }: { children: React.ReactNode }) {
         </button>
         <Link href="/dashboard" className="ml-3 flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-teal flex items-center justify-center">
-            <span className="text-white font-bold text-sm">N</span>
+            <img src="/images/logo.png" className="w-8 h-8" />
           </div>
           <span className="font-bold text-xl text-teal tracking-tight">Nexus</span>
         </Link>

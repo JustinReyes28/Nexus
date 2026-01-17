@@ -14,19 +14,19 @@ Nexus is an intelligent web platform designed to guide students through every st
 
 ## ✦ Screenshots
 
-![Nexus Dashboard Preview](<images/img%20(1).png>)
+![Nexus Dashboard Preview](<public/images/img%20(1).png>)
 _Dashboard with progress tracking and AI tools_
 
-![Project Management View](<images/img%20(2).png>)
+![Project Management View](<public/images/img%20(2).png>)
 _Task management with Gantt chart visualization_
 
-![AI Assistant Interface](<images/img%20(3).png>)
+![AI Assistant Interface](<public/images/img%20(3).png>)
 _Interactive AI writing assistant_
 
-![Team Collaboration](<images/img%20(4).png>)
+![Team Collaboration](<public/images/img%20(4).png>)
 _Real-time team collaboration features_
 
-![What Nexus Offers](<images/img%20(5).png>)
+![What Nexus Offers](<public/images/img%20(5).png>)
 _What Nexus Offers_
 
 ## ✦ Key Features

@@ -101,16 +101,16 @@ export default function Sidebar({ className }: { className?: string }) {
         collapsed ? "justify-center" : "justify-between"
       )}>
         {!collapsed ? (
-          <Link href="/dashboard" className="flex items-center gap-2">
+<Link href="/dashboard" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-teal flex items-center justify-center">
-              <span className="text-white font-bold text-sm">N</span>
+              <img src="/images/logo.png" className="w-6 h-6" />
             </div>
             <span className="font-bold text-xl text-teal tracking-tight">Nexus</span>
           </Link>
         ) : (
-          <Link href="/dashboard" className="flex items-center justify-center">
+<Link href="/dashboard" className="flex items-center justify-center">
             <div className="w-8 h-8 rounded-lg bg-teal flex items-center justify-center">
-              <span className="text-white font-bold text-sm">N</span>
+              <img src="/images/logo.png" className="w-6 h-6" />
             </div>
           </Link>
         )}
