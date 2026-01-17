@@ -86,7 +86,7 @@ export default function DeadlineWidget({ deadlines }: DeadlineWidgetProps) {
             </div>
           ))
         ) : (
-          <div className="bg-white border-2 border-dashed rounded-2xl p-16 text-center flex flex-col items-center justify-center gap-6 group hover:border-red-500 transition-all bg-paper">
+          <div className="bg-white border-2 border-dashed rounded-2xl p-16 text-center flex flex-col items-center justify-center gap-6 group border-red-500 transition-all bg-paper">
             <Star className="w-8 h-8 opacity-10 mx-auto mb-2" />
             <p className="text-xs font-handwritten">All clear! Go grab a coffee.</p>
           </div>
