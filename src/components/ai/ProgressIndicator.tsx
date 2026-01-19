@@ -1,3 +1,4 @@
+// TODO: Review accessibility attributes and animation performance in ProgressIndicator component - ensure proper ARIA attributes and smooth animations for all states - assign to @developer
 "use client";
 
 import React from "react";

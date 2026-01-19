@@ -1,3 +1,4 @@
+// TODO: Review type compatibility between different Message interfaces in ProposalWriterView component - fix role type mismatch between \"assistant\"|\"system\" and \"bot\" roles - assign to @developer
 "use client";
 
 import React, { useState } from "react";

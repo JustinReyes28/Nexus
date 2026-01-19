@@ -1,3 +1,4 @@
+// TODO: Review message handling and input validation in ChatInterface component - verify security measures for user inputs and response sanitization - assign to @developer
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";

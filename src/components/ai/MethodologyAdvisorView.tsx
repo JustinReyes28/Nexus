@@ -1,3 +1,4 @@
+// TODO: Review type compatibility between ChatMessage and Message interfaces in MethodologyAdvisorView component - fix type mismatch for historyMessages prop in ChatInterface - assign to @developer
 "use client";
 
 import React, { useState } from "react";

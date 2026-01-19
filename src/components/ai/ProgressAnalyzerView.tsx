@@ -1,3 +1,4 @@
+// TODO: Review type compatibility between ConversationHistory and Message interfaces in ProgressAnalyzerView component - fix type mismatch for historyMessages prop in ChatInterface - assign to @developer
 "use client";
 
 import React, { useState, useEffect } from "react";

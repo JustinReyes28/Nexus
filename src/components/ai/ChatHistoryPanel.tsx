@@ -1,3 +1,4 @@
+// TODO: Review state management and accessibility features in ChatHistoryPanel component - ensure proper keyboard navigation and ARIA attributes are implemented correctly - assign to @developer
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
