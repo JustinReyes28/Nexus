@@ -1,0 +1,49 @@
+// Test
+import { authOptions } from "@/lib/auth";
+import { getServerSession } from "next-auth/next";
+import { redirect } from "next/navigation";
+import { WavyUnderline } from "@/components/ui/HandDrawnElements";
+import { Search } from "lucide-react";
+
+export const metadata = {
+  title: "Research Tools | Nexus",
+  description: "Advanced research assistance and literature review tools for your academic projects"
+};
+
+export default async function ResearchPage() {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user?.id) {
+    redirect("/login");
+  }
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Header section */}
+      <div className="pb-4 border-b-2 border-gray-100 border-dashed">
+        <h1 className="text-4xl lg:text-5xl font-heading font-extrabold text-gray-900 tracking-tight relative inline-block">
+          Research Tools
+          <WavyUnderline className="text-teal/20" />
+        </h1>
+        <p className="text-gray-500 mt-2 font-body">Advanced research assistance and literature review tools</p>
+      </div>
+
+      <div className="bg-white border-2 border-dashed rounded-2xl p-16 text-center flex flex-col items-center justify-center gap-6">
+        <div className="w-16 h-16 rounded-3xl bg-teal/10 flex items-center justify-center text-teal">
+          <Search className="w-8 h-8" />
+        </div>
+        <div className="max-w-[320px]">
+          <h3 className="text-xl font-heading font-extrabold text-gray-900">Feature Coming Soon</h3>
+          <p className="text-sm text-gray-500 font-body italic mt-2">"Research is what I'm doing when I don't know what I'm doing." - Wernher von Braun</p>
+        </div>
+        
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md max-w-md">
+          <p className="text-sm text-yellow-700 text-center">
+            <strong>Note:</strong> The Research Tools page is currently under development. 
+            This feature will be available in future versions!
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

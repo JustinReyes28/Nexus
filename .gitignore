@@ -94,3 +94,6 @@ storage/
 .vscode/
 .idea/
 *.iml
+nul
+# TypeScript build info
+tsconfig.tsbuildinfo
