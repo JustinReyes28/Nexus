@@ -7,6 +7,7 @@ export const AI_SETTINGS_LABELS = {
   featuresUsed: "Features Used",
   tasksCompleted: "Tasks Completed",
   activeProjects: "Active Projects",
+  queriesUsed: "AI Queries",
   featuresAvailable: "AI Features Available",
 };
 
@@ -34,7 +35,7 @@ export const AI_TIERS = {
       "Custom Methodology Advice",
     ],
   },
-};
+} as const;
 
 // Retention policy constants for chat history retention
 // FREE users: 14-day retention
@@ -42,12 +43,16 @@ export const AI_TIERS = {
 export const CONVERSATION_RETENTION_POLICY = {
   FREE: {
     days: 14,
-    milliseconds: 14 * 24 * 60 * 60 * 1000, // 14 days in ms
+    get milliseconds() {
+      return this.days * 24 * 60 * 60 * 1000;
+    },
     description: "Conversations retained for 14 days for FREE users"
   },
   PREMIUM: {
     days: 30,
-    milliseconds: 30 * 24 * 60 * 60 * 1000, // 30 days in ms
+    get milliseconds() {
+      return this.days * 24 * 60 * 60 * 1000;
+    },
     description: "Conversations retained for 30 days for PREMIUM users"
   }
 };
@@ -58,9 +63,7 @@ export const CONVERSATION_RETENTION_POLICY = {
  * @returns Date when the conversation should expire
  */
 export function getConversationExpirationDate(userTier: 'FREE' | 'PREMIUM'): Date {
-  const retentionPolicy = userTier === 'PREMIUM' 
-    ? CONVERSATION_RETENTION_POLICY.PREMIUM 
-    : CONVERSATION_RETENTION_POLICY.FREE;
+  const retentionPolicy = CONVERSATION_RETENTION_POLICY[userTier];
   
   return new Date(Date.now() + retentionPolicy.milliseconds);
 }

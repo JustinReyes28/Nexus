@@ -3,16 +3,17 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  FileText, 
-  Search, 
-  Calendar, 
-  MessageCircle, 
-  Sparkles, 
-  Settings, 
-  LogOut, 
-  PanelLeftOpen, 
+import Image from "next/image";
+import {
+  LayoutDashboard,
+  FileText,
+  Search,
+  Calendar,
+  MessageCircle,
+  Sparkles,
+  Settings,
+  LogOut,
+  PanelLeftOpen,
   PanelLeftClose,
   Menu
 } from "lucide-react";
@@ -32,7 +33,11 @@ interface NavItemProps {
 
 const NavItem = ({ href, onClick, icon: Icon, label, isCollapsed, variant = "default" }: NavItemProps) => {
   const pathname = usePathname();
-  const isActive = href ? pathname === href : false;
+  const isActive = href ? (
+    href === "/"
+      ? pathname === "/" || pathname === "/dashboard"
+      : pathname === href || pathname.startsWith(`${href}/`)
+  ) : false;
 
   const content = (
     <>
@@ -103,14 +108,14 @@ export default function Sidebar({ className }: { className?: string }) {
         {!collapsed ? (
 <Link href="/dashboard" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-teal flex items-center justify-center">
-              <img src="/images/logo.png" className="w-6 h-6" />
+              <Image src="/images/logo.png" alt="Nexus logo" width={24} height={24} className="w-6 h-6" />
             </div>
             <span className="font-bold text-xl text-teal tracking-tight">Nexus</span>
           </Link>
         ) : (
 <Link href="/dashboard" className="flex items-center justify-center">
             <div className="w-8 h-8 rounded-lg bg-teal flex items-center justify-center">
-              <img src="/images/logo.png" className="w-6 h-6" />
+              <Image src="/images/logo.png" alt="Nexus logo" width={24} height={24} className="w-6 h-6" />
             </div>
           </Link>
         )}

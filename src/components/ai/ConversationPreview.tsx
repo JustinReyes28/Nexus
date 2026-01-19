@@ -5,14 +5,16 @@ import { formatDistanceToNow } from "date-fns";
 import { MessageSquare, Sparkles, Clock, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface ConversationPreviewProps {
-  conversation: {
-    id: string;
-    feature: string;
-    prompt: string;
-    response: string;
-    createdAt: string | Date;
-  };
+export interface Conversation {
+  id: string;
+  feature: string;
+  prompt: string;
+  response: string;
+  createdAt: string | Date;
+}
+
+export interface ConversationPreviewProps {
+  conversation: Conversation;
   onClick: () => void;
   isActive?: boolean;
 }
@@ -23,6 +25,7 @@ export const ConversationPreview: React.FC<ConversationPreviewProps> = ({
   isActive = false,
 }) => {
   const date = new Date(conversation.createdAt);
+  const isValidDate = !isNaN(date.getTime());
 
   return (
     <button
@@ -46,12 +49,12 @@ export const ConversationPreview: React.FC<ConversationPreviewProps> = ({
             <MessageSquare size={14} />
           </div>
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-            {conversation.feature.replace("_", " ")}
+            {conversation.feature.replaceAll("_", " ")}
           </span>
         </div>
         <div className="flex items-center gap-1 text-[10px] font-medium text-gray-400">
           <Clock size={10} />
-          {formatDistanceToNow(date, { addSuffix: true })}
+          {isValidDate ? formatDistanceToNow(date, { addSuffix: true }) : 'Just now'}
         </div>
       </div>
 

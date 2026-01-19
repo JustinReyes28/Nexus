@@ -14,19 +14,19 @@ Nexus is an intelligent web platform designed to guide students through every st
 
 ## ✦ Screenshots
 
-![Nexus Dashboard Preview](<public/images/img%20(1).png>)
-_Dashboard with progress tracking and AI tools_
+![Nexus Dashboard Preview](public/images/img-1.png)
+_Dashboard Preview_
 
-![Project Management View](<public/images/img%20(2).png>)
+![Project Management View](public/images/img-2.png)
 _Task management with Gantt chart visualization_
 
-![AI Assistant Interface](<public/images/img%20(3).png>)
+![AI Assistant Interface](public/images/img-3.png)
 _Interactive AI writing assistant_
 
-![Team Collaboration](<public/images/img%20(4).png>)
+![Team Collaboration](public/images/img-4.png)
 _Real-time team collaboration features_
 
-![What Nexus Offers](<public/images/img%20(5).png>)
+![What Nexus Offers](public/images/img-5.png)
 _What Nexus Offers_
 
 ## ✦ Key Features
@@ -137,7 +137,7 @@ nexus/
 │   │   ├── (auth)/          # Authentication routes (login, register, etc.)
 │   │   ├── (dashboard)/     # Dashboard routes with protected layout
 │   │   ├── api/             # API routes for backend functionality
-│   │   ├── ai/          # AI feature endpoints (ideas, research, writing, etc.)
+│   │   │   ├── ai/          # AI feature endpoints (ideas, research, writing, etc.)
 │   │   │   ├── auth/        # Authentication API routes
 │   │   │   ├── dashboard/   # Dashboard statistics API
 │   │   │   ├── email/       # Email sending functionality
@@ -206,11 +206,11 @@ nexus/
 
    Update the `.env.local` file with your configuration (see Environment Variables section below)
 
-4. Run database migrations (if needed):
+4. Run database setup (required for fresh installs):
 
    ```bash
-   npx prisma db push
-   npx prisma generate
+   npx prisma db push    # Syncs the database schema (skip if connecting to pre-existing production DB managed by migrations)
+   npx prisma generate   # Builds the Prisma Client for local/dev setups (skip if CI/deployment handles client generation)
    ```
 
 5. Run the development server:
@@ -252,10 +252,10 @@ SMTP_PASSWORD=your-app-password
 
 ## ✦ Documentation
 
-- [MD Files/PRD1.md](MD Files/PRD1.md) - Complete Product Requirements Document
-- [MD Files/Security.md](MD Files/Security.md) - Security and Privacy Requirements
-- [MD Files/Design.md](MD Files/Design.md) - Design documentation
-- [MD Files/Phase*.md](MD Files/) - Phase-specific documentation files
+- [PRD1.md](plans/PRD1.md) - Complete Product Requirements Document
+- [Security.md](MD%20Files/Security.md) - Security and Privacy Requirements
+- [Design.md](MD%20Files/Design.md) - Design documentation
+- [Phase1.md](plans/Phase1.md) - Phase-specific documentation files
 
 ## ✦ Contributing
 

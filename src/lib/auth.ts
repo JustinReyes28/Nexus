@@ -18,7 +18,7 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      allowDangerousEmailAccountLinking: true,
+      allowDangerousEmailAccountLinking: false,
     }),
     CredentialsProvider({
       name: "credentials",
@@ -50,24 +50,46 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        return user;
+        // Return a sanitized user object without sensitive data
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        };
       },
     }),
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      // For Google OAuth, check if email is verified before allowing sign-in
+      if (account?.provider === "google" && profile) {
+        // Type assertion to access email_verified property
+        const googleProfile = profile as { email_verified?: boolean };
+        // Only allow sign-in if the email is verified by Google
+        const isEmailVerified = googleProfile.email_verified === true;
+        
+        if (!isEmailVerified) {
+          // Optionally, you could redirect to an email verification page
+          // or store this info for later verification
+          return false; // Deny sign-in if email is not verified
+        }
+      }
+      
+      return true; // Allow sign-in
+    },
     async session({ token, session }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;
       }
       return session;
     },
-    async jwt({ token }) {
-      return token;
-    },
   },
   cookies: {
     sessionToken: {
-      name: `next-auth.session-token`,
+      name: process.env.NODE_ENV === "production"
+        ? `__Secure-next-auth.session-token`
+        : `next-auth.session-token`,
       options: {
         httpOnly: true,
         sameSite: "lax",

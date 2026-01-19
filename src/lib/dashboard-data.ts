@@ -10,6 +10,7 @@ export interface ProjectTemplate {
 }
 
 export interface ProjectExample {
+  id: string;
   name: string;
   color: string;
 }
@@ -18,7 +19,7 @@ export interface DashboardEmptyStateConfig {
   tips: QuickTip[];
   templates: ProjectTemplate[];
   examples: ProjectExample[];
-  tutorialLink: string;
+  tutorialLink?: string;
 }
 
 export const DEFAULT_EMPTY_STATE_CONFIG: DashboardEmptyStateConfig = {
@@ -33,10 +34,10 @@ export const DEFAULT_EMPTY_STATE_CONFIG: DashboardEmptyStateConfig = {
     { id: "presentation", name: "Presentation", color: "teal" },
   ],
   examples: [
-    { name: "Machine Learning Research", color: "bg-crimson" },
-    { name: "Literature Review", color: "bg-sunny" },
-    { name: "Experimental Study", color: "bg-teal" },
-    { name: "Case Study Analysis", color: "bg-purple-500" },
+    { id: "ml-research", name: "Machine Learning Research", color: "crimson" },
+    { id: "lit-review", name: "Literature Review", color: "sunny" },
+    { id: "experimental-study", name: "Experimental Study", color: "teal" },
+    { id: "case-study", name: "Case Study Analysis", color: "purple-500" },
   ],
-  tutorialLink: "https://example.com/tutorial",
+  tutorialLink: undefined,
 };

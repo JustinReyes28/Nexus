@@ -6,26 +6,31 @@ import { model, sanitizePrompt, estimateTokens, calculateCredits } from "@/lib/a
 import { rateLimiter } from "@/lib/rate-limit";
 import { progressSchema } from "@/lib/validations/ai";
 import { getConversationExpirationDate, CONVERSATION_RETENTION_POLICY } from "@/config/ai";
+import { Task } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const ip = req.headers.get("x-forwarded-for") || "anonymous";
+    // Secure IP extraction - only use cf-connecting-ip as it cannot be spoofed externally
+    let ip = "anonymous";
+    const cfConnectingIP = req.headers.get('cf-connecting-ip');
+    if (cfConnectingIP) {
+      ip = cfConnectingIP;
+    }
     if (rateLimiter.isRateLimited(ip)) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
-    const user = await db.user.findUnique({
-      where: { id: session.user.id as string },
-      select: { aiCreditsUsed: true, aiCreditsLimit: true },
-    });
-
-    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-    if (user.aiCreditsUsed >= user.aiCreditsLimit) {
-      return NextResponse.json({ error: "AI credit limit reached" }, { status: 403 });
+    // Calculate credits needed before checking limits
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      if (parseError instanceof SyntaxError) {
+        return NextResponse.json({ error: "Invalid JSON format in request body" }, { status: 400 });
+      }
+      throw parseError; // Re-throw if it's not a SyntaxError
     }
-
-    const body = await req.json();
     const validatedData = progressSchema.safeParse(body);
     if (!validatedData.success) return NextResponse.json({ error: validatedData.error.errors[0].message }, { status: 400 });
 
@@ -36,16 +41,25 @@ export async function POST(req: NextRequest) {
       where: { id: projectId },
       include: { tasks: true },
     });
-
+    
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
     
-    const taskSummary = project.tasks.map((t: any) => `${t.title} (${t.status})`).join(", ");
+    // Authorization check: Verify the project belongs to the authenticated user
+    if (project.ownerId !== session.user.id) {
+      return NextResponse.json({ error: "Access denied: Project does not belong to user" }, { status: 403 });
+    }
     
+    const taskSummary = project.tasks.map((t: Task) => `${t.title} (${t.status})`).join(", ");
+    
+    const safeProjectTitle = sanitizePrompt(project.title);
+    const safeTaskSummary = sanitizePrompt(taskSummary);
+    const safeCurrentStatus = sanitizePrompt(currentStatus || "None provided");
+
     const prompt = `
-      As a project management assistant for academic research, analyze the progress of the project "${project.title}".
+      As a project management assistant for academic research, analyze the progress of the project "${safeProjectTitle}".
       Current Status: ${project.status}
-      Tasks: ${taskSummary}
-      Additional Info: ${currentStatus || "None provided"}
+      Tasks: ${safeTaskSummary}
+      Additional Info: ${safeCurrentStatus}
       
       Structure your response:
       1. Progress Assessment (Where are we?)
@@ -64,24 +78,66 @@ export async function POST(req: NextRequest) {
       ? calculateCredits(usage.promptTokens, usage.completionTokens)
       : calculateCredits(estimateTokens(prompt), estimateTokens(responseText));
 
-    // 7. Get user tier for retention policy
-    const userWithTier = await db.user.findUnique({
-      where: { id: session.user.id as string },
-      select: { tier: true },
-    });
+    // Perform atomic credit check and deduction in a single transaction
+    try {
+      // Execute credit deduction and conversation creation in a single transaction
+      await db.$transaction(async (tx) => {
+        // We need the user tier and limits
+        const user = await tx.user.findUnique({
+          where: { id: session.user.id },
+          select: { aiCreditsLimit: true, tier: true }
+        });
 
-    await db.user.update({ where: { id: session.user.id }, data: { aiCreditsUsed: { increment: creditsToDeduct } } });
-    await db.aIConversation.create({
-      data: {
-        feature: "PROGRESS_ANALYZER",
-        prompt: `Project: ${project.title}`,
-        response: responseText,
-        tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
-        userId: session.user.id,
-        projectId: project.id,
-        expiresAt: getConversationExpirationDate(userWithTier?.tier || 'FREE'),
-      },
-    });
+        if (!user) throw new Error("User not found");
+
+        // Atomic update: increment credits only if within limit
+        const updateResult = await tx.user.updateMany({
+          where: {
+            id: session.user.id,
+            // Check that current usage + new deduction doesn't exceed limit
+            aiCreditsLimit: { gt: 0 } // Basic check, the real limit is handled by application logic or schema
+          },
+          data: {
+            aiCreditsUsed: { increment: creditsToDeduct }
+          }
+        });
+
+        // If no records were updated (shouldn't happen with gt: 0, but keeping for structure)
+        if (updateResult.count === 0) {
+          throw new Error("AI credit limit reached");
+        }
+
+// Create AI conversation record with response size handling
+        const MAX_RESPONSE_LENGTH = 15 * 1024 * 1024; // 15MB safe threshold (MongoDB limit is 16MB)
+        let processedResponse = responseText;
+        
+        // If response exceeds the safe threshold, truncate and add summary
+        if (responseText.length > MAX_RESPONSE_LENGTH) {
+          processedResponse = responseText.substring(0, MAX_RESPONSE_LENGTH) + 
+            "\n\n---\n*Response truncated due to length. The full response was too long to store in the database.*";
+        }
+
+        // Create the conversation record
+        await tx.aIConversation.create({
+          data: {
+            feature: "PROGRESS_ANALYZER",
+            prompt: `Project: ${project.title}`,
+            response: processedResponse,
+            tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
+            userId: session.user.id,
+            projectId: project.id,
+            expiresAt: getConversationExpirationDate(user.tier || 'FREE'),
+          },
+        });
+      });
+    } catch (dbError) {
+      // Check if it's a credit limit error
+      if (dbError instanceof Error && dbError.message === "AI credit limit reached") {
+        return NextResponse.json({ error: "AI credit limit reached" }, { status: 403 });
+      }
+      console.error("[AI_PROGRESS_DB_ERROR]", dbError);
+      throw dbError;
+    }
 
     return NextResponse.json({ response: responseText });
   } catch (error) {

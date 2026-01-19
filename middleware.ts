@@ -4,15 +4,31 @@ import type { NextRequest } from "next/server";
 import { rateLimiter } from "@/lib/rate-limit";
 
 export async function middleware(request: NextRequest) {
-  const ip = request.ip || request.headers.get("x-forwarded-for") || "127.0.0.1";
+  // Improved IP extraction logic
+  let ip: string | null = null;
+  const forwarded = request.headers.get("x-forwarded-for");
   
-  if (rateLimiter.isRateLimited(ip)) {
+  if (forwarded) {
+    const ips = forwarded.split(",").map(i => i.trim());
+    const validIp = ips.find(i => i && !i.startsWith("unknown"));
+    if (validIp) ip = validIp;
+  }
+  
+  if (!ip) ip = request.ip ?? null;
+  if (!ip) ip = request.headers.get("x-real-ip");
+  
+  // As a last resort, use a non-shared placeholder to avoid shared rate-limit buckets
+  const finalIp = ip || `unknown-${crypto.randomUUID()}`;
+
+  if (rateLimiter.isRateLimited(finalIp)) {
     return new NextResponse("Too Many Requests", { status: 429 });
   }
 
   const token = await getToken({ req: request });
   const isAuthPage = request.nextUrl.pathname.startsWith("/login") || 
-                     request.nextUrl.pathname.startsWith("/register");
+                     request.nextUrl.pathname.startsWith("/register") ||
+                     request.nextUrl.pathname.startsWith("/reset-password") ||
+                     request.nextUrl.pathname.startsWith("/verify");
 
   if (isAuthPage) {
     if (token) {
@@ -43,5 +59,7 @@ export const config = {
     "/settings/:path*",
     "/login",
     "/register",
+    "/reset-password/:path*",
+    "/verify/:path*",
   ],
 };

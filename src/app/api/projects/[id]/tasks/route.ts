@@ -9,7 +9,12 @@ const taskSchema = z.object({
   description: z.string().max(500).optional(),
   status: z.enum(["TODO", "IN_PROGRESS", "REVIEW", "COMPLETED"]).default("TODO"),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
-  dueDate: z.string().optional().nullable(),
+  dueDate: z.string().optional().nullable().refine((val) => {
+    if (val === null || val === undefined || val === "") return true;
+    return !isNaN(Date.parse(val));
+  }, {
+    message: "Invalid date format"
+  }),
 });
 
 export async function GET(
@@ -49,7 +54,12 @@ export async function POST(
   }
 
   try {
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      return NextResponse.json({ error: "Invalid JSON format" }, { status: 400 });
+    }
     const validatedData = taskSchema.parse(body);
 
     // Verify project ownership

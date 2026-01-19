@@ -10,10 +10,30 @@ import { TheGuide } from "./TheGuide";
 import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { AIFeature } from "@prisma/client";
 
+interface SanitizedMarkdownProps {
+  content: string;
+}
+
+const SanitizedMarkdown: React.FC<SanitizedMarkdownProps> = React.memo(({ content }) => {
+  const sanitized = React.useMemo(() => DOMPurify.sanitize(content), [content]);
+
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+      {sanitized}
+    </ReactMarkdown>
+  );
+});
+
 
 interface Message {
+  id: string;
   role: "user" | "bot";
   content: string;
+}
+
+interface AdditionalData {
+  historyMessages?: Message[];
+  fromHistory?: boolean;
 }
 
 interface ChatInterfaceProps {
@@ -21,11 +41,12 @@ interface ChatInterfaceProps {
   placeholder?: string;
   initialMessage?: string;
   onResponse?: (response: string) => void;
-  additionalData?: Record<string, any>;
+  additionalData?: AdditionalData;
   discipline?: string;
   feature?: AIFeature;
   submitOnMount?: boolean;
   initialInput?: string;
+  loadedHistoryId?: string;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -38,28 +59,41 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   feature,
   submitOnMount = false,
   initialInput = "",
+  loadedHistoryId,
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [messageIdCounter, setMessageIdCounter] = useState(0);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
+  const [draftConversation, setDraftConversation] = useState<{ id: string; messages: Message[] } | null>(null);
+  const [additionalDataState, setAdditionalDataState] = useState<AdditionalData>(additionalData || {});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasAutoSubmitted = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
     if (initialMessage && messages.length === 0 && !submitOnMount) {
-      setMessages([{ role: "bot", content: initialMessage }]);
+      setMessages([{ id: `msg-${messageIdCounter}`, role: "bot", content: initialMessage }]);
+      setMessageIdCounter(prev => prev + 1);
     }
-  }, [initialMessage, submitOnMount]);
+  }, [initialMessage, submitOnMount, messageIdCounter]);
 
   // Exposed method to update messages externally if needed, or we can use another prop
   // For now, let's add a way to set messages from parent
   useEffect(() => {
-    if (additionalData?.historyMessages) {
-      setMessages(additionalData.historyMessages);
+    if (loadedHistoryId && Array.isArray(additionalData?.historyMessages)) {
+      const historyMessages = additionalData.historyMessages as Message[];
+      const isValidMessageArray = historyMessages.every(
+        (msg) => msg && typeof msg === 'object' && 'role' in msg && 'content' in msg && 'id' in msg
+      );
+      if (isValidMessageArray) {
+        setMessages(historyMessages);
+      }
     }
-  }, [additionalData?.historyMessages]);
+  }, [additionalData, loadedHistoryId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -67,25 +101,62 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   useEffect(scrollToBottom, [messages]);
 
-  const sendMessage = async (text: string) => {
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  const sendMessage = React.useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
 
-    const userMessage: Message = { role: "user", content: text };
-    setMessages((prev: Message[]) => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const userMessage: Message = { id: `msg-${messageIdCounter}`, role: "user", content: text };
+    if (isMountedRef.current) {
+      setMessages((prev: Message[]) => [...prev, userMessage]);
+      setInput("");
+      setIsLoading(true);
+      setMessageIdCounter(prev => prev + 1);
+    }
 
     try {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...additionalData, topic: text, ...(discipline && { discipline }) }),
+        signal: controller.signal,
       });
 
-      const data = await response.json();
+      if (!isMountedRef.current) return;
 
       if (!response.ok) {
-        const errorMessage = data.error || "Failed to get response";
+        let errorMessage = "Failed to get response";
+        try {
+          // Attempt to read the response as text first
+          const responseText = await response.text();
+          try {
+            // Try to parse as JSON if possible
+            const errorData = JSON.parse(responseText);
+            errorMessage = errorData.error || errorData.message || responseText;
+          } catch (jsonError) {
+            // If JSON parsing fails, use the raw text response
+            errorMessage = responseText;
+          }
+        } catch (textError) {
+          // If reading text fails, fall back to status text
+          errorMessage = response.statusText || errorMessage;
+        }
+
         if (response.status === 400) {
           throw new Error(`Input validation error: ${errorMessage}`);
         } else if (response.status === 401) {
@@ -99,32 +170,40 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         }
       }
 
-      const botMessage: Message = { role: "bot", content: data.response };
+      const data = await response.json();
+
+      if (isMountedRef.current) {
+      const botMessage: Message = { id: `msg-${messageIdCounter}`, role: "bot", content: data.response };
       setMessages((prev: Message[]) => [...prev, botMessage]);
-      if (onResponse) onResponse(data.response);
+      setMessageIdCounter(prev => prev + 1);
+        if (onResponse) onResponse(data.response);
+      }
     } catch (error: any) {
-      console.error("ChatInterface error:", error);
-      setMessages((prev: Message[]) => [
-        ...prev,
-        { role: "bot", content: `**The Guide:** Oops! Something went wrong: *${error.message}*. Let's try again?` },
-      ]);
+        if (isMountedRef.current) {
+          console.error("ChatInterface error:", error);
+          const errorMessage: Message = { id: `msg-${messageIdCounter}`, role: "bot", content: `**The Guide:** Oops! Something went wrong: *${error.message}*. Let's try again?` };
+          setMessages((prev: Message[]) => [...prev, errorMessage]);
+          setMessageIdCounter(prev => prev + 1);
+        }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [endpoint, additionalData, discipline, isLoading, messageIdCounter, onResponse]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await sendMessage(input);
   };
 
-  // Handle auto-submit on mount
+// Handle auto-submit on mount
   useEffect(() => {
-    if (submitOnMount && initialInput && !hasAutoSubmitted.current) {
+    if (submitOnMount && initialInput && !hasAutoSubmitted.current && !additionalData?.fromHistory) {
       hasAutoSubmitted.current = true;
       sendMessage(initialInput);
     }
-  }, [submitOnMount, initialInput]);
+  }, [submitOnMount, initialInput, additionalData?.fromHistory, sendMessage]);
 
   return (
     <div className="flex flex-col h-[600px] border-2 border-gray-100 rounded-2xl bg-white shadow-xl shadow-gray-200/50 overflow-hidden relative">
@@ -161,7 +240,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       <div className="flex-1 overflow-y-auto p-6 space-y-6 relative z-10">
         {messages.map((msg: Message, i: number) => (
           <div
-            key={i}
+             key={msg.id}
             className={cn(
               "flex items-start gap-3",
               msg.role === "user" ? "flex-row-reverse" : "flex-row"
@@ -189,11 +268,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 msg.role === "user" ? "-right-1" : "-left-1"
               )} style={{ clipPath: msg.role === 'user' ? "polygon(0 0, 100% 0, 100% 100%)" : "polygon(0 0, 100% 0, 0 100%)" }} />
 
-              <div className="prose prose-sm prose-p:leading-relaxed max-w-none text-inherit">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {DOMPurify.sanitize(msg.content)}
-                </ReactMarkdown>
-              </div>
+               <div className="prose prose-sm prose-p:leading-relaxed max-w-none text-inherit">
+                 <SanitizedMarkdown content={msg.content} />
+               </div>
             </div>
           </div>
         ))}
@@ -234,11 +311,19 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           isOpen={isHistoryOpen}
           onClose={() => setIsHistoryOpen(false)}
           onSelect={(conv) => {
+            const hasExistingMessages = messages.length > 0;
+            const isSameConversation = activeHistoryId === conv.id;
+            
+            if (hasExistingMessages && !isSameConversation) {
+              setDraftConversation({ id: activeHistoryId || 'current', messages });
+            }
+            
             setActiveHistoryId(conv.id);
             setMessages([
-              { role: "user", content: conv.prompt },
-              { role: "bot", content: conv.response }
+              { id: `msg-${messageIdCounter}`, role: "user", content: conv.prompt },
+              { id: `msg-${messageIdCounter + 1}`, role: "bot", content: conv.response }
             ]);
+            setMessageIdCounter(prev => prev + 2);
             setIsHistoryOpen(false);
           }}
           featureFilter={feature}

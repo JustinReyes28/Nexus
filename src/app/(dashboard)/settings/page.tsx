@@ -17,59 +17,67 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  // Fetch user data with tier and statistics
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      institution: true,
-      program: true,
-      year: true,
-      image: true,
-      aiCreditsUsed: true,
-      aiCreditsLimit: true,
-      tier: true,
-      emailVerified: true,
-      accounts: {
-        select: {
-          provider: true,
-        }
-      },
-      projects: {
-        where: {
-          status: { not: "COMPLETED" }
+  // Fetch user data and notification preferences in parallel
+  const [user, notificationPreferences] = await Promise.all([
+    db.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        institution: true,
+        program: true,
+        year: true,
+        image: true,
+        aiCreditsUsed: true,
+        aiCreditsLimit: true,
+        tier: true,
+        emailVerified: true,
+        accounts: {
+          select: {
+            provider: true,
+          }
         },
-        select: {
-          id: true
-        }
-      },
-      tasks: {
-        where: {
-          status: "COMPLETED"
+        projects: {
+          where: {
+            status: { not: "COMPLETED" }
+          },
+          select: {
+            id: true
+          }
         },
-        select: {
-          id: true
-        }
-      },
-      conversations: {
-        select: {
-          feature: true
+        tasks: {
+          where: {
+            status: "COMPLETED"
+          },
+          select: {
+            id: true
+          }
+        },
+        conversations: {
+          select: {
+            feature: true
+          }
         }
       }
-    }
-  });
+    }),
+    db.notificationPreference.findUnique({
+      where: { userId: session.user.id },
+    })
+  ]);
 
-  // Calculate stats
-  const activeProjectsCount = user?.projects?.length || 0;
-  const uniqueFeaturesUsed = new Set(user?.conversations?.map(c => c.feature) || []).size;
-  const tasksCompleted = user?.tasks?.length || 0;
+  // Handle case where user is not found
+  if (!user) {
+    redirect("/onboarding"); // or redirect to an error/onboarding page
+  }
 
-  // Fetch notification preferences
-  const notificationPreferences = await db.notificationPreference.findUnique({
-    where: { userId: session.user.id },
-  });
+  // Calculate stats from user data
+  const activeProjectsCount = user.projects.length;
+  const uniqueFeaturesUsed = new Set(user.conversations.map(c => c.feature)).size;
+  const tasksCompleted = user.tasks.length;
+
+  // Extract hasGoogleAccount value for SecuritySettings
+  const hasGoogleAccount = user.accounts.some(acc => acc.provider === "google");
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -85,17 +93,15 @@ export default async function SettingsPage() {
       <div className="grid gap-8">
         <ProfileSettings
           user={user}
-          session={session}
+          session={{}} // Pass empty session object as per component definition
         />
         <SecuritySettings
-          user={user}
-          hasGoogleAccount={user?.accounts?.some(acc => acc.provider === "google") || false}
+          hasGoogleAccount={hasGoogleAccount}
         />
         <AISettings
-          aiCreditsUsed={user?.aiCreditsUsed || 0}
-          aiCreditsLimit={user?.aiCreditsLimit || 100}
-          userId={session.user.id}
-          tier={user?.tier || "FREE"}
+          aiCreditsUsed={Number(user.aiCreditsUsed)}
+          aiCreditsLimit={Number(user.aiCreditsLimit)}
+          tier={user.tier}
           activeProjectsCount={activeProjectsCount}
           uniqueFeaturesUsed={uniqueFeaturesUsed}
           tasksCompleted={tasksCompleted}

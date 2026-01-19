@@ -1,6 +1,12 @@
-import React from 'react';
+import type { Metadata } from 'next';
+import { CONTACT_EMAIL } from '@/config/constants';
 
-const PrivacyPage = () => {
+export const metadata: Metadata = {
+  title: 'Privacy Policy | Nexus',
+  description: 'Learn about how Nexus handles your data and privacy.'
+};
+
+const PrivacyPage = (): React.JSX.Element => {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -263,7 +269,7 @@ const PrivacyPage = () => {
               If you have any questions about this Privacy Policy, please contact us:
             </p>
             <ul className="list-disc pl-6 mb-6 space-y-2">
-              <li>By email: JustinReyes28@proton.me</li>
+               <li>By email: {CONTACT_EMAIL}</li>
             </ul>
             
             <h3 className="text-xl font-medium mt-6 mb-3">Submitting Requests</h3>

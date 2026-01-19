@@ -1,3 +1,5 @@
+import { PrismaClient } from "@prisma/client";
+
 /**
  * Defines the credit limits for different user tiers
  */
@@ -25,7 +27,7 @@ export function getCreditLimitForTier(tier: Tier): number {
  * @param db - Database instance (Prisma client)
  * @returns Updated user object
  */
-export async function updateUserCreditLimit(userId: string, tier: Tier, db: any) {
+export async function updateUserCreditLimit(userId: string, tier: Tier, db: PrismaClient) {
   const creditLimit = getCreditLimitForTier(tier);
   
   return await db.user.update({

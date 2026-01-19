@@ -52,7 +52,8 @@ const config: Config = {
         },
         crimson: "#B30909",
         sunny: "#FFD166",
-        teal: "#EF4444",
+        teal: "#14B8A6",
+        indigo: "#6366F1",
         canvas: "#F8F9FA",
       },
       fontFamily: {
@@ -68,17 +69,9 @@ const config: Config = {
         "2xl": "16px",
       },
       spacing: {
-        "6": "1.5rem",
-        "10": "2.5rem",
         "14": "3.5rem",
         "18": "4.5rem",
         "22": "5.5rem",
-      },
-      rotate: {
-        '-1': '-1deg',
-        '-2': '-2deg',
-        '1': '1deg',
-        '2': '2deg',
       },
       keyframes: {
         "accordion-down": {
@@ -98,7 +91,7 @@ const config: Config = {
           "50%": { transform: "translateY(-8px)" },
         },
         "bounce-slow": {
-          "0%, 100%": { transform: "translateY(0)" },
+          "0%": { transform: "translateY(0)" },
           "25%": { transform: "translateY(-5px)" },
           "50%": { transform: "translateY(0)" },
           "75%": { transform: "translateY(-3px)" },
@@ -119,6 +112,10 @@ const config: Config = {
         "bounce-subtle": {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-15px)" },
+        },
+        "draw": {
+          "0%": { strokeDashoffset: "300" },
+          "100%": { strokeDashoffset: "0" },
         }
       },
       animation: {
@@ -131,6 +128,7 @@ const config: Config = {
         "sparkle": "sparkle 0.5s ease-in-out forwards",
         "fade-in-up": "fade-in-up 0.6s ease forwards",
         "bounce-subtle": "bounce-subtle 1s infinite",
+        "draw": "draw 1s ease-out forwards",
       },
     },
   },

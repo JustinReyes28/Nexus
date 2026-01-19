@@ -12,6 +12,26 @@ import { AISparkleIcon } from "@/components/ui/AISparkleIcon";
 import { WavyUnderline } from "@/components/ui/HandDrawnElements";
 import EmptyDashboardState from "@/components/dashboard/EmptyDashboardState";
 
+import { ProjectStatus, TaskStatus } from "@prisma/client";
+
+interface ProjectWithTasks {
+  id: string;
+  title: string;
+  description: string | null;
+  discipline: string | null;
+  status: ProjectStatus;
+  startDate: Date | null;
+  deadline: Date | null;
+  _count?: {
+    tasks: number;
+  };
+  tasks?: Array<{ id: string }>;
+  createdAt: Date;
+  updatedAt: Date;
+  ownerId: string;
+  completedTasks?: number;
+}
+
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
@@ -19,21 +39,24 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
+  // Shared include configuration for project queries
+  const projectInclude = {
+    _count: {
+      select: { tasks: true }
+    },
+    tasks: {
+      where: { status: TaskStatus.COMPLETED },
+      select: { id: true }
+    }
+  };
+
   // Fetch active projects (excluding drafts)
   const activeProjects = await db.project.findMany({
     where: { 
       ownerId: session.user.id,
       status: { not: "IDEATION" }
     },
-    include: {
-      _count: {
-        select: { tasks: true }
-      },
-      tasks: {
-        where: { status: "COMPLETED" },
-        select: { id: true }
-      }
-    },
+    include: projectInclude,
     orderBy: { updatedAt: "desc" },
     take: 6,
   });
@@ -44,15 +67,7 @@ export default async function DashboardPage() {
       ownerId: session.user.id,
       status: "IDEATION"
     },
-    include: {
-      _count: {
-        select: { tasks: true }
-      },
-      tasks: {
-        where: { status: "COMPLETED" },
-        select: { id: true }
-      }
-    },
+    include: projectInclude,
     orderBy: { updatedAt: "desc" },
     take: 3,
   });
@@ -75,28 +90,40 @@ export default async function DashboardPage() {
     take: 5,
   });
 
-  const deadlines = [
-    ...upcomingTasks.map((t: any) => ({ id: t.id, title: t.title, dueDate: t.dueDate as Date, type: "TASK" as const })),
-  ].sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime()).slice(0, 5);
+  // Deadlines are already sorted and limited by the upcomingTasks query
+  const deadlines = upcomingTasks.map((t: any) => ({ 
+    id: t.id, 
+    title: t.title, 
+    dueDate: t.dueDate as Date, 
+    type: "TASK" as const 
+  }));
 
-  const activities = [
+  // TODO: Replace with real activity data from database
+  // Currently using mock data for demonstration purposes
+  const activities: {
+    id: string;
+    type: "PROJECT_CREATED" | "TASK_CREATED" | "TASK_COMPLETED" | "MEMBER_ADDED" | "STATUS_CHANGE";
+    user: { name: string; image?: string };
+    target: string;
+    timestamp: Date;
+  }[] = (activeProjects.length > 0 || recentDrafts.length > 0) ? [
     {
       id: "1",
-      type: "PROJECT_CREATED" as const,
+      type: "PROJECT_CREATED",
       user: { name: session.user.name?.split(" ")[0] || "Student" },
       target: activeProjects[0]?.title || recentDrafts[0]?.title || "Visionary Project",
       timestamp: activeProjects[0]?.createdAt || recentDrafts[0]?.createdAt || new Date(),
     }
-  ].filter(a => activeProjects.length > 0 || recentDrafts.length > 0);
+  ] : [];
 
-  const processedProjects = activeProjects.map((p: any) => ({
+  const processedProjects = activeProjects.map((p: ProjectWithTasks) => ({
     ...p,
-    completedTasks: p.tasks.length
+    completedTasks: p.tasks?.length || 0
   }));
 
-  const processedDrafts = recentDrafts.map((p: any) => ({
+  const processedDrafts = recentDrafts.map((p: ProjectWithTasks) => ({
     ...p,
-    completedTasks: p.tasks.length
+    completedTasks: p.tasks?.length || 0
   }));
 
   const greetings = ["Happy Brainstorming", "Focus Power On", "Creative Energy High", "Leveling Up"];
@@ -139,11 +166,11 @@ export default async function DashboardPage() {
                 </Link>
               </div>
               <div className="border-2 border-gray-400 rounded-2xl p-6 bg-gray-200">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {processedDrafts.map((draft: any) => (
-                    <ProjectCard key={draft.id} project={draft} />
-                  ))}
-                </div>
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                 {processedDrafts.map((draft: ProjectWithTasks) => (
+                   <ProjectCard key={draft.id} project={draft} />
+                 ))}
+               </div>
               </div>
             </div>
           )}
@@ -161,11 +188,11 @@ export default async function DashboardPage() {
             
 {processedProjects.length > 0 ? (
               <div className="border-2 border-gray-400 rounded-2xl p-6 bg-gray-200">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {processedProjects.map((project: any) => (
-                    <ProjectCard key={project.id} project={project} />
-                  ))}
-                </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+               {processedProjects.map((project: ProjectWithTasks) => (
+                 <ProjectCard key={project.id} project={project} />
+               ))}
+             </div>
               </div>
             ) : processedDrafts.length === 0 ? (
               <EmptyDashboardState />
@@ -204,9 +231,9 @@ export default async function DashboardPage() {
             <DeadlineWidget deadlines={deadlines} />
           </section>
 
-          <section>
-            <ActivityFeed activities={activities as any} />
-          </section>
+           <section>
+             <ActivityFeed activities={activities} />
+           </section>
         </div>
       </div>
     </div>

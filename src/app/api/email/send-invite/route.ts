@@ -5,13 +5,13 @@ import { renderTeamInviteEmail } from "@/emails/team-invite";
 import { emailQueue } from "@/lib/email-queue";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { randomBytes } from "crypto";
 
 const inviteSchema = z.object({
-  projectId: z.string(),
+  projectId: z.string().cuid(), // Require CUID format for projectId
   email: z.string().email(),
 });
-
-import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   const rateLimitResponse = checkRateLimit(req);
@@ -39,9 +39,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Project not found or unauthorized" }, { status: 404 });
     }
 
-    // Create invitation (In real app, we'd have an Invitation model, for now we can use TeamMember with a pending status if we add it, or just send the email)
-    // For now, let's just send the email with a link to join
-    const inviteLink = `${process.env.NEXTAUTH_URL}/projects/${projectId}/join?email=${encodeURIComponent(email)}`;
+    // Generate a cryptographically secure token
+    const token = randomBytes(32).toString('hex');
+    
+    // Create invitation record in the database
+    await db.invitation.create({
+      data: {
+        projectId,
+        email,
+        token,
+        invitedBy: session.user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days expiry
+      }
+    });
+    
+    // Build invite link using the token instead of email
+    const inviteLink = `${process.env.NEXTAUTH_URL}/invitations/accept?token=${encodeURIComponent(token)}`;
 
     await emailQueue.add({
       to: email,

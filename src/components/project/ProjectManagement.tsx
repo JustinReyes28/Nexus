@@ -3,17 +3,10 @@
 import React, { useState } from "react";
 import ProjectActions from "./ProjectActions";
 import EditProjectModal from "./EditProjectModal";
-import { ProjectStatus } from "@prisma/client";
+import { ProjectData } from "@/types/project";
 
 interface ProjectManagementProps {
-  project: {
-    id: string;
-    title: string;
-    description: string | null;
-    discipline: string | null;
-    deadline: Date | string | null;
-    status: ProjectStatus;
-  };
+  project: ProjectData;
 }
 
 export default function ProjectManagement({ project }: ProjectManagementProps) {

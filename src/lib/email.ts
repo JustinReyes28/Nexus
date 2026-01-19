@@ -1,27 +1,70 @@
 import nodemailer from "nodemailer";
+import crypto from "crypto";
 
-export const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
-  },
-});
+let cachedTransporter: nodemailer.Transporter | null = null;
 
-export const sendEmail = async ({ 
-  to, 
-  subject, 
-  html, 
-  text 
-}: { 
-  to: string; 
-  subject: string; 
+const validateEnvVars = () => {
+  if (!process.env.SMTP_HOST) {
+    throw new Error("SMTP_HOST environment variable is required");
+  }
+  if (!process.env.SMTP_USER) {
+    throw new Error("SMTP_USER environment variable is required");
+  }
+  if (!process.env.SMTP_PASSWORD) {
+    throw new Error("SMTP_PASSWORD environment variable is required");
+  }
+};
+
+export const getTransporter = () => {
+  if (!cachedTransporter) {
+    validateEnvVars();
+    
+    const parsedPort = parseInt(process.env.SMTP_PORT || "587");
+    const secure = parsedPort === 465; // true for 465, false for other ports
+    
+    cachedTransporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parsedPort,
+      secure,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASSWORD,
+      },
+    });
+  }
+  return cachedTransporter;
+};
+
+export const verifyConnection = async () => {
+  try {
+    const transporter = getTransporter();
+    await transporter.verify();
+    return { success: true, message: "SMTP connection verified successfully" };
+  } catch (error) {
+    console.error("[EMAIL_CONNECTION_ERROR]", error);
+    return {
+      success: false,
+      error: {
+        message: "Failed to verify SMTP connection",
+        code: "CONNECTION_VERIFY_FAILED"
+      }
+    };
+  }
+};
+
+export const sendEmail = async ({
+  to,
+  subject,
+  html,
+  text
+}: {
+  to: string;
+  subject: string;
   html: string;
   text?: string;
 }) => {
   try {
+    const transporter = getTransporter();
     const info = await transporter.sendMail({
       from: `"Nexus" <${process.env.SMTP_USER}>`,
       to,
@@ -29,11 +72,21 @@ export const sendEmail = async ({
       html,
       text: text || "This email requires HTML to view properly.",
     });
-    console.log(`[EMAIL_SENT] Message sent: ${info.messageId} to ${to}`);
+    
+    // Create a hash of the email for logging purposes (without exposing PII)
+    const emailHash = crypto.createHash('sha256').update(to).digest('hex').substring(0, 8);
+    console.log(`[EMAIL_SENT] Message sent: ${info.messageId} to recipient with hash: ${emailHash}`);
+    
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error("[EMAIL_ERROR]", error);
-    return { success: false, error };
+    return {
+      success: false,
+      error: {
+        message: 'Failed to send email',
+        code: 'EMAIL_SEND_FAILED'
+      }
+    };
   }
 };
 
@@ -58,9 +111,9 @@ export const emailLayout = (content: string) => `
     <div class="header">
       <h1 style="color: #2563eb; margin: 0;">Nexus</h1>
     </div>
-    ${content}
+    \${content}
     <div class="footer">
-      &copy; ${new Date().getFullYear()} Nexus. All rights reserved.
+      &copy; \${new Date().getFullYear()} Nexus. All rights reserved.
     </div>
   </div>
 </body>

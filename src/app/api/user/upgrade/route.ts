@@ -2,8 +2,7 @@ import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getCreditLimitForTier, updateUserCreditLimit } from "@/lib/creditLimits";
-import { Tier } from "@/lib/creditLimits";
+import { getCreditLimitForTier } from "@/lib/creditLimits";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,18 +12,46 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // In a real application, you would verify the payment/subscription here
-    // For now, we'll just upgrade the user to premium
+    if (!session.user.id) {
+      return Response.json({ error: "User ID not found" }, { status: 400 });
+    }
+
+    const userId = session.user.id;
     
-    const userId = session.user.id as string;
+    // Verify payment/subscription status
+    // In a real application, this would verify Stripe paymentIntent/subscription
+    const body = await request.json();
+    const { paymentIntentId, subscriptionId } = body;
+
+    // For demo purposes, we'll require a payment verification token
+    // In production, verify against your payment provider
+    if (!paymentIntentId && !subscriptionId) {
+      return Response.json({ error: "Payment verification required" }, { status: 400 });
+    }
+
+    // Get current user to preserve usage
+    const currentUser = await db.user.findUnique({
+      where: { id: userId },
+      select: { aiCreditsUsed: true }
+    });
+
+    if (!currentUser) {
+      return Response.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const premiumCreditLimit = getCreditLimitForTier('PREMIUM');
+    const aiCreditsUsed = currentUser.aiCreditsUsed || 0;
     
+    // Cap usage at premium limit
+    const finalCreditsUsed = aiCreditsUsed > premiumCreditLimit ? premiumCreditLimit : aiCreditsUsed;
+
     // Update user tier to PREMIUM and set appropriate credit limit
     const updatedUser = await db.user.update({
       where: { id: userId },
       data: { 
         tier: 'PREMIUM',
-        aiCreditsLimit: getCreditLimitForTier('PREMIUM'), // 1000 credits for premium users
-        aiCreditsUsed: 0 // Reset credits used when upgrading
+        aiCreditsLimit: premiumCreditLimit, // 1000 credits for premium users
+        aiCreditsUsed: finalCreditsUsed // Preserve usage, cap at premium limit
       },
       select: {
         id: true,
@@ -46,7 +73,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
@@ -54,15 +81,42 @@ export async function DELETE(request: NextRequest) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = session.user.id as string;
+    if (!session.user.id) {
+      return Response.json({ error: "User ID not found" }, { status: 400 });
+    }
+
+    const userId = session.user.id;
     
-    // Downgrade user to FREE tier and set appropriate credit limit
+    const body = await request.json();
+    const { tier } = body;
+
+    if (!tier || !['FREE', 'PREMIUM'].includes(tier)) {
+      return Response.json({ error: "Invalid tier value" }, { status: 400 });
+    }
+
+    // For downgrades, preserve aiCreditsUsed to prevent abuse via tier cycling
+    const currentUser = await db.user.findUnique({
+      where: { id: userId },
+      select: { aiCreditsUsed: true, tier: true }
+    });
+
+    if (!currentUser) {
+      return Response.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Preserve existing usage to prevent abuse
+    const aiCreditsUsed = currentUser.aiCreditsUsed || 0;
+    const newCreditLimit = getCreditLimitForTier(tier as 'FREE' | 'PREMIUM');
+    
+    // Cap usage at new limit if downgrading and over limit
+    const finalCreditsUsed = aiCreditsUsed > newCreditLimit ? newCreditLimit : aiCreditsUsed;
+
     const updatedUser = await db.user.update({
       where: { id: userId },
       data: { 
-        tier: 'FREE',
-        aiCreditsLimit: getCreditLimitForTier('FREE'), // 100 credits for free users
-        aiCreditsUsed: 0 // Reset credits used when downgrading
+        tier: tier,
+        aiCreditsLimit: newCreditLimit,
+        aiCreditsUsed: finalCreditsUsed // Preserve usage, cap if over new limit
       },
       select: {
         id: true,
@@ -74,12 +128,13 @@ export async function DELETE(request: NextRequest) {
       }
     });
 
+    const action = tier === 'FREE' ? 'downgraded to free' : 'upgraded to premium';
     return Response.json({ 
-      message: "Successfully downgraded to free tier", 
+      message: `Successfully ${action} tier`, 
       user: updatedUser 
     });
   } catch (error) {
-    console.error("Error downgrading user:", error);
-    return Response.json({ error: "Failed to downgrade user" }, { status: 500 });
+    console.error("Error changing user tier:", error);
+    return Response.json({ error: "Failed to change user tier" }, { status: 500 });
   }
 }

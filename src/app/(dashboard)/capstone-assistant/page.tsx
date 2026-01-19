@@ -16,7 +16,6 @@ import { WavyUnderline } from "@/components/ui/HandDrawnElements";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { TheGuide } from "@/components/ai/TheGuide";
-import { cn } from "@/lib/utils";
 
 // Tool View Imports
 import { IdeaGeneratorView } from "@/components/ai/IdeaGeneratorView";
@@ -25,6 +24,15 @@ import { ProposalWriterView } from "@/components/ai/ProposalWriterView";
 import { MethodologyAdvisorView } from "@/components/ai/MethodologyAdvisorView";
 import { ProgressAnalyzerView } from "@/components/ai/ProgressAnalyzerView";
 import { WritingAssistantView } from "@/components/ai/WritingAssistantView";
+
+const TOOL_VIEWS: Record<ToolId, React.ComponentType> = {
+  ideas: IdeaGeneratorView,
+  research: ResearchAssistantView,
+  proposal: ProposalWriterView,
+  methodology: MethodologyAdvisorView,
+  progress: ProgressAnalyzerView,
+  writing: WritingAssistantView,
+};
 
 // Tool Definitions
 const TOOLS = [
@@ -70,10 +78,12 @@ const TOOLS = [
     icon: PenTool,
     color: "text-sunny",
   },
-];
+] as const;
+
+type ToolId = typeof TOOLS[number]["id"];
 
 export default function CapstoneAssistantPage() {
-  const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [activeTool, setActiveTool] = useState<ToolId | null>(null);
 
   const selectedTool = TOOLS.find(t => t.id === activeTool);
 
@@ -120,13 +130,14 @@ export default function CapstoneAssistantPage() {
       {!activeTool ? (
         /* Tool Selection Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 container px-4 md:px-0">
-          {TOOLS.map((tool, index) => (
+           {TOOLS.map((tool, index) => (
             <ToolCard
               key={tool.id}
               index={index}
               title={tool.title}
               description={tool.description}
               icon={tool.icon}
+              color={tool.color}
               isActive={false}
               onClick={() => setActiveTool(tool.id)}
             />
@@ -176,14 +187,9 @@ export default function CapstoneAssistantPage() {
           <div className="bg-white border-2 border-gray-100 rounded-[32px] p-8 md:p-12 shadow-2xl shadow-gray-200/50 relative overflow-hidden">
              <div className="absolute inset-0 bg-grain opacity-[0.03] pointer-events-none" />
              
-             <div className="min-h-[500px]">
-                {activeTool === "ideas" && <IdeaGeneratorView />}
-                {activeTool === "research" && <ResearchAssistantView />}
-                {activeTool === "proposal" && <ProposalWriterView />}
-                {activeTool === "methodology" && <MethodologyAdvisorView />}
-                {activeTool === "progress" && <ProgressAnalyzerView />}
-                {activeTool === "writing" && <WritingAssistantView />}
-             </div>
+           <div className="min-h-[500px]">
+            {activeTool && TOOL_VIEWS[activeTool] ? React.createElement(TOOL_VIEWS[activeTool]) : null}
+          </div>
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ export const featureColors = {
     border: "border-teal/20",
     hover: "hover:bg-teal/15",
     button: "bg-teal hover:bg-teal/90",
+    glow: "bg-teal/5",
   },
   collaboration: {
     icon: "text-crimson",
@@ -12,6 +13,7 @@ export const featureColors = {
     border: "border-crimson/15",
     hover: "hover:bg-crimson/10",
     button: "bg-crimson hover:bg-crimson/90",
+    glow: "bg-crimson/5",
   },
   management: {
     icon: "text-sunny",
@@ -19,13 +21,15 @@ export const featureColors = {
     border: "border-sunny/30",
     hover: "hover:bg-sunny/25",
     button: "bg-sunny hover:bg-sunny/90",
+    glow: "bg-sunny/5",
   },
   research: {
-    icon: "text-indigo-600",
-    background: "bg-indigo-50",
-    border: "border-indigo-100",
-    hover: "hover:bg-indigo-100/50",
-    button: "bg-indigo-600 hover:bg-indigo-700",
+    icon: "text-indigo",
+    background: "bg-indigo/10",
+    border: "border-indigo/20",
+    hover: "hover:bg-indigo/15",
+    button: "bg-indigo hover:bg-indigo/90",
+    glow: "bg-indigo/5",
   },
 } as const;
 

@@ -46,25 +46,32 @@ export const FeaturesSection: React.FC = () => {
         </div>
 
         {/* Category Tabs */}
-        <div className="flex flex-wrap justify-center gap-2 mb-12">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => setActiveCategory(category.id)}
-              className={cn(
-                "px-6 py-2 rounded-full text-sm font-semibold transition-all duration-200 border-2",
-                activeCategory === category.id
-                  ? "bg-gray-900 text-white border-gray-900 shadow-md scale-105"
-                  : "bg-white text-gray-600 border-gray-100 hover:border-gray-300"
-              )}
-            >
-              {category.label}
-            </button>
-          ))}
+        <div role="tablist" className="flex flex-wrap justify-center gap-2 mb-12">
+          {categories.map((category) => {
+            const tabId = `tab-${category.id}`;
+            return (
+              <button
+                key={category.id}
+                id={tabId}
+                role="tab"
+                aria-selected={activeCategory === category.id}
+                aria-controls="features-grid"
+                onClick={() => setActiveCategory(category.id)}
+                className={cn(
+                  "px-6 py-2 rounded-full text-sm font-semibold transition-all duration-200 border-2",
+                  activeCategory === category.id
+                    ? "bg-gray-900 text-white border-gray-900 shadow-md scale-105"
+                    : "bg-white text-gray-600 border-gray-100 hover:border-gray-300"
+                )}
+              >
+                {category.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Feature Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+        <div id="features-grid" role="tabpanel" aria-labelledby={`tab-${activeCategory}`} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
           {filteredFeatures.map((feature, index) => (
             <div
               key={feature.id}
@@ -96,14 +103,14 @@ export const FeaturesSection: React.FC = () => {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link href="/register">
-              <Button size="lg" className="w-full sm:w-auto">
-                Get Started for Free
+            <Link href="/register" passHref legacyBehavior>
+              <Button asChild size="lg" className="w-full sm:w-auto">
+                <a>Get Started for Free</a>
               </Button>
             </Link>
-            <Link href="/demo">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                Watch Demo
+            <Link href="/demo" passHref legacyBehavior>
+              <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
+                <a>Watch Demo</a>
               </Button>
             </Link>
           </div>

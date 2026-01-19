@@ -3,20 +3,23 @@
 import React from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { Calendar, AlertCircle, Clock, MoreVertical } from "lucide-react";
+import { AlertCircle, Clock, MoreVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PushPin } from "@/components/ui/HandDrawnElements";
+
+type TaskStatus = "TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED";
+type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
 interface TaskCardProps {
   task: {
     id: string;
     title: string;
     description: string | null;
-    status: "TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED";
-    priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-    dueDate: Date | null;
+    status: TaskStatus;
+    priority: TaskPriority;
+    dueDate: Date | string | null;
   };
-  onStatusChange?: (id: string, newStatus: "TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED") => void;
+  onStatusChange?: (id: string, newStatus: TaskStatus) => void;
   onEdit?: (id: string) => void;
 }
 
@@ -25,7 +28,7 @@ export default function TaskCard({ task, onStatusChange, onEdit }: TaskCardProps
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "COMPLETED";
   const isCompleted = task.status === "COMPLETED";
 
-  const priorityVariants = {
+  const priorityVariants: Record<TaskPriority, "secondary" | "default" | "danger"> = {
     LOW: "secondary",
     MEDIUM: "default",
     HIGH: "danger",
@@ -69,13 +72,13 @@ export default function TaskCard({ task, onStatusChange, onEdit }: TaskCardProps
       )}
 
       <div className="flex items-start gap-4 relative z-10">
-        <Checkbox
-          id={task.id}
-          checked={isCompleted}
-          onCheckedChange={() => onStatusChange?.(task.id, getNextStatus())}
-          className="mt-1.5"
-          onClick={(e) => e.stopPropagation()}
-        />
+         <Checkbox
+           id={task.id}
+           checked={isCompleted}
+           onCheckedChange={() => onStatusChange?.(task.id, isCompleted ? "TODO" : "COMPLETED")}
+           className="mt-1.5"
+           onClick={(e) => e.stopPropagation()}
+         />
         
         <div className="flex-1 space-y-3">
           <div className="flex items-center justify-between">
@@ -86,15 +89,16 @@ export default function TaskCard({ task, onStatusChange, onEdit }: TaskCardProps
               {task.title}
             </h4>
             <div className="flex items-center gap-1">
-               <Badge variant={priorityVariants[task.priority as keyof typeof priorityVariants] as any} className="text-[8px] h-4">
+               <Badge variant={priorityVariants[task.priority]} className="text-[8px] h-4">
                  {task.priority}
                </Badge>
-               <button 
-                onClick={(e) => { e.stopPropagation(); onEdit?.(task.id); }}
-                className="text-gray-300 hover:text-gray-600 transition-colors"
-               >
-                  <MoreVertical className="w-4 h-4" />
-               </button>
+                <button 
+                 onClick={(e) => { e.stopPropagation(); onEdit?.(task.id); }}
+                 className="text-gray-300 hover:text-gray-600 transition-colors"
+                 aria-label={`Edit task ${task.id}`}
+                >
+                   <MoreVertical className="w-4 h-4" />
+                </button>
             </div>
           </div>
 
@@ -118,9 +122,9 @@ export default function TaskCard({ task, onStatusChange, onEdit }: TaskCardProps
               </span>
             </div>
             
-            {isOverdue && (
-              <span className="text-[8px] bg-crimson text-white px-2 py-0.5 rounded-full font-bold animate-pulse">OVERDUE</span>
-            )}
+             {isOverdue && (
+               <span className="text-[8px] bg-crimson text-white px-2 py-0.5 rounded-full font-bold motion-safe:animate-pulse">OVERDUE</span>
+             )}
             
             {isCompleted && (
               <span className="text-[8px] bg-teal text-white px-2 py-0.5 rounded-full font-bold">DONE</span>

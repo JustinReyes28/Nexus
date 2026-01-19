@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { TaskStatus, Priority } from "@prisma/client";
 import { X, Calendar, Flag, Layout } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
 
 interface TaskFormProps {
   initialData?: {
@@ -33,16 +32,77 @@ export default function TaskForm({ initialData, onSave, onCancel }: TaskFormProp
     priority: initialData?.priority || "MEDIUM",
     dueDate: initialData?.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : "",
   });
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const modalRef = useRef<HTMLDivElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const priorityOptions: { value: "LOW" | "MEDIUM" | "HIGH" | "URGENT"; label: string }[] = [
+    { value: "LOW", label: "Chill (Low)" },
+    { value: "MEDIUM", label: "Steady (Medium)" },
+    { value: "HIGH", label: "Focus (High)" },
+    { value: "URGENT", label: "Deadline (Urgent)" },
+  ];
+
+  const statusOptions: { value: TaskStatus; label: string }[] = [
+    { value: "TODO", label: "To Do" },
+    { value: "IN_PROGRESS", label: "In Progress" },
+    { value: "REVIEW", label: "Review" },
+    { value: "COMPLETED", label: "Completed" },
+  ];
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    setIsSubmitting(true);
+    try {
+      const normalizedData = {
+        ...formData,
+        dueDate: formData.dueDate === "" ? "" : formData.dueDate,
+      };
+      await onSave(normalizedData);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onCancel();
+      }
+    };
+
+    const modalElement = modalRef.current;
+    if (modalElement) {
+      modalElement.focus();
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onCancel]);
+
+  useEffect(() => {
+    const focusableElements = modalRef.current?.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusableElements && focusableElements.length > 0) {
+      (focusableElements[0] as HTMLElement).focus();
+    }
+  }, []);
 
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-md p-4 animate-in fade-in duration-300">
-      <div className="bg-canvas w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border-4 border-white relative">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-md p-4 animate-in fade-in duration-300"
+      ref={modalRef}
+      tabIndex={-1}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          onCancel();
+        }
+      }}
+    >
+      <div className="bg-canvas w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border-4 border-white relative" ref={modalRef} tabIndex={-1}>
         {/* Subtle pattern bg */}
         <div className="absolute inset-0 bg-paper opacity-50 pointer-events-none" />
         <div className="absolute inset-0 bg-grain opacity-20 pointer-events-none" />
@@ -54,15 +114,16 @@ export default function TaskForm({ initialData, onSave, onCancel }: TaskFormProp
             </h3>
             <p className="text-sm text-gray-500 font-body">Adding a brick to the campus structure.</p>
           </div>
-          <button onClick={onCancel} className="p-2 bg-white rounded-xl shadow-sm hover:bg-gray-50 transition-colors text-gray-400 hover:text-crimson">
+          <button onClick={onCancel} className="p-2 bg-white rounded-xl shadow-sm hover:bg-gray-50 transition-colors text-gray-400 hover:text-crimson" aria-label="Close task form">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6 relative z-10">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Task Title</label>
+            <label htmlFor="task-title" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Task Title</label>
             <input
+              id="task-title"
               type="text"
               required
               className="w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-crimson/30 focus:ring-4 focus:ring-crimson/5 outline-none transition-all font-body text-gray-800 placeholder:text-gray-300"
@@ -73,8 +134,9 @@ export default function TaskForm({ initialData, onSave, onCancel }: TaskFormProp
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Deep Dive (Description)</label>
+            <label htmlFor="task-description" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Deep Dive (Description)</label>
             <textarea
+              id="task-description"
               className="w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-crimson/30 focus:ring-4 focus:ring-crimson/5 outline-none transition-all font-body text-gray-800 placeholder:text-gray-300 resize-none h-32"
               placeholder="Add some context or specific details..."
               value={formData.description || ""}
@@ -84,44 +146,49 @@ export default function TaskForm({ initialData, onSave, onCancel }: TaskFormProp
 
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Priority Level</label>
+              <label htmlFor="task-priority" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Priority Level</label>
               <div className="relative">
                  <Flag className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                 <select
-                  className="w-full pl-11 pr-5 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-crimson/30 outline-none transition-all font-body text-gray-800 appearance-none cursor-pointer"
-                  value={formData.priority}
-                  onChange={(e) => setFormData({ ...formData, priority: e.target.value as Priority })}
-                >
-                  <option value="LOW">Chill (Low)</option>
-                  <option value="MEDIUM">Steady (Medium)</option>
-                  <option value="HIGH">Focus (High)</option>
-                  <option value="URGENT">Deadline (Urgent)</option>
+<select
+                   id="task-priority"
+                   className="w-full pl-11 pr-5 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-crimson/30 outline-none transition-all font-body text-gray-800 appearance-none cursor-pointer"
+                   value={formData.priority}
+                   onChange={(e) => setFormData({ ...formData, priority: e.target.value as Priority })}
+                 >
+                  {priorityOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Canvas Section</label>
+              <label htmlFor="task-status" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Canvas Section</label>
               <div className="relative">
                  <Layout className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                 <select
-                  className="w-full pl-11 pr-5 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-crimson/30 outline-none transition-all font-body text-gray-800 appearance-none cursor-pointer"
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as TaskStatus })}
-                >
-                  <option value="TODO">To Do</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="REVIEW">Review</option>
-                  <option value="COMPLETED">Completed</option>
+<select
+                   id="task-status"
+                   className="w-full pl-11 pr-5 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-crimson/30 outline-none transition-all font-body text-gray-800 appearance-none cursor-pointer"
+                   value={formData.status}
+                   onChange={(e) => setFormData({ ...formData, status: e.target.value as TaskStatus })}
+                 >
+                  {statusOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Deadline Date</label>
+            <label htmlFor="task-dueDate" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Deadline Date</label>
             <div className="relative">
                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                <input
+                id="task-dueDate"
                 type="date"
                 className="w-full pl-11 pr-5 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-crimson/30 outline-none transition-all font-body text-gray-800"
                 value={formData.dueDate}
@@ -135,6 +202,7 @@ export default function TaskForm({ initialData, onSave, onCancel }: TaskFormProp
               type="button"
               onClick={onCancel}
               className="flex-1 px-6 py-4 border-2 border-gray-100 rounded-2xl font-bold text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all font-body text-sm"
+              disabled={isSubmitting}
             >
               Back Out
             </button>
@@ -142,6 +210,7 @@ export default function TaskForm({ initialData, onSave, onCancel }: TaskFormProp
               type="submit"
               variant="primary"
               className="flex-1 shadow-xl shadow-crimson/10"
+              disabled={isSubmitting}
             >
               {initialData?.id ? "Sync Changes" : "Create Task"}
             </Button>

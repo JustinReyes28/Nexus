@@ -8,8 +8,7 @@ import { Tier } from "@prisma/client";
 interface AISettingsProps {
   aiCreditsUsed: number;
   aiCreditsLimit: number;
-  userId: string;
- tier: Tier;
+  tier: Tier;
   activeProjectsCount: number;
   uniqueFeaturesUsed: number;
   tasksCompleted: number;
@@ -18,7 +17,6 @@ interface AISettingsProps {
 export default function AISettings({
   aiCreditsUsed,
   aiCreditsLimit,
-  userId,
   tier,
   activeProjectsCount,
   uniqueFeaturesUsed,
@@ -31,32 +29,54 @@ export default function AISettings({
     ? Math.min(100, Math.round((aiCreditsUsed / aiCreditsLimit) * 100))
     : 0;
 
-  const handleUpgrade = async () => {
+  const [error, setError] = useState<string | null>(null);
+
+const handleUpgrade = async () => {
     setIsLoading(true);
+    setError(null);
     try {
+      // In a real app, this would include the actual payment intent from Stripe
       const response = await fetch('/api/user/upgrade', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          // This is a placeholder - in production, get from Stripe checkout
+          paymentIntentId: 'pi_demo_upgrade_token',
+        }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upgrade account');
+        let errorMessage = `Upgrade failed with status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage += `: ${errorData.error || 'Unknown error'}`;
+        } catch (e) {
+          const errorText = await response.text();
+          errorMessage += `: ${errorText || 'No details available'}`;
+        }
+        throw new Error(errorMessage);
       }
 
       // Refresh the page or update the UI to reflect the new tier
       window.location.reload(); // Simple approach to refresh the UI with new tier info
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to process upgrade");
+      setError(error instanceof Error ? error.message : "Failed to process upgrade");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="card rounded-xl shadow-md bg-teal/5 border border-teal">
+      <div className="card rounded-xl shadow-md bg-teal/5 border border-teal">
+        {error && (
+          <div className="px-6 pt-4">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+              <span className="block sm:inline">{error}</span>
+            </div>
+          </div>
+        )}
       <div className="px-6 py-4 border-b border-teal/20">
         <h3 className="text-xl font-heading font-bold text-primary">{AI_SETTINGS_LABELS.sectionHeader}</h3>
         <p className="text-sm text-gray-500 mt-1">{AI_SETTINGS_LABELS.sectionSubheader}</p>
@@ -67,22 +87,22 @@ export default function AISettings({
         <div>
           <h4 className="text-lg font-heading font-semibold text-primary mb-3">Current Tier</h4>
           <div className="bg-white rounded-xl p-4 border border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-heading font-bold text-teal animate-pulse-organic">
-                  {AI_TIERS[tier].name}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">{AI_TIERS[tier].description}</p>
-              </div>
-              <Button
-                variant="ai"
-                onClick={handleUpgrade}
-                disabled={isLoading}
-                className="animate-sparkle hover:animate-none"
-              >
-                {AI_TIERS[tier].upgradeLabel}
-              </Button>
-            </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-2xl font-heading font-bold text-teal animate-pulse-organic">
+              {AI_TIERS[tier]?.name || 'Unknown Tier'}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">{AI_TIERS[tier]?.description || ''}</p>
+          </div>
+          <Button
+            variant="ai"
+            onClick={handleUpgrade}
+            disabled={isLoading}
+            className="animate-sparkle hover:animate-none"
+          >
+            {isLoading ? 'Upgrading...' : (AI_TIERS[tier]?.upgradeLabel || 'Upgrade')}
+          </Button>
+        </div>
           </div>
         </div>
 
@@ -92,13 +112,9 @@ export default function AISettings({
           <div className="bg-white rounded-xl p-4 border border-gray-100">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm text-gray-500">{AI_SETTINGS_LABELS.monthlyCredits}</p>
-              <p className="font-semibold text-gray-800">
-                {tier === "PREMIUM" ? (
-                  `${aiCreditsUsed} / ${aiCreditsLimit} credits used`
-                ) : (
-                  `${aiCreditsUsed} / ${aiCreditsLimit} credits used`
-                )}
-              </p>
+            <p className="font-semibold text-gray-800">
+              {`${aiCreditsUsed} / ${aiCreditsLimit} credits used`}
+            </p>
             </div>
 
             <>
@@ -124,7 +140,7 @@ export default function AISettings({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white rounded-xl p-4 border border-gray-100 text-center">
               <p className="text-2xl font-heading font-bold text-teal animate-float">{aiCreditsUsed}</p>
-              <p className="text-xs text-gray-500 mt-1">AI Queries</p>
+              <p className="text-xs text-gray-500 mt-1">{AI_SETTINGS_LABELS.queriesUsed}</p>
             </div>
             <div className="bg-white rounded-xl p-4 border border-gray-100 text-center">
               <p className="text-2xl font-heading font-bold text-teal animate-float">{uniqueFeaturesUsed}</p>
@@ -148,7 +164,7 @@ export default function AISettings({
             {AI_SETTINGS_LABELS.featuresAvailable}
           </h4>
           <div className="space-y-2 text-sm">
-            {AI_TIERS[tier].features.map((feature, index) => (
+            {(AI_TIERS[tier]?.features || []).map((feature, index) => (
               <div key={index} className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-teal rounded-full animate-pulse" />
                 <span>{feature}</span>

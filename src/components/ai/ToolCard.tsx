@@ -8,6 +8,7 @@ interface ToolCardProps {
   title: string;
   description: string;
   icon: LucideIcon;
+  color?: string;
   isActive: boolean;
   onClick: () => void;
   index: number;
@@ -17,6 +18,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({
   title,
   description,
   icon: Icon,
+  color,
   isActive,
   onClick,
   index,
@@ -27,11 +29,13 @@ export const ToolCard: React.FC<ToolCardProps> = ({
 
   return (
     <button
+      type="button"
       onClick={onClick}
+      aria-pressed={isActive}
       className={cn(
         "group relative flex flex-col items-start p-6 text-left transition-all duration-300 rounded-2xl border-2",
         "bg-white shadow-lg hover:shadow-xl",
-        isActive 
+        isActive
           ? cn("border-teal bg-teal/5 shadow-teal/10", activeRotation)
           : "border-gray-100 hover:border-teal/30 hover:bg-canvas/50",
         rotation
@@ -45,9 +49,10 @@ export const ToolCard: React.FC<ToolCardProps> = ({
         "mb-4 p-3 rounded-xl transition-all duration-300",
         isActive 
           ? "bg-teal text-white shadow-lg shadow-teal/20 scale-110" 
-          : "bg-gray-50 text-gray-400 group-hover:bg-teal/10 group-hover:text-teal group-hover:scale-110"
+          : "bg-gray-50 text-gray-400 group-hover:bg-teal/10 group-hover:text-teal group-hover:scale-110",
+        color
       )}>
-        <Icon size={24} strokeWidth={2.5} />
+        <Icon size={24} strokeWidth={2.5} className={color} />
       </div>
 
       <h3 className={cn(

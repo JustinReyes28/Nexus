@@ -4,7 +4,6 @@ import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { WavyUnderline, Sparkle } from "@/components/ui/HandDrawnElements";
-import { cn } from "@/lib/utils";
 
 export const HeroSection = () => {
   return (
@@ -38,16 +37,16 @@ export const HeroSection = () => {
             </p>
             
             <div className="flex flex-wrap gap-4">
-              <Link href="/register">
-                <Button size="lg" className="shadow-lg shadow-crimson/20">
+              <Button asChild size="lg" className="shadow-lg shadow-crimson/20">
+                <a href="/register">
                   Start Your Journey
-                </Button>
-              </Link>
-              <Link href="/about">
-                <Button variant="outline" size="lg">
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <a href="/about">
                   Explore the Canvas
-                </Button>
-              </Link>
+                </a>
+              </Button>
             </div>
             
           </div>
@@ -56,11 +55,11 @@ export const HeroSection = () => {
           <div className="lg:w-[40%] relative">
              <div className="relative aspect-square w-full max-w-[450px] mx-auto">
                 {/* Asymmetric Image/Illustration Container */}
-                <div className="absolute inset-x-4 inset-y-0 bg-sunny rounded-[30% 70% 70% 30% / 30% 30% 70% 70%] animate-[pulse-organic_4s_infinite] opacity-20" />
+                <div className="absolute inset-x-4 inset-y-0 bg-sunny rounded-[30%_70%_70%_30%_/_30%_30%_70%_70%] animate-[pulse-organic_4s_infinite] opacity-20" />
                 
                 <div className="absolute inset-0 flex items-center justify-center p-8">
                    {/* Abstract Digital Graphic / Mind Map Illustration */}
-                   <svg viewBox="0 0 200 200" className="w-full h-full text-crimson">
+                   <svg viewBox="0 0 200 200" className="w-full h-full text-crimson" aria-hidden="true">
                       <circle cx="100" cy="100" r="10" fill="currentColor" />
                       <path d="M100 100 L150 50" stroke="currentColor" strokeWidth="2" strokeDasharray="4 2" />
                       <circle cx="150" cy="50" r="6" fill="var(--teal)" />

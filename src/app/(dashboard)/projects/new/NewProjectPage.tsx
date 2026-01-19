@@ -64,6 +64,7 @@ export default function NewProjectPage({ session }: NewProjectPageProps) {
       await createProject(formDataToSend);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create project. Please try again.");
+    } finally {
       setIsLoading(false);
     }
   };
@@ -72,6 +73,12 @@ export default function NewProjectPage({ session }: NewProjectPageProps) {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  // Compute min dates for date inputs
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0];
+  const minDeadline = formData.startDate || todayStr;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -109,7 +116,6 @@ export default function NewProjectPage({ session }: NewProjectPageProps) {
         )}
 
         <form onSubmit={handleSubmit} className="relative z-10 space-y-8 max-w-2xl mx-auto">
-          <input type="hidden" name="userId" value={session.user.id} />
           
           <div className="space-y-8">
             {/* Project Title */}
@@ -209,6 +215,7 @@ export default function NewProjectPage({ session }: NewProjectPageProps) {
                   type="date"
                   id="startDate"
                   name="startDate"
+                  min={todayStr}
                   className="w-full pl-5 pr-5 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-crimson/30 outline-none transition-all font-body text-gray-800"
                   value={formData.startDate}
                   onChange={handleInputChange}
@@ -223,6 +230,7 @@ export default function NewProjectPage({ session }: NewProjectPageProps) {
                   type="date"
                   id="deadline"
                   name="deadline"
+                  min={minDeadline}
                   className="w-full pl-5 pr-5 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-crimson/30 outline-none transition-all font-body text-gray-800"
                   value={formData.deadline}
                   onChange={handleInputChange}
@@ -233,11 +241,11 @@ export default function NewProjectPage({ session }: NewProjectPageProps) {
 
           {/* Form Actions */}
           <div className="flex flex-col sm:flex-row gap-4 justify-end pt-4 border-t border-gray-100">
-            <Link href="/dashboard">
-              <Button type="button" variant="outline" className="w-full sm:w-auto">
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link href="/dashboard" type="button">
                 Cancel
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             <Button
               type="submit"
               className="w-full sm:w-auto shadow-lg shadow-crimson/10 rotate-1 hover:rotate-0"

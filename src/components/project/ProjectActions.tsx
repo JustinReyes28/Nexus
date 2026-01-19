@@ -2,15 +2,14 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { 
-  Pencil, 
-  Trash2, 
-  ListTodo, 
-  Sparkles, 
+import {
+  Pencil,
+  Trash2,
+  ListTodo,
+  Sparkles,
   Loader2,
   ExternalLink
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ProjectStatus } from "@prisma/client";
@@ -38,14 +37,30 @@ export default function ProjectActions({ projectId, status, onEdit }: ProjectAct
         method: "DELETE",
       });
 
-      if (!response.ok) throw new Error("Failed to delete project");
+      if (!response.ok) {
+        let errorMessage = "Failed to delete project";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (jsonError) {
+          // Fallback to text if JSON parsing fails
+          try {
+            const errorText = await response.text();
+            errorMessage = errorText || errorMessage;
+          } catch (textError) {
+            // Use default message if both JSON and text parsing fail
+          }
+        }
+        throw new Error(errorMessage);
+      }
 
       toast.success("Project deleted successfully");
       router.push("/dashboard");
       router.refresh();
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to delete project. Please try again.");
+    } catch (error: any) {
+      console.error("Delete project error:", error);
+      const errorMessage = error.message || "Failed to delete project. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setIsDeleting(false);
     }
@@ -78,16 +93,18 @@ export default function ProjectActions({ projectId, status, onEdit }: ProjectAct
         </h3>
         
         <div className="grid grid-cols-1 gap-3">
-          <Link href={`/projects/${projectId}/tasks`}>
-            <Button variant="primary" className="w-full justify-start gap-3 h-12 rotate-0">
-               <ListTodo className="w-5 h-5" />
-               View Task Board
-               <ExternalLink className="w-4 h-4 ml-auto opacity-50" />
-            </Button>
-          </Link>
+          <Button
+            variant="primary"
+            className="w-full justify-start gap-3 h-12 rotate-0"
+            onClick={() => router.push(`/projects/${projectId}/tasks`)}
+          >
+             <ListTodo className="w-5 h-5" />
+             View Task Board
+             <ExternalLink className="w-4 h-4 ml-auto opacity-50" />
+          </Button>
 
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full justify-start gap-3 h-12"
             onClick={onEdit}
           >

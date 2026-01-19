@@ -19,6 +19,17 @@ const DISCIPLINES = [
   "Environmental Science",
 ];
 
+interface Message {
+  role: string;
+  content: string;
+}
+
+interface Conversation {
+  id: string;
+  prompt: string;
+  response: string;
+}
+
 export const IdeaGeneratorView: React.FC = () => {
   const [formData, setFormData] = useState({
     discipline: "Computer Science",
@@ -27,10 +38,10 @@ export const IdeaGeneratorView: React.FC = () => {
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [historyMessages, setHistoryMessages] = useState<any[] | undefined>();
+  const [historyMessages, setHistoryMessages] = useState<Message[] | undefined>();
   const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
 
-  const handleHistorySelect = (conv: any) => {
+  const handleHistorySelect = (conv: Conversation) => {
     setActiveHistoryId(conv.id);
     setHistoryMessages([
       { role: "user", content: conv.prompt },
@@ -43,6 +54,8 @@ export const IdeaGeneratorView: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.topic.length < 3) return;
+    setHistoryMessages([]);
+    setActiveHistoryId(undefined);
     setIsSubmitted(true);
   };
 
@@ -62,9 +75,9 @@ export const IdeaGeneratorView: React.FC = () => {
                   History
                </Button>
             </div>
-            <div className="w-16 h-16 bg-sunny/10 text-sunny rounded-3xl flex items-center justify-center mx-auto rotate-3 group-hover:rotate-0 transition-transform">
-              <Brain size={32} />
-            </div>
+             <div className="w-16 h-16 bg-sunny/10 text-sunny rounded-3xl flex items-center justify-center mx-auto rotate-3 transition-transform">
+               <Brain size={32} />
+             </div>
             <h3 className="text-2xl font-heading font-extrabold text-gray-900 mt-4">
               What sparks your interest?
             </h3>
@@ -73,42 +86,45 @@ export const IdeaGeneratorView: React.FC = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6 bg-canvas border-2 border-gray-100 p-8 rounded-[32px] shadow-xl shadow-gray-200/50">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Field of Study</label>
-              <select 
-                value={formData.discipline}
-                onChange={(e) => setFormData({ ...formData, discipline: e.target.value })}
-                className="w-full bg-white border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-teal transition-all appearance-none cursor-pointer"
-              >
-                {DISCIPLINES.map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
+           <form onSubmit={handleSubmit} className="space-y-6 bg-canvas border-2 border-gray-100 p-8 rounded-[32px] shadow-xl shadow-gray-200/50">
+             <div className="space-y-2">
+               <label htmlFor="discipline" className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Field of Study</label>
+               <select 
+                 id="discipline"
+                 value={formData.discipline}
+                 onChange={(e) => setFormData({ ...formData, discipline: e.target.value })}
+                 className="w-full bg-white border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-teal transition-all appearance-none cursor-pointer"
+               >
+                 {DISCIPLINES.map(d => (
+                   <option key={d} value={d}>{d}</option>
+                 ))}
+               </select>
+             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Initial Topic or Interest</label>
-              <input
-                type="text"
-                placeholder="e.g. Sustainable energy in urban areas"
-                value={formData.topic}
-                onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
-                className="w-full bg-white border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-teal transition-all"
-                required
-              />
-            </div>
+             <div className="space-y-2">
+               <label htmlFor="topic" className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Initial Topic or Interest</label>
+               <input
+                 id="topic"
+                 type="text"
+                 placeholder="e.g. Sustainable energy in urban areas"
+                 value={formData.topic}
+                 onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+                 className="w-full bg-white border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-teal transition-all"
+                 required
+               />
+             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Constraints (Optional)</label>
-              <textarea
-                placeholder="e.g. Must be low-cost, 6-month timeline, local resources only"
-                value={formData.constraints}
-                onChange={(e) => setFormData({ ...formData, constraints: e.target.value })}
-                rows={3}
-                className="w-full bg-white border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-teal transition-all resize-none"
-              />
-            </div>
+             <div className="space-y-2">
+               <label htmlFor="constraints" className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Constraints (Optional)</label>
+               <textarea
+                 id="constraints"
+                 placeholder="e.g. Must be low-cost, 6-month timeline, local resources only"
+                 value={formData.constraints}
+                 onChange={(e) => setFormData({ ...formData, constraints: e.target.value })}
+                 rows={3}
+                 className="w-full bg-white border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-teal transition-all resize-none"
+               />
+             </div>
 
             <Button 
               type="submit" 
@@ -172,21 +188,24 @@ export const IdeaGeneratorView: React.FC = () => {
               endpoint="/api/ai/ideas"
               feature="IDEA_GENERATOR"
               placeholder="Ask for more ideas or deeper validation..."
-              submitOnMount={true}
+              submitOnMount={!historyMessages || historyMessages.length === 0}
               initialInput={formData.topic}
+              loadedHistoryId={activeHistoryId}
               additionalData={{ ...formData, historyMessages }}
             />
           </div>
         </div>
       )}
 
-      <ChatHistoryPanel
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        onSelect={handleHistorySelect}
-        featureFilter="IDEA_GENERATOR"
-        activeId={activeHistoryId}
-      />
+      {!isSubmitted && (
+        <ChatHistoryPanel
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          onSelect={handleHistorySelect}
+          featureFilter="IDEA_GENERATOR"
+          activeId={activeHistoryId}
+        />
+      )}
     </div>
   );
 };

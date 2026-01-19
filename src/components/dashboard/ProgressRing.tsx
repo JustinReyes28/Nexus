@@ -17,16 +17,22 @@ export default function ProgressRing({
   color = "text-blue-600",
   className = "",
 }: ProgressRingProps) {
+  const clampedValue = Math.min(Math.max(value, 0), 100);
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (value / 100) * circumference;
+  const offset = circumference - (clampedValue / 100) * circumference;
 
   return (
     <div className={`relative flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
-      <svg
+<svg
         width={size}
         height={size}
         className="transform -rotate-90"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(clampedValue)}
+        aria-label={`Progress ${Math.round(clampedValue)}%`}
       >
         {/* Background circle */}
         <circle
@@ -52,8 +58,8 @@ export default function ProgressRing({
           cy={size / 2}
         />
       </svg>
-      <span className="absolute text-xs font-semibold">
-        {Math.round(value)}%
+<span className="absolute text-xs font-semibold">
+        {Math.round(clampedValue)}%
       </span>
     </div>
   );

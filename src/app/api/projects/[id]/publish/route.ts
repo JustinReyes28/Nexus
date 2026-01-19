@@ -29,10 +29,9 @@ export async function PATCH(
     }
 
     const updatedProject = await db.project.update({
-      where: { id },
+      where: { id, ownerId: session.user.id },
       data: {
-        status: "PROPOSAL",
-        updatedAt: new Date()
+        status: "PROPOSAL"
       }
     });
 

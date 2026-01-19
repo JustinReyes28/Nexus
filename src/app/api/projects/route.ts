@@ -8,7 +8,12 @@ const projectSchema = z.object({
   title: z.string().min(1, "Title is required").max(100),
   description: z.string().max(500).optional(),
   discipline: z.string().max(100).optional(),
-  deadline: z.string().optional().nullable(),
+  deadline: z.string().optional().nullable().refine((val) => {
+    if (val === null || val === undefined || val === "") return true;
+    return !isNaN(Date.parse(val));
+  }, {
+    message: "Invalid date format"
+  }),
 });
 
 export async function GET() {
@@ -43,8 +48,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    const body = await req.json();
+try {
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      return NextResponse.json({ error: "Invalid JSON format" }, { status: 400 });
+    }
     const validatedData = projectSchema.parse(body);
 
     const project = await db.project.create({

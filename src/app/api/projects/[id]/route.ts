@@ -3,12 +3,18 @@ import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 const projectUpdateSchema = z.object({
   title: z.string().min(1, "Title is required").max(100).optional(),
   description: z.string().max(500).optional().nullable(),
   discipline: z.string().max(100).optional().nullable(),
-  deadline: z.string().optional().nullable(),
+  deadline: z.string().optional().nullable().refine((val) => {
+    if (val === null || val === undefined || val === "") return true;
+    return !isNaN(Date.parse(val));
+  }, {
+    message: "Invalid date format"
+  }),
   status: z.enum([
     "IDEATION",
     "PROPOSAL",
@@ -84,13 +90,13 @@ export async function PATCH(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    const updatedData: any = { ...validatedData };
-    if (validatedData.deadline !== undefined) {
-      updatedData.deadline = validatedData.deadline ? new Date(validatedData.deadline) : null;
-    }
+     const updatedData: Prisma.ProjectUpdateInput = { ...validatedData };
+     if (validatedData.deadline !== undefined) {
+       updatedData.deadline = validatedData.deadline ? new Date(validatedData.deadline) : null;
+     }
 
     const updatedProject = await db.project.update({
-      where: { id: params.id },
+      where: { id: params.id, ownerId: session.user.id },
       data: updatedData,
     });
 
@@ -129,25 +135,23 @@ export async function DELETE(
     // Since we don't have cascade delete in schema yet, we'll delete tasks first 
     // to avoid potential orphan records or constraint issues.
     // In a real production app, we should update the schema.
-    await db.task.deleteMany({
-      where: { projectId: params.id }
-    });
-    
-    await db.document.deleteMany({
-      where: { projectId: params.id }
-    });
-
-    await db.aIConversation.deleteMany({
-      where: { projectId: params.id }
-    });
-
-    await db.teamMember.deleteMany({
-      where: { projectId: params.id }
-    });
-
-    await db.project.delete({
-      where: { id: params.id },
-    });
+    await db.$transaction([
+      db.task.deleteMany({
+        where: { projectId: params.id }
+      }),
+      db.document.deleteMany({
+        where: { projectId: params.id }
+      }),
+      db.aIConversation.deleteMany({
+        where: { projectId: params.id }
+      }),
+      db.teamMember.deleteMany({
+        where: { projectId: params.id }
+      }),
+      db.project.delete({
+        where: { id: params.id, ownerId: session.user.id },
+      })
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

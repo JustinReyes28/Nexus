@@ -9,6 +9,7 @@ import { WavyUnderline } from "@/components/ui/HandDrawnElements";
 import { Sparkles, ArrowLeft, BookOpen, Target, Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { createProject } from "@/lib/actions";
+import SubmitButton from "./SubmitButton";
 
 export default async function NewProjectPage() {
   const session = await getServerSession(authOptions);
@@ -39,9 +40,8 @@ export default async function NewProjectPage() {
         </Link>
       </div>
 
-      {/* Form */}
+{/* Form */}
       <form action={createProject} className="space-y-8">
-        <input type="hidden" name="userId" value={session.user.id} />
         
         <div className="space-y-6">
           <div>
@@ -49,11 +49,12 @@ export default async function NewProjectPage() {
               <Target className="w-4 h-4 text-crimson" />
               Project Title
             </Label>
-            <Input
+<Input
               id="title"
               name="title"
               type="text"
               required
+              maxLength={150}
               placeholder="e.g., My Capstone Research Project"
               className="text-lg font-heading font-bold"
             />
@@ -65,10 +66,11 @@ export default async function NewProjectPage() {
               <BookOpen className="w-4 h-4 text-teal" />
               Description
             </Label>
-            <Textarea
+<Textarea
               id="description"
               name="description"
               required
+              maxLength={2000}
               placeholder="Describe your project's main goals and what you hope to achieve..."
               className="min-h-[120px] font-body"
             />
@@ -80,10 +82,11 @@ export default async function NewProjectPage() {
               <Lightbulb className="w-4 h-4 text-sunny" />
               Academic Discipline (Optional)
             </Label>
-            <Input
+<Input
               id="discipline"
               name="discipline"
               type="text"
+              maxLength={100}
               placeholder="e.g., Computer Science, Engineering, Business"
               className="font-body"
             />
@@ -91,16 +94,14 @@ export default async function NewProjectPage() {
           </div>
         </div>
 
-        {/* Form Actions */}
+{/* Form Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-end pt-4 border-t border-gray-100">
           <Link href="/dashboard">
             <Button type="button" variant="outline" className="w-full sm:w-auto">
               Cancel
             </Button>
           </Link>
-          <Button type="submit" className="w-full sm:w-auto shadow-lg shadow-crimson/10">
-            Create Project
-          </Button>
+          <SubmitButton />
         </div>
       </form>
     </div>

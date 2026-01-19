@@ -6,6 +6,22 @@ import { model, sanitizePrompt, estimateTokens, calculateCredits } from "@/lib/a
 import { rateLimiter } from "@/lib/rate-limit";
 import { methodologySchema } from "@/lib/validations/ai";
 
+interface AiResponse {
+  response: {
+    text: () => string | any[];
+  };
+  usage?: {
+    promptTokens?: number;
+    completionTokens?: number;
+    totalTokens?: number;
+  };
+  choices?: Array<{
+    message?: {
+      content?: string | any[];
+    };
+  }>;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -25,26 +41,17 @@ export async function POST(req: NextRequest) {
         ip = forwarded.split(",")[0].trim() || "anonymous";
       }
     } else {
-      // When not trusting proxies, avoid using X-Forwarded-For as it can be spoofed by clients
-      // Instead, we'll use alternative headers that are typically set by infrastructure (not clients)
-      // These headers are less likely to be spoofed when not behind a trusted proxy
-      const xRealIP = req.headers.get('x-real-ip');
-      const cfConnectingIP = req.headers.get('cf-connecting-ip'); // Cloudflare
-      const xOriginalForwardedFor = req.headers.get('x-original-forwarded-for');
-
-      // Use alternative headers that are typically set by infrastructure, not clients
+      // When not trusting proxies, avoid using infrastructure headers as they can be spoofed by clients
+      // Only use headers that are guaranteed to be set by the hosting platform (like cf-connecting-ip from Cloudflare)
+      // These headers cannot be spoofed by external clients
+      const cfConnectingIP = req.headers.get('cf-connecting-ip'); // Cloudflare - cannot be spoofed externally
+      
       if (cfConnectingIP) {
         ip = cfConnectingIP;
-      } else if (xRealIP) {
-        ip = xRealIP;
-      } else if (xOriginalForwardedFor) {
-        // If we have x-original-forwarded-for, take the first IP
-        ip = xOriginalForwardedFor.split(",")[0].trim() || "anonymous";
       } else {
-        // If no trusted headers are present and we don't trust X-Forwarded-For,
-        // we'll default to anonymous since we can't securely determine the IP
-        // In a real Next.js environment, you might have access to the IP through other means
-        // but in the App Router API routes, direct socket access isn't available
+        // If no platform-specific headers are present and we don't trust proxies,
+        // we cannot securely determine the IP in Next.js App Router API routes
+        // (direct socket access isn't available)
         ip = "anonymous";
       }
     }
@@ -88,67 +95,90 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Set up timeout for AI model call
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
-    let aiResult: any;
+    // Set up timeout for AI model call using Promise.race
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Request timeout")), 30000)
+    );
+    
+    let aiResult: AiResponse;
     try {
-      // Using AbortController with the model call if supported, otherwise using Promise.race
+      // Race between the AI call and timeout
       aiResult = await Promise.race([
         model.generateContent(prompt),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Request timeout")), 30000)
-        )
+        timeoutPromise
       ]);
     } catch (error) {
       if (error instanceof Error && error.message.includes("timeout")) {
         return NextResponse.json({ error: "Request timed out. Please try again." }, { status: 408 });
       }
       throw error; // Re-throw other errors
-    } finally {
-      clearTimeout(timeoutId);
     }
 
     const responseText = aiResult.response.text() as string;
     const usage = aiResult.usage;
 
-    const creditsToDeduct = usage 
+    const creditsToDeduct = usage
       ? calculateCredits(usage.promptTokens, usage.completionTokens)
       : calculateCredits(estimateTokens(prompt), estimateTokens(responseText));
 
-    // Perform credit check and increment sequentially
+    // First fetch user data to get the current credit limit
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { aiCreditsUsed: true, aiCreditsLimit: true }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Perform atomic credit check and deduction in a single transaction
     try {
-      // First check if user still has credits (extra safety)
-      const user = await db.user.findUnique({
-        where: { id: session.user.id },
-        select: { aiCreditsUsed: true, aiCreditsLimit: true }
-      });
+      // Execute credit deduction and conversation creation in a single transaction
+      await db.$transaction(async (tx) => {
+        // Atomic update: increment credits only if within limit
+        const updatedUser = await tx.user.updateMany({
+          where: {
+            id: session.user.id,
+            // Check that current usage + new deduction doesn't exceed limit
+            aiCreditsUsed: { lt: user.aiCreditsLimit - creditsToDeduct }
+          },
+          data: {
+            aiCreditsUsed: { increment: creditsToDeduct }
+          }
+        });
 
-      if (!user || user.aiCreditsUsed >= user.aiCreditsLimit) {
-        return NextResponse.json({ error: "AI credit limit reached" }, { status: 403 });
-      }
+        // If no records were updated, it means the credit limit would be exceeded
+        if (updatedUser.count === 0) {
+          throw new Error("AI credit limit reached");
+        }
 
-      // Increment credits
-      await db.user.update({
-        where: { id: session.user.id },
-        data: { aiCreditsUsed: { increment: creditsToDeduct } }
-      });
+        // Create AI conversation record with response size handling
+        const MAX_RESPONSE_LENGTH = 15 * 1024 * 1024; // 15MB safe threshold (MongoDB limit is 16MB)
+        let processedResponse = responseText;
+        
+        // If response exceeds the safe threshold, truncate and add summary
+        if (responseText.length > MAX_RESPONSE_LENGTH) {
+          processedResponse = responseText.substring(0, MAX_RESPONSE_LENGTH) + 
+            "\n\n---\n*Response truncated due to length. The full response was too long to store in the database.*";
+        }
 
-      // Create the conversation record
-      await db.aIConversation.create({
-        data: {
-          feature: "METHODOLOGY_ADVISOR",
-          prompt: `Type: ${researchType} | Discipline: ${discipline} | Problem: ${problemStatement.substring(0, 50)}...`,
-          response: responseText,
-          tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
-          userId: session.user.id,
-        },
+        // Create the conversation record
+        await tx.aIConversation.create({
+          data: {
+            feature: "METHODOLOGY_ADVISOR",
+            prompt: `Type: ${researchType} | Discipline: ${discipline} | Problem: ${problemStatement.substring(0, 50)}${problemStatement.length > 50 ? "..." : ""}`,
+            response: processedResponse,
+            tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
+            userId: session.user.id,
+          },
+        });
       });
     } catch (dbError) {
+      // Check if it's a credit limit error
+      if (dbError instanceof Error && dbError.message === "AI credit limit reached") {
+        return NextResponse.json({ error: "AI credit limit reached" }, { status: 403 });
+      }
       console.error("[AI_METHODOLOGY_DB_ERROR]", dbError);
-      // Even if saving failed, we might want to return the response if credits were already deducted, 
-      // but usually we want to know it failed.
       throw dbError;
     }
 

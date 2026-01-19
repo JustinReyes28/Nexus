@@ -3,7 +3,10 @@ import { z } from "zod";
 // User Schemas
 export const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      "Password must include at least one uppercase letter, one lowercase letter, one digit, and one special character"),
 });
 
 export const registerSchema = loginSchema.extend({
@@ -23,8 +26,8 @@ export const projectSchema = z.object({
   description: z.string().max(2000).optional(),
   discipline: z.string().max(100).optional(),
   status: z.enum(["IDEATION", "PROPOSAL", "RESEARCH", "DEVELOPMENT", "WRITING", "REVIEW", "COMPLETED"]).optional(),
-  startDate: z.string().datetime().optional().or(z.date().optional()),
-  deadline: z.string().datetime().optional().or(z.date().optional()),
+  startDate: z.union([z.string().datetime(), z.date()]).optional(),
+  deadline: z.union([z.string().datetime(), z.date()]).optional(),
 });
 
 // Task Schemas
@@ -33,11 +36,21 @@ export const taskSchema = z.object({
   description: z.string().max(1000).optional(),
   status: z.enum(["TODO", "IN_PROGRESS", "REVIEW", "COMPLETED"]).optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
-  dueDate: z.string().datetime().optional().or(z.date().optional()),
-  projectId: z.string().min(1, "Project ID is required"),
+  dueDate: z.union([z.string().datetime(), z.date()]).optional(),
+  projectId: z.string().uuid("Project ID must be a valid UUID"),
 });
 
 // Utility for sanitization
-export const sanitizeString = (str: string) => {
-  return str.trim().replace(/[<>]/g, ""); // Basic XSS prevention for raw strings
+/**
+ * Strips angle brackets from a string.
+ * WARNING: This only removes raw '<' and '>' characters and does not protect against
+ * entities, javascript: URLs, event handlers, quote/backtick injection, or CSS attacks.
+ * Ensure all call sites perform context-appropriate encoding (HTML-escape or URL-encode)
+ * at render time instead of relying on this function for comprehensive XSS protection.
+ */
+export const stripAngleBrackets = (str: string) => {
+  return str.trim().replace(/[<>]/g, "");
 };
+
+// Alias for backward compatibility - to be removed in future versions
+export const sanitizeString = stripAngleBrackets;

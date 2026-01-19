@@ -23,7 +23,7 @@ export default function ProjectProgress({ stats, deadline }: ProjectProgressProp
   const timeLeft = deadline ? (() => {
     const diff = new Date(deadline).getTime() - new Date().getTime();
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    return days > 0 ? `${days} days left` : "Deadline passed";
+    return days > 0 ? `${days} ${days === 1 ? 'day' : 'days'} left` : "Deadline passed";
   })() : null;
 
   return (
@@ -124,7 +124,7 @@ function BreakdownItem({ icon, label, count, color, percentage }: {
             style={{ width: `${percentage}%` }} 
           />
         </div>
-        <span className="text-sm font-heading font-extrabold text-gray-900 w-4 text-right">{count}</span>
+        <span className="text-sm font-heading font-extrabold text-gray-900 min-w-[1.5rem] text-right">{count}</span>
       </div>
     </div>
   );

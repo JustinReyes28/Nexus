@@ -6,40 +6,27 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding default values...');
   
-  // The schema already defines default values, but we're ensuring 
-  // that the application's understanding of credit limits is consistent
-  
-  // Update any existing users who might have incorrect defaults
-  const freeUsers = await prisma.user.findMany({
-    where: { 
-      tier: 'FREE',
-      aiCreditsLimit: { not: getCreditLimitForTier('FREE') } 
-    },
-    select: { id: true }
-  });
-  
-  if (freeUsers.length > 0) {
-    await prisma.user.updateMany({
-      where: { id: { in: freeUsers.map(u => u.id) } },
-      data: { aiCreditsLimit: getCreditLimitForTier('FREE') }
+  const tierConfigs = [
+    { tier: 'FREE' as const },
+    { tier: 'PREMIUM' as const },
+    // Add future tiers here
+  ];
+
+  for (const config of tierConfigs) {
+    const limit = getCreditLimitForTier(config.tier);
+    const result = await prisma.user.updateMany({
+      where: { 
+        tier: config.tier,
+        aiCreditsLimit: { not: limit } 
+      },
+      data: { aiCreditsLimit: limit }
     });
-    console.log(`Updated ${freeUsers.length} FREE users to have correct credit limit`);
-  }
-  
-  const premiumUsers = await prisma.user.findMany({
-    where: { 
-      tier: 'PREMIUM',
-      aiCreditsLimit: { not: getCreditLimitForTier('PREMIUM') } 
-    },
-    select: { id: true }
-  });
-  
-  if (premiumUsers.length > 0) {
-    await prisma.user.updateMany({
-      where: { id: { in: premiumUsers.map(u => u.id) } },
-      data: { aiCreditsLimit: getCreditLimitForTier('PREMIUM') }
-    });
-    console.log(`Updated ${premiumUsers.length} PREMIUM users to have correct credit limit`);
+
+    if (result.count > 0) {
+      console.log(`Updated ${result.count} ${config.tier} users to have correct credit limit (${limit})`);
+    } else {
+      console.log(`All ${config.tier} users already have correct credit limits.`);
+    }
   }
   
   console.log('Seeding completed successfully!');

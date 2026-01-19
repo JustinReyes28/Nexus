@@ -37,17 +37,24 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
     notFound();
   }
 
-  const [completedCount, todoCount, progressCount] = await Promise.all([
-    db.task.count({ where: { projectId: project.id, status: "COMPLETED" } }),
-    db.task.count({ where: { projectId: project.id, status: "TODO" } }),
-    db.task.count({ where: { projectId: project.id, status: "IN_PROGRESS" } }),
-  ]);
+  const statusCounts = await db.task.groupBy({
+    by: ['status'],
+    where: { projectId: project.id },
+    _count: { status: true }
+  });
+
+  const statusMap = new Map<string, number>();
+  let totalTasks = 0;
+  statusCounts.forEach(group => {
+    statusMap.set(group.status, group._count.status);
+    totalTasks += group._count.status;
+  });
 
   const taskStats = {
-    totalTasks: project._count.tasks,
-    completedTasks: completedCount,
-    todoTasks: todoCount,
-    inProgressTasks: progressCount,
+    totalTasks: totalTasks,
+    completedTasks: statusMap.get("COMPLETED") || 0,
+    todoTasks: statusMap.get("TODO") || 0,
+    inProgressTasks: statusMap.get("IN_PROGRESS") || 0,
   };
 
   return (
@@ -96,9 +103,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
                   {project.tasks.map((task) => (
                     <div key={task.id} className="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between group">
                        <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900">{task.title}</span>
-                       <Badge variant={task.status === "COMPLETED" ? "success" : "info"} className="scale-90">
-                         {task.status.replace("_", " ")}
-                       </Badge>
+                        <Badge variant={task.status === "COMPLETED" ? "success" : "info"} className="scale-90">
+                          {task.status.replaceAll("_", " ")}
+                        </Badge>
                     </div>
                   ))}
                 </div>

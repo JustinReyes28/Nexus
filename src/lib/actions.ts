@@ -12,17 +12,28 @@ export async function createProject(formData: FormData) {
     redirect("/login");
   }
 
-  const title = formData.get("title") as string;
-  const description = formData.get("description") as string;
+  const titleInput = formData.get("title");
+  const descriptionInput = formData.get("description");
   const discipline = formData.get("discipline") as string | null;
-  const userId = formData.get("userId") as string;
+
+  // Validate title and description
+  if (!titleInput || typeof titleInput !== 'string' || titleInput.trim().length === 0) {
+    throw new Error('Title is required');
+  }
+  
+  if (!descriptionInput || typeof descriptionInput !== 'string' || descriptionInput.trim().length === 0) {
+    throw new Error('Description is required');
+  }
+
+  const title = titleInput.trim();
+  const description = descriptionInput.trim();
 
   const project = await db.project.create({
     data: {
       title,
       description,
       discipline,
-      ownerId: userId,
+      ownerId: session.user.id,
     },
   });
 

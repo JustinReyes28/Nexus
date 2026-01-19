@@ -1,12 +1,14 @@
 "use client";
 
 import React from "react";
-import { cn } from "@/lib/utils";
+import { useId } from "react";
 import { AISparkleIcon } from "@/components/ui/AISparkleIcon";
 import { CircleHighlight, Sparkle } from "@/components/ui/HandDrawnElements";
 
 
 export const AICompanionPreview = () => {
+  const mascotGridId = useId();
+  
   return (
     <section className="py-24 bg-white">
       <div className="container px-6 mx-auto">
@@ -19,7 +21,7 @@ export const AICompanionPreview = () => {
                
                {/* "The Guide" Mascot (Geometric Teal Shape) */}
                <div className="relative z-10 flex items-center justify-center p-12">
-                  <div className="w-64 h-64 bg-teal rounded-[40% 60% 40% 60% / 60% 40% 60% 40%] animate-[pulse-organic_5s_infinite] shadow-2xl shadow-teal/20 flex items-center justify-center overflow-hidden">
+                  <div className="w-64 h-64 bg-teal rounded-[40%_60%_40%_60%_/60%_40%_60%_40%] animate-[pulse-organic_5s_infinite] shadow-2xl shadow-teal/20 flex items-center justify-center overflow-hidden">
                      {/* Mascot "Eyes" or minimalist face */}
                      <div className="flex gap-12">
                         <div className="w-4 h-4 bg-white rounded-full" />
@@ -29,11 +31,11 @@ export const AICompanionPreview = () => {
                      <div className="absolute inset-0 opacity-10 pointer-events-none">
                         <svg width="100%" height="100%">
                            <defs>
-                              <pattern id="mascotGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+                              <pattern id={mascotGridId} width="20" height="20" patternUnits="userSpaceOnUse">
                                  <circle cx="1" cy="1" r="1" fill="white" />
                               </pattern>
                            </defs>
-                           <rect width="100%" height="100%" fill="url(#mascotGrid)" />
+                           <rect width="100%" height="100%" fill={`url(#${mascotGridId})`} />
                         </svg>
                      </div>
                   </div>
@@ -67,7 +69,7 @@ export const AICompanionPreview = () => {
                   <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 border border-gray-200">
                      <span className="text-xs font-bold">You</span>
                   </div>
-                  <div className="bg-gray-100 p-4 rounded-xl rounded-tl-none max-w-[80%] shadow-sm">
+                  <div className="bg-gray-100 p-4 rounded-xl rounded-tr-none max-w-[80%] shadow-sm">
                      <p className="text-sm text-gray-800 font-body">I'm stuck on my methodology section...</p>
                   </div>
                </div>
@@ -76,7 +78,7 @@ export const AICompanionPreview = () => {
                   <div className="w-10 h-10 rounded-full bg-teal flex items-center justify-center flex-shrink-0 shadow-md">
                      <span className="text-xs font-bold text-white">G</span>
                   </div>
-                  <div className="bg-teal text-white p-4 rounded-xl rounded-tr-none max-w-[80%] shadow-lg">
+                  <div className="bg-teal text-white p-4 rounded-xl rounded-tl-none max-w-[80%] shadow-lg">
                      <p className="text-sm font-body">
                        Let's break it down! Are you leaning towards qualitative interviews or quantitative surveys?
                      </p>

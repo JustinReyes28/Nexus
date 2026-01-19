@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/Button";
 import { HandCoins, Zap, Sparkles, Rocket } from "lucide-react";
+import { BILLING_CONSTANTS } from "@/config/constants";
 
 const BUNDLES = [
   {
@@ -9,8 +10,8 @@ const BUNDLES = [
     name: "Starter Bundle",
     credits: 100,
     price: 2,
-    pricePerCredit: 0.02,
-    icon: <Zap className="w-6 h-6 text-teal" />,
+    Icon: Zap,
+    iconColor: "text-teal",
     description: "Perfect for light users and quick tasks.",
     color: "bg-teal/5",
     borderColor: "border-teal/20",
@@ -20,8 +21,8 @@ const BUNDLES = [
     name: "Pro Bundle",
     credits: 500,
     price: 8,
-    pricePerCredit: 0.016,
-    icon: <Sparkles className="w-6 h-6 text-indigo-500" />,
+    Icon: Sparkles,
+    iconColor: "text-indigo-500",
     description: "The best value for individual researchers.",
     color: "bg-indigo-50",
     borderColor: "border-indigo-200",
@@ -32,8 +33,8 @@ const BUNDLES = [
     name: "Power Bundle",
     credits: 1000,
     price: 12,
-    pricePerCredit: 0.012,
-    icon: <Rocket className="w-6 h-6 text-orange-500" />,
+    Icon: Rocket,
+    iconColor: "text-orange-500",
     description: "For users who need maximum AI power.",
     color: "bg-orange-50",
     borderColor: "border-orange-200",
@@ -63,7 +64,7 @@ export default function BillingSettings() {
               className={`relative flex flex-col p-6 rounded-2xl border-2 transition-all hover:shadow-lg ${
                 bundle.borderColor
               } ${bundle.color} ${
-                bundle.popular ? "scale-105 shadow-md z-10" : ""
+                bundle.popular ? "shadow-lg z-10 border-4" : ""
               }`}
             >
               {bundle.popular && (
@@ -72,7 +73,7 @@ export default function BillingSettings() {
                 </div>
               )}
 
-              <div className="mb-4">{bundle.icon}</div>
+              <div className="mb-4"><bundle.Icon className={`w-6 h-6 ${bundle.iconColor}`} /></div>
 
               <h4 className="text-lg font-heading font-bold text-gray-900 mb-1">
                 {bundle.name}
@@ -80,7 +81,7 @@ export default function BillingSettings() {
               <p className="text-sm text-gray-500 mb-4 h-10">{bundle.description}</p>
 
               <div className="mt-auto pt-4 border-t border-gray-100 italic text-[10px] text-gray-400">
-                ${bundle.pricePerCredit} per credit
+                ${(bundle.price / bundle.credits).toFixed(4)} per credit
               </div>
 
               <div className="flex items-baseline gap-1 mt-2">
@@ -95,10 +96,8 @@ export default function BillingSettings() {
               </div>
 
               <Button
-                variant={bundle.popular ? "ai" : "outline"}
-                className={`w-full font-bold ${
-                  bundle.popular ? "bg-indigo-600 hover:bg-indigo-700 border-indigo-600 text-white" : ""
-                }`}
+                variant={bundle.popular ? "popular" : "outline"}
+                className="w-full font-bold"
                 onClick={() => handlePurchase(bundle.name)}
               >
                 Buy Now
@@ -112,9 +111,9 @@ export default function BillingSettings() {
             <Sparkles className="w-4 h-4 text-amber-600" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-amber-900">Limited Time Offer</p>
+            <p className="text-sm font-semibold text-amber-900">{BILLING_CONSTANTS.PROMOTIONAL_OFFER.TITLE}</p>
             <p className="text-xs text-amber-800 mt-0.5">
-              All credit purchases currently include priority processing and 24/7 research support.
+              {BILLING_CONSTANTS.PROMOTIONAL_OFFER.BODY}
             </p>
           </div>
         </div>

@@ -6,48 +6,112 @@ import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { Button } from "@/components/ui/Button";
 import { TrendingUp, Activity, CheckCircle2, Clock, AlertCircle, Sparkles, History } from "lucide-react";
 
-export const ProgressAnalyzerView: React.FC = () => {
-  const [projects, setProjects] = useState<any[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
-  const [currentStatus, setCurrentStatus] = useState("");
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [historyMessages, setHistoryMessages] = useState<any[] | undefined>();
-  const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
+interface Project {
+  id: string;
+  title: string;
+  status?: string;
+}
 
-  const handleHistorySelect = (conv: any) => {
+interface ConversationHistory {
+  id: string;
+  prompt: string;
+  response: string;
+}
+
+export const ProgressAnalyzerView: React.FC = () => {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [currentStatus, setCurrentStatus] = useState<string>("");
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+  const [historyMessages, setHistoryMessages] = useState<ConversationHistory[] | undefined>();
+  const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
+  const [isLoadingProjects, setIsLoadingProjects] = useState<boolean>(true);
+
+const handleHistorySelect = (conv: ConversationHistory) => {
     setActiveHistoryId(conv.id);
     setHistoryMessages([
-      { role: "user", content: conv.prompt },
-      { role: "bot", content: conv.response }
+      { id: conv.id, prompt: conv.prompt, response: conv.response }
     ]);
     setIsSubmitted(true);
     setIsHistoryOpen(false);
   };
-  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
 
-  useEffect(() => {
+useEffect(() => {
     async function fetchProjects() {
+      const controller = new AbortController();
+      const { signal } = controller;
+
       try {
-        const response = await fetch("/api/projects");
+        const response = await fetch("/api/projects", { signal });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch projects: ${response.status}`);
+        }
+        
         const data = await response.json();
         const projectsData = Array.isArray(data) ? data : data.projects || [];
         setProjects(projectsData);
+        setProjectsError(null);
+        
         if (projectsData.length > 0) {
           setSelectedProjectId(projectsData[0].id);
         }
       } catch (error) {
-        console.error("Failed to fetch projects");
+        if (error instanceof DOMException && error.name === "AbortError") {
+          console.log("Fetch aborted");
+        } else {
+          console.error("Failed to fetch projects:", error);
+          setProjectsError(error instanceof Error ? error.message : "Failed to load projects");
+        }
       } finally {
         setIsLoadingProjects(false);
       }
     }
     fetchProjects();
+
+    return () => {
+      // Cleanup not needed since controller is local to the fetch function
+    };
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitted(true);
+  };
+
+  const loadProjects = async () => {
+    setIsLoadingProjects(true);
+    setProjectsError(null);
+    
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    try {
+      const response = await fetch("/api/projects", { signal });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projects: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const projectsData = Array.isArray(data) ? data : data.projects || [];
+      setProjects(projectsData);
+      
+      if (projectsData.length > 0) {
+        setSelectedProjectId(projectsData[0].id);
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        console.log("Fetch aborted");
+      } else {
+        console.error("Failed to fetch projects:", error);
+        setProjectsError(error instanceof Error ? error.message : "Failed to load projects");
+      }
+    } finally {
+      setIsLoadingProjects(false);
+    }
   };
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
@@ -82,22 +146,35 @@ export const ProgressAnalyzerView: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-6 bg-canvas border-2 border-gray-100 p-8 rounded-[32px] shadow-xl shadow-gray-200/50">
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Select Project</label>
-              <select 
+<select 
                 value={selectedProjectId}
                 onChange={(e) => setSelectedProjectId(e.target.value)}
                 className="w-full bg-white border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-teal transition-all appearance-none cursor-pointer disabled:opacity-50"
                 disabled={isLoadingProjects || projects.length === 0}
               >
                 {isLoadingProjects ? (
-                  <option>Loading projects...</option>
+                  <option value="">Loading projects...</option>
+                ) : projectsError ? (
+                  <option value="">Failed to load projects — retry</option>
                 ) : projects.length > 0 ? (
                   projects.map(p => (
                     <option key={p.id} value={p.id}>{p.title}</option>
                   ))
                 ) : (
-                  <option>No projects found</option>
+                  <option value="">No projects found</option>
                 )}
               </select>
+              {projectsError && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2 text-xs"
+                  onClick={loadProjects}
+                >
+                  Retry
+                </Button>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -156,16 +233,20 @@ export const ProgressAnalyzerView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-4">
+<div className="pt-4">
                  <Button 
                    variant="outline" 
                    size="sm" 
                    className="w-full text-xs"
-                   onClick={() => setIsSubmitted(false)}
+                   onClick={() => {
+                     setIsSubmitted(false);
+                     setHistoryMessages(undefined);
+                     setActiveHistoryId(undefined);
+                   }}
                  >
                    Re-analyze Status
                  </Button>
-              </div>
+               </div>
             </div>
 
             <div className="bg-sunny/5 border-2 border-sunny/20 p-6 rounded-3xl space-y-4">
@@ -181,25 +262,33 @@ export const ProgressAnalyzerView: React.FC = () => {
 
           {/* Chat Interface */}
           <div className="lg:col-span-8">
-            <ChatInterface 
+<ChatInterface 
               endpoint="/api/ai/progress"
               feature="PROGRESS_ANALYZER"
               placeholder="Ask for next steps or deadline checks..."
-              submitOnMount={true}
-              initialInput={`Analyze the progress for ${selectedProject?.title}.`}
-              additionalData={{ projectId: selectedProjectId, currentStatus, historyMessages }}
+              submitOnMount={!historyMessages || historyMessages.length === 0}
+              initialInput={`Analyze the progress for ${selectedProject?.title ?? 'the project'}.`}
+              loadedHistoryId={activeHistoryId}
+              additionalData={{ 
+                projectId: selectedProjectId, 
+                currentStatus, 
+                historyMessages,
+                fromHistory: !!historyMessages && historyMessages.length > 0
+              }}
             />
           </div>
         </div>
       )}
 
-      <ChatHistoryPanel
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        onSelect={handleHistorySelect}
-        featureFilter="PROGRESS_ANALYZER"
-        activeId={activeHistoryId}
-      />
+      {!isSubmitted && (
+        <ChatHistoryPanel
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          onSelect={handleHistorySelect}
+          featureFilter="PROGRESS_ANALYZER"
+          activeId={activeHistoryId}
+        />
+      )}
     </div>
   );
 };

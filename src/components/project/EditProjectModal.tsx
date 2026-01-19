@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -8,31 +8,107 @@ import { Label } from "@/components/ui/Label";
 import { X, Target, BookOpen, Lightbulb, Calendar, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { ProjectData } from "@/types/project";
 import { ProjectStatus } from "@prisma/client";
 
 interface EditProjectModalProps {
-  project: {
-    id: string;
-    title: string;
-    description: string | null;
-    discipline: string | null;
-    deadline: Date | string | null;
-    status: ProjectStatus;
-  };
+  project: ProjectData;
   isOpen: boolean;
   onClose: () => void;
 }
+
+// Helper function to format date for input field using local time
+const formatDateForInput = (dateString: string | Date | null | undefined): string => {
+  if (!dateString) return "";
+  
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+  const day = String(date.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+};
 
 export default function EditProjectModal({ project, isOpen, onClose }: EditProjectModalProps) {
   const [formData, setFormData] = useState({
     title: project.title,
     description: project.description || "",
     discipline: project.discipline || "",
-    deadline: project.deadline ? new Date(project.deadline).toISOString().split('T')[0] : "",
+    deadline: project.deadline ? formatDateForInput(project.deadline) : "",
     status: project.status,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+
+  // Update form state when project prop changes
+  useEffect(() => {
+    setFormData({
+      title: project.title,
+      description: project.description || "",
+      discipline: project.discipline || "",
+      deadline: project.deadline ? formatDateForInput(project.deadline) : "",
+      status: project.status,
+    });
+  }, [project]);
+
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
+
+  // Focus management and keyboard accessibility
+  useEffect(() => {
+    if (isOpen) {
+      // Save the currently focused element to restore later
+      previousActiveElement.current = document.activeElement as HTMLElement;
+      
+      // Set initial focus to the modal container
+      if (modalRef.current) {
+        modalRef.current.focus();
+      }
+
+      // Add keydown event listener for Escape key
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
+          onClose();
+        }
+      };
+
+      // Add focus trap using keyboard events for tab navigation
+      const handleTabNavigation = (e: KeyboardEvent) => {
+        if (e.key === "Tab") {
+          // Get all focusable elements inside the modal
+          const focusableElements = modalRef.current?.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          ) as NodeListOf<HTMLElement>;
+          
+          if (focusableElements.length > 0) {
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+            
+            if (e.shiftKey && document.activeElement === firstElement) {
+              lastElement.focus();
+              e.preventDefault();
+            } else if (!e.shiftKey && document.activeElement === lastElement) {
+              firstElement.focus();
+              e.preventDefault();
+            }
+          }
+        }
+      };
+
+      document.addEventListener("keydown", handleKeyDown);
+      document.addEventListener("keydown", handleTabNavigation);
+
+      return () => {
+        document.removeEventListener("keydown", handleKeyDown);
+        document.removeEventListener("keydown", handleTabNavigation);
+        
+        // Restore focus to the previously active element when closing
+        if (previousActiveElement.current) {
+          previousActiveElement.current.focus();
+        }
+      };
+    }
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -50,14 +126,42 @@ export default function EditProjectModal({ project, isOpen, onClose }: EditProje
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to update project");
+      if (!response.ok) {
+        let errorMessage = "Failed to update project. Please try again.";
+        try {
+          // Try parsing JSON error response first
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (typeof errorData === 'string') {
+            errorMessage = errorData;
+          }
+        } catch (jsonError) {
+          // If JSON parsing fails, try text response
+          try {
+            const errorText = await response.text();
+            if (errorText) {
+              errorMessage = errorText;
+            }
+          } catch (textError) {
+            // If both JSON and text parsing fail, keep the generic message
+          }
+        }
+        
+        console.error(`Update failed: ${errorMessage}`);
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
+      }
 
       toast.success("Project updated successfully");
       router.refresh();
       onClose();
     } catch (error) {
-      console.error(error);
-      toast.error("Failed to update project. Please try again.");
+      // Error is already handled above, but this catches any other errors
+      if (error instanceof Error && !error.message.includes("Failed to update project")) {
+        console.error(error);
+        toast.error(error.message);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -65,7 +169,11 @@ export default function EditProjectModal({ project, isOpen, onClose }: EditProje
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border-2 border-gray-100 flex flex-col max-h-[90vh]">
+      <div
+        ref={modalRef}
+        tabIndex={-1}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border-2 border-gray-100 flex flex-col max-h-[90vh]"
+      >
         {/* Header */}
         <div className="px-8 py-6 border-b-2 border-gray-100 border-dashed flex items-center justify-between bg-paper">
           <div>
@@ -153,12 +261,13 @@ export default function EditProjectModal({ project, isOpen, onClose }: EditProje
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as ProjectStatus })}
                     className="w-full h-11 px-4 rounded-[8px] border-2 border-gray-100 bg-white font-body text-sm outline-none focus:ring-2 focus:ring-crimson/10 transition-all cursor-pointer"
                   >
-                    <option value="PROPOSAL">Proposal</option>
-                    <option value="RESEARCH">Research</option>
-                    <option value="DEVELOPMENT">Development</option>
-                    <option value="WRITING">Writing</option>
-                    <option value="REVIEW">Review</option>
-                    <option value="COMPLETED">Completed</option>
+                    {Object.values(ProjectStatus)
+                      .filter(status => status !== "IDEATION")
+                      .map((status) => (
+                        <option key={status} value={status}>
+                          {status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()}
+                        </option>
+                      ))}
                   </select>
                 </div>
               )}

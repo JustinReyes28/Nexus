@@ -1,25 +1,33 @@
 "use client";
 
-import React from "react";
+import React, { KeyboardEvent } from "react";
 import { AISparkleIcon } from "@/components/ui/AISparkleIcon";
-import { Sparkle, WavyUnderline } from "@/components/ui/HandDrawnElements";
-import { cn } from "@/lib/utils";
+import { Sparkle } from "@/components/ui/HandDrawnElements";
 
 interface IdeaCardProps {
   idea: {
     title: string;
     description: string;
     methodology?: string;
-    relevance?: string;
   };
   onSelect?: () => void;
 }
 
 export default function IdeaCard({ idea, onSelect }: IdeaCardProps) {
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (onSelect && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onSelect();
+    }
+  };
+
   return (
-    <div 
-      className="bg-paper p-8 rounded-3xl border-2 border-gray-100 shadow-xl shadow-gray-200/40 relative overflow-hidden group hover:border-teal/40 hover:-translate-y-2 transition-all duration-500 cursor-pointer"
+    <div
+      className={`bg-paper p-8 rounded-3xl border-2 border-gray-100 shadow-xl shadow-gray-200/40 relative overflow-hidden group hover:border-teal/40 hover:-translate-y-2 transition-all duration-500 ${onSelect ? 'cursor-pointer' : ''}`}
       onClick={onSelect}
+      role={onSelect ? "button" : undefined}
+      tabIndex={onSelect ? 0 : -1}
+      onKeyDown={handleKeyDown}
     >
       {/* Texture bg */}
       <div className="absolute inset-0 bg-paper opacity-60 pointer-events-none" />
@@ -61,7 +69,16 @@ export default function IdeaCard({ idea, onSelect }: IdeaCardProps) {
               <span className="w-2 h-2 bg-teal rounded-full" />
               <span className="text-[10px] font-bold text-teal uppercase tracking-widest">AI Insight</span>
            </div>
-           <button className="px-5 py-2.5 bg-crimson text-white rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-lg shadow-crimson/10 hover:bg-crimson/90 active:scale-95 transition-all">
+           <button
+             type="button"
+             className="px-5 py-2.5 bg-crimson text-white rounded-xl text-[10px] font-extrabold uppercase tracking-widest shadow-lg shadow-crimson/10 hover:bg-crimson/90 active:scale-95 transition-all"
+             onClick={(e) => {
+               e.stopPropagation();
+               if (onSelect) {
+                 onSelect();
+               }
+             }}
+           >
               Draft Proposal
            </button>
         </div>

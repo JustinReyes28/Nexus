@@ -14,14 +14,14 @@ const variants = {
   warning: "bg-sunny text-gray-900 border border-sunny/50",
   danger: "bg-crimson/10 text-crimson border border-crimson/20",
   info: "bg-teal/10 text-teal border border-teal/20",
-  primary: "bg-crimson text-white",
+  primary: "bg-crimson text-white border border-crimson", // Primary variant includes border for consistency
 };
 
 export function Badge({ children, variant = "default", className = "" }: BadgeProps) {
   return (
     <span className={cn(
-      "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors",
-      variants[variant as keyof typeof variants],
+      "px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-colors",
+      variants[variant],
       "rounded-[6px]", // Anti-AI imperfection: non-perfectly round pill
       className
     )}>

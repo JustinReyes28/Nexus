@@ -2,7 +2,6 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { PushPin } from "@/components/ui/HandDrawnElements";
 
 interface GanttChartProps {
   tasks: Array<{
@@ -24,17 +23,36 @@ export default function GanttChart({ tasks }: GanttChartProps) {
     new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   );
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: GanttChartProps["tasks"][number]["priority"]) => {
     switch (priority) {
       case "HIGH":
       case "URGENT":
         return "bg-crimson border-crimson shadow-crimson/20";
       case "MEDIUM":
         return "bg-sunny border-sunny shadow-sunny/20";
-      default:
+      case "LOW":
         return "bg-teal border-teal shadow-teal/20";
+      default:
+        const _exhaustiveCheck: never = priority;
+        throw new Error(`Unhandled priority: ${_exhaustiveCheck}`);
     }
   };
+
+  const getBarPosition = (task: GanttChartProps["tasks"][number], timelineStart: Date, timelineEnd: Date) => {
+    const taskStart = task.startDate ?? task.createdAt;
+    const taskEnd = task.endDate ?? task.dueDate ?? new Date(taskStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const totalDuration = timelineEnd.getTime() - timelineStart.getTime();
+    const duration = taskEnd.getTime() - taskStart.getTime();
+    const left = ((taskStart.getTime() - timelineStart.getTime()) / totalDuration) * 100;
+    const width = (duration / totalDuration) * 100;
+    return {
+      left: Math.max(0, Math.min(100, left)),
+      width: Math.max(5, Math.min(100 - left, width))
+    };
+  };
+
+  const timelineStart = new Date(Math.min(...sortedTasks.map(task => new Date(task.startDate ?? task.createdAt).getTime())));
+  const timelineEnd = new Date(Math.max(...sortedTasks.map(task => new Date(task.endDate ?? task.dueDate ?? new Date((task.startDate ?? task.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000)).getTime())));
 
   return (
     <div className="bg-canvas p-6 rounded-3xl border-2 border-gray-100 shadow-xl relative overflow-hidden">
@@ -52,6 +70,10 @@ export default function GanttChart({ tasks }: GanttChartProps) {
               <div className="flex items-center gap-2">
                  <div className="w-2 h-2 bg-crimson rounded-full" />
                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Urgent</span>
+              </div>
+              <div className="flex items-center gap-2">
+                 <div className="w-2 h-2 bg-sunny rounded-full" />
+                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Medium</span>
               </div>
               <div className="flex items-center gap-2">
                  <div className="w-2 h-2 bg-teal rounded-full" />
@@ -72,28 +94,31 @@ export default function GanttChart({ tasks }: GanttChartProps) {
                </div>
             </div>
 
-            {sortedTasks.map((task, idx) => (
-              <div key={task.id} className="flex items-center group">
-                <div className="w-48 pr-4 flex-shrink-0">
-                  <span className="text-xs font-bold text-gray-600 line-clamp-1 group-hover:text-crimson transition-colors">
-                    {task.title}
-                  </span>
-                </div>
-                <div className="flex-1 h-3 bg-gray-50 rounded-full relative overflow-hidden">
-                   <div
-                     className={cn(
-                       "absolute h-full rounded-full border shadow-sm transition-all duration-700 ease-out",
-                       getPriorityColor(task.priority)
-                     )}
-                     style={{
-                       left: `${Math.max(5, (idx * 15) % 40)}%`,
-                       width: `${Math.max(20, 80 - (idx * 10) % 60)}%`,
-                       opacity: task.status === "COMPLETED" ? 0.4 : 1
-                     }}
-                   />
-                </div>
-              </div>
-            ))}
+             {sortedTasks.map((task) => {
+               const { left, width } = getBarPosition(task, timelineStart, timelineEnd);
+               return (
+                 <div key={task.id} className="flex items-center group">
+                   <div className="w-48 pr-4 flex-shrink-0">
+                     <span className="text-xs font-bold text-gray-600 line-clamp-1 group-hover:text-crimson transition-colors">
+                       {task.title}
+                     </span>
+                   </div>
+                   <div className="flex-1 h-3 bg-gray-50 rounded-full relative overflow-hidden">
+                      <div
+                        className={cn(
+                          "absolute h-full rounded-full border shadow-sm transition-all duration-700 ease-out",
+                          getPriorityColor(task.priority)
+                        )}
+                        style={{
+                          left: `${left}%`,
+                          width: `${width}%`,
+                          opacity: task.status === "COMPLETED" ? 0.4 : 1
+                        }}
+                      />
+                   </div>
+                 </div>
+               );
+             })}
           </div>
         </div>
 

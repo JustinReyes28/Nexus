@@ -1,15 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, History, Loader2, Sparkles, AlertCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConversationPreview } from "./ConversationPreview";
 import { Button } from "@/components/ui/Button";
 
+interface Conversation {
+  id: string;
+  feature: string;
+  prompt: string;
+  response: string;
+  createdAt: string | Date;
+}
+
 interface ChatHistoryPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (conversation: any) => void;
+  onSelect: (conversation: Conversation) => void;
   featureFilter?: string;
   activeId?: string;
 }
@@ -21,34 +29,68 @@ export const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
   featureFilter,
   activeId,
 }) => {
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchHistory = async () => {
+const fetchHistory = async (signal?: AbortSignal) => {
     setIsLoading(true);
     setError(null);
     try {
       const url = new URL("/api/ai/history", window.location.origin);
       if (featureFilter) url.searchParams.append("feature", featureFilter);
       
-      const response = await fetch(url.toString());
+      const fetchOptions = signal ? { signal } : {};
+      const response = await fetch(url.toString(), fetchOptions);
       if (!response.ok) throw new Error("Failed to load history");
       
       const data = await response.json();
+      
+      // Validate response shape
+      if (!data || !Array.isArray(data.conversations)) {
+        setConversations([]);
+        return;
+      }
+      
       setConversations(data.conversations);
     } catch (err: any) {
+      if (signal?.aborted) {
+        // Don't update state if the component was unmounted
+        return;
+      }
       setError(err.message);
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) {
+        setIsLoading(false);
+      }
     }
   };
 
+  const handleRetry = () => {
+    fetchHistory();
+  };
+
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+    
     if (isOpen) {
-      fetchHistory();
+      fetchHistory(signal);
     }
-  }, [isOpen, featureFilter]);
+    
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    
+    window.addEventListener('keydown', handleEscape);
+    
+    return () => {
+      controller.abort();
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, featureFilter, onClose]);
 
   if (!isOpen) return null;
 
@@ -98,7 +140,7 @@ export const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
               <p className="text-xs font-body text-sunny-900/70 font-medium">
                 Couldn't reach your past insights. Let's try again?
               </p>
-              <Button variant="outline" size="sm" onClick={fetchHistory} leftIcon={<RefreshCw size={14} />}>
+<Button variant="outline" size="sm" onClick={handleRetry} leftIcon={<RefreshCw size={14} />}>
                 Retry
               </Button>
             </div>

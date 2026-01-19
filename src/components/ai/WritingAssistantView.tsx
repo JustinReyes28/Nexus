@@ -5,6 +5,7 @@ import { ChatInterface } from "./ChatInterface";
 import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { Button } from "@/components/ui/Button";
 import { PenTool, Highlighter, Type, Languages, Sparkles, Wand2, History } from "lucide-react";
+import { ChatMessage, Conversation } from "@/types/aiTypes";
 
 const STYLES = [
   { id: "academic", label: "Academic", description: "Formal, objective, and precise." },
@@ -25,10 +26,10 @@ export const WritingAssistantView: React.FC = () => {
   const [type, setType] = useState("grammar");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [historyMessages, setHistoryMessages] = useState<any[] | undefined>();
+  const [historyMessages, setHistoryMessages] = useState<ChatMessage[] | undefined>();
   const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
 
-  const handleHistorySelect = (conv: any) => {
+  const handleHistorySelect = (conv: Conversation) => {
     setActiveHistoryId(conv.id);
     setHistoryMessages([
       { role: "user", content: conv.prompt },
@@ -182,7 +183,11 @@ export const WritingAssistantView: React.FC = () => {
             <div className="bg-sunny/5 border-2 border-sunny/10 p-6 rounded-3xl space-y-4 text-center">
                <Languages className="mx-auto text-sunny" size={32} />
                <p className="text-xs font-body text-gray-700 font-medium">
-                  "I'm enhancing your text for **${style}** clarity. I'll focus on **${type.replace("-", " ")}** while maintaining your core message."
+                  {"I'm enhancing your text for "}
+                  <strong>{style}</strong>
+                  {" clarity. I'll focus on "}
+                  <strong>{type.replace("-", " ")}</strong>
+                  {" while maintaining your core message."}
                </p>
             </div>
           </div>
@@ -193,21 +198,24 @@ export const WritingAssistantView: React.FC = () => {
               endpoint="/api/ai/writing"
               feature="WRITING_ASSISTANT"
               placeholder="Ask for further refinements or alternatives..."
-              submitOnMount={true}
+              submitOnMount={!historyMessages || historyMessages.length === 0}
               initialInput={content}
+              loadedHistoryId={activeHistoryId}
               additionalData={{ content, style, type, historyMessages }}
             />
           </div>
         </div>
       )}
 
-      <ChatHistoryPanel
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        onSelect={handleHistorySelect}
-        featureFilter="WRITING_ASSISTANT"
-        activeId={activeHistoryId}
-      />
+      {!isSubmitted && (
+        <ChatHistoryPanel
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          onSelect={handleHistorySelect}
+          featureFilter="WRITING_ASSISTANT"
+          activeId={activeHistoryId}
+        />
+      )}
     </div>
   );
 };

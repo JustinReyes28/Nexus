@@ -3,6 +3,11 @@ import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 
+interface TaskStatGroup {
+  status: string;
+  _count: number;
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
 
@@ -32,13 +37,20 @@ export async function GET() {
           }
         },
         orderBy: { dueDate: "asc" },
-        take: 5
+        take: 5,
+        select: {
+          id: true,
+          title: true,
+          dueDate: true,
+          status: true,
+          assigneeId: true
+        }
       })
     ]);
 
     return NextResponse.json({
       projectCount,
-      taskStats: taskStats.reduce((acc: any, curr: any) => {
+      taskStats: taskStats.reduce((acc: Record<string, number>, curr: TaskStatGroup) => {
         acc[curr.status] = curr._count;
         return acc;
       }, {} as Record<string, number>),

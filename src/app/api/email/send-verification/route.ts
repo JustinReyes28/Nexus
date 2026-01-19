@@ -4,6 +4,7 @@ import { emailQueue } from "@/lib/email-queue";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { randomInt } from "crypto";
 
 const verificationSchema = z.object({
   email: z.string().email(),
@@ -17,15 +18,17 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { email } = verificationSchema.parse(body);
 
-    // Generate 6-digit code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate 6-digit code using cryptographically secure method
+    const code = randomInt(100000, 1000000).toString();
     const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
-    // Store in DB
-    await db.verificationToken.upsert({
-      where: { identifier_token: { identifier: email, token: code } },
-      update: { expires },
-      create: { identifier: email, token: code, expires },
+    // Delete any existing tokens for this email and create a new one
+    await db.verificationToken.deleteMany({
+      where: { identifier: email },
+    });
+
+    await db.verificationToken.create({
+      data: { identifier: email, token: code, expires },
     });
 
     // Add to email queue

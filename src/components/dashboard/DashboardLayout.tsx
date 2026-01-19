@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TeamSidebar from "@/components/dashboard/TeamSidebar";
 import { cn } from "@/lib/utils";
@@ -24,15 +25,16 @@ function MainContent({ children }: { children: React.ReactNode }) {
     >
       {/* Mobile Header Trigger */}
       <div className="lg:hidden flex items-center mb-6">
-        <button 
+        <button
           onClick={toggleMobile}
           className="p-2 -ml-2 rounded-lg hover:bg-gray-100 text-gray-500"
+          aria-label="Toggle navigation menu"
         >
           <Menu className="w-6 h-6" />
         </button>
         <Link href="/dashboard" className="ml-3 flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-teal flex items-center justify-center">
-            <img src="/images/logo.png" className="w-8 h-8" />
+            <Image src="/images/logo.png" alt="App logo" width={32} height={32} className="w-8 h-8" />
           </div>
           <span className="font-bold text-xl text-teal tracking-tight">Nexus</span>
         </Link>
@@ -60,8 +62,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </MainContent>
 
-       {/* TeamSidebar */}
-       <TeamSidebar />
+        {/* TeamSidebar */}
+        <TeamSidebar />
       </div>
     </SidebarProvider>
   );

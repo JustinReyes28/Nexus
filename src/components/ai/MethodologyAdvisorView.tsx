@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import type { Conversation, ChatMessage } from "@/types/aiTypes";
 import { ChatInterface } from "./ChatInterface";
 import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { Button } from "@/components/ui/Button";
@@ -27,16 +28,16 @@ const DISCIPLINES = [
 
 export const MethodologyAdvisorView: React.FC = () => {
   const [formData, setFormData] = useState({
-    researchType: "Quantitative",
-    discipline: "Computer Science",
+    researchType: "quantitative",
+    discipline: "computer-science",
     problemStatement: "",
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [historyMessages, setHistoryMessages] = useState<any[] | undefined>();
+  const [historyMessages, setHistoryMessages] = useState<ChatMessage[] | undefined>();
   const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
 
-  const handleHistorySelect = (conv: any) => {
+const handleHistorySelect = (conv: Conversation) => {
     setActiveHistoryId(conv.id);
     setHistoryMessages([
       { role: "user", content: conv.prompt },
@@ -101,9 +102,9 @@ export const MethodologyAdvisorView: React.FC = () => {
                    onChange={(e) => setFormData({ ...formData, discipline: e.target.value })}
                    className="w-full bg-white border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-purple-500 transition-all appearance-none cursor-pointer"
                  >
-                   {DISCIPLINES.map(d => (
-                     <option key={d} value={d.toLowerCase().replace(" ", "-")}>{d}</option>
-                   ))}
+                    {DISCIPLINES.map(d => (
+                      <option key={d} value={d.toLowerCase().replace(/\s+/g, "-")}>{d}</option>
+                    ))}
                  </select>
                </div>
             </div>
@@ -150,7 +151,7 @@ export const MethodologyAdvisorView: React.FC = () => {
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Discipline</p>
-                  <p className="text-sm font-body font-semibold text-gray-700 capitalize">{formData.discipline.replace("-", " ")}</p>
+                   <p className="text-sm font-body font-semibold text-gray-700 capitalize">{formData.discipline.replace(/-/g, " ")}</p>
                 </div>
               </div>
 
@@ -192,21 +193,24 @@ export const MethodologyAdvisorView: React.FC = () => {
               endpoint="/api/ai/methodology"
               feature="METHODOLOGY_ADVISOR"
               placeholder="Ask about data collection, analysis, or tools..."
-              submitOnMount={true}
+              submitOnMount={!historyMessages || historyMessages.length === 0}
               initialInput={formData.problemStatement}
+              loadedHistoryId={activeHistoryId}
               additionalData={{ ...formData, historyMessages }}
             />
           </div>
         </div>
       )}
 
-      <ChatHistoryPanel
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        onSelect={handleHistorySelect}
-        featureFilter="METHODOLOGY_ADVISOR"
-        activeId={activeHistoryId}
-      />
+      {!isSubmitted && (
+        <ChatHistoryPanel
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          onSelect={handleHistorySelect}
+          featureFilter="METHODOLOGY_ADVISOR"
+          activeId={activeHistoryId}
+        />
+      )}
     </div>
   );
 };

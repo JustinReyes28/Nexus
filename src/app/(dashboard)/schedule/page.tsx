@@ -22,7 +22,7 @@ export default async function SchedulePage() {
         <p className="text-gray-500 mt-2 font-body">Organize your timeline and important dates</p>
       </div>
 
-      <div className="bg-white border-2 border-dashed rounded-2xl p-16 text-center flex flex-col items-center justify-center gap-6">
+      <div className="bg-white border-2 border-gray-100 border-dashed rounded-2xl p-16 text-center flex flex-col items-center justify-center gap-6">
         <div className="w-16 h-16 rounded-3xl bg-teal/10 flex items-center justify-center text-teal">
           <Calendar className="w-8 h-8" />
         </div>

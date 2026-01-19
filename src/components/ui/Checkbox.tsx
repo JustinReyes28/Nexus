@@ -9,25 +9,30 @@ interface CheckboxProps {
   onCheckedChange: (checked: boolean) => void;
   className?: string;
   onClick?: (e: React.MouseEvent) => void;
+  disabled?: boolean;
 }
 
-export function Checkbox({ id, checked, onCheckedChange, className, onClick }: CheckboxProps) {
+export function Checkbox({ id, checked, onCheckedChange, className, onClick, disabled = false }: CheckboxProps) {
   return (
     <button
       id={id}
       type="button"
       role="checkbox"
       aria-checked={checked}
+      aria-disabled={disabled}
+      disabled={disabled}
       onClick={(e) => {
-        onClick?.(e);
-        onCheckedChange(!checked);
+        if (!disabled) {
+          onClick?.(e);
+          onCheckedChange(!checked);
+        }
       }}
-
       className={cn(
-        "w-6 h-6 rounded-lg border-2 transition-all flex items-center justify-center relative active:scale-90",
-        checked 
-          ? "bg-teal border-teal shadow-sm shadow-teal/20" 
+        "group w-6 h-6 rounded-lg border-2 transition-all flex items-center justify-center relative active:scale-90",
+        checked
+          ? "bg-teal border-teal shadow-sm shadow-teal/20"
           : "bg-white border-gray-200 hover:border-gray-300",
+        disabled ? "opacity-50 cursor-not-allowed" : "",
         className
       )}
     >

@@ -6,15 +6,18 @@ type EmailJob = {
   html: string;
   text?: string;
   retries: number;
+  nextAttemptAt?: number;
 };
 
 class EmailQueue {
   private queue: EmailJob[] = [];
   private isProcessing = false;
-  private MAX_RETRIES = 3;
-  private BATCH_SIZE = 5;
+  private static readonly MAX_RETRIES = 3;
+  private static readonly BATCH_SIZE = 5;
+  private static readonly baseDelayMs = 1000;
+  private static readonly maxBackoff = 30000;
 
-  async add(job: Omit<EmailJob, "retries">) {
+  add(job: Omit<EmailJob, "retries">) {
     this.queue.push({ ...job, retries: 0 });
     if (!this.isProcessing) {
       this.process();
@@ -28,18 +31,37 @@ class EmailQueue {
     }
 
     this.isProcessing = true;
-    const batch = this.queue.splice(0, this.BATCH_SIZE);
+    const now = Date.now();
+    const batch = this.queue
+      .filter((job) => !job.nextAttemptAt || job.nextAttemptAt <= now)
+      .splice(0, EmailQueue.BATCH_SIZE);
     
-    await Promise.all(batch.map(async (job) => {
-      const result = await sendEmail(job);
-      if (!result.success && job.retries < this.MAX_RETRIES) {
-        this.queue.push({ ...job, retries: job.retries + 1 });
-      }
-    }));
+    await Promise.all(
+      batch.map(async (job) => {
+        try {
+          const result = await sendEmail(job);
+          if (!result.success && job.retries < EmailQueue.MAX_RETRIES) {
+            const delay = Math.min(EmailQueue.baseDelayMs * 2 ** job.retries, EmailQueue.maxBackoff);
+            const nextAttemptAt = Date.now() + delay;
+            this.queue.push({ ...job, retries: job.retries + 1, nextAttemptAt });
+          }
+        } catch (error) {
+          console.error(`Failed to send email job: ${error}`);
+          if (job.retries < EmailQueue.MAX_RETRIES) {
+            const delay = Math.min(EmailQueue.baseDelayMs * 2 ** job.retries, EmailQueue.maxBackoff);
+            const nextAttemptAt = Date.now() + delay;
+            this.queue.push({ ...job, retries: job.retries + 1, nextAttemptAt });
+          } else {
+            console.error(`Max retries exceeded for job to ${job.to}, moving to dead letter`);
+          }
+        }
+      })
+    );
 
-    // Wait 1 second between batches to avoid rate limits
-    setTimeout(() => this.process(), 1000);
+    // Continue processing batches
+    setTimeout(() => this.process(), 0);
   }
 }
 
 export const emailQueue = new EmailQueue();
+export { EmailQueue };

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface ProfileSettingsProps {
   user: {
@@ -16,7 +16,9 @@ interface ProfileSettingsProps {
     image: string | null;
     emailVerified: Date | null;
   } | null;
-  session: any;
+  session: {
+    accessToken?: string;
+  } | null;
 }
 
 export default function ProfileSettings({ user, session }: ProfileSettingsProps) {
@@ -41,10 +43,10 @@ export default function ProfileSettings({ user, session }: ProfileSettingsProps)
     try {
       const response = await fetch("/api/user/profile", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken || ''}` // Include token if available
-        },
+         headers: {
+           "Content-Type": "application/json",
+           "Authorization": `Bearer ${session?.accessToken ?? ''}`
+         },
         body: JSON.stringify({
           name: formData.name,
           institution: formData.institution,
@@ -54,18 +56,24 @@ export default function ProfileSettings({ user, session }: ProfileSettingsProps)
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update profile");
+        let errorMessage;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || "Failed to update profile";
+        } catch (parseError) {
+          const textError = await response.text();
+          errorMessage = textError || `HTTP error! status: ${response.status}`;
+        }
+        throw new Error(`${errorMessage} (Status: ${response.status})`);
       }
 
       const result = await response.json();
-      
-      // Simple toast notification fallback
-      alert(result.message || "Profile updated successfully!");
+       
+      toast.success(result.message || "Profile updated successfully!");
       router.refresh();
     } catch (error) {
       console.error("Update profile error:", error);
-      alert(error instanceof Error ? error.message : "Failed to update profile");
+      toast.error(error instanceof Error ? error.message : "Failed to update profile");
     } finally {
       setIsLoading(false);
     }
@@ -162,7 +170,7 @@ export default function ProfileSettings({ user, session }: ProfileSettingsProps)
               name="year"
               value={formData.year}
               onChange={handleInputChange}
-              className="w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-crimson/30 outline-none transition-all font-body text-gray-800 appearance-none cursor-pointer"
+              className="w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-crimson/30 focus:ring-4 focus:ring-crimson/5 outline-none transition-all font-body text-gray-800 appearance-none cursor-pointer"
             >
               <option value="">Select your academic year</option>
               {years.map((year) => (

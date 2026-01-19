@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+
 import { Plus, LayoutGrid, Sparkles, Video, ChevronRight, Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +10,17 @@ import {
   ProjectTemplate, 
   ProjectExample 
 } from "@/lib/dashboard-data";
+
+const colorMap: Record<string, string> = {
+  crimson: "bg-crimson/10 text-crimson",
+  sunny: "bg-sunny/10 text-sunny", 
+  teal: "bg-teal/10 text-teal",
+  "purple-500": "bg-purple-500/10 text-purple-500",
+};
+
+function getColorClasses(color: string): string {
+  return colorMap[color] || "bg-gray-500/10 text-gray-500";
+}
 
 interface EmptyDashboardStateProps {
   tips?: QuickTip[];
@@ -43,11 +54,13 @@ export default function EmptyDashboardState({
               Start Drafting
             </Button>
           </Link>
-          <Link href={tutorialLink} target="_blank">
-            <Button variant="outline" leftIcon={<Video className="w-4 h-4" />}>
-              Watch Guide
-            </Button>
-          </Link>
+{tutorialLink && (
+            <Link href={tutorialLink} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" leftIcon={<Video className="w-4 h-4" />}>
+                Watch Guide
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -119,8 +132,8 @@ export default function EmptyDashboardState({
             Quick Tips
           </h4>
           <div className="space-y-3">
-            {tips.map((tip, i) => (
-              <div key={i} className="flex gap-3 group">
+{tips.map((tip) => (
+              <div key={tip.title} className="flex gap-3 group">
                 <div className="mt-1 w-1.5 h-1.5 rounded-full bg-teal group-hover:scale-150 transition-transform" />
                 <p className="text-xs text-gray-600 font-body">
                   <strong className="text-gray-900">{tip.title}:</strong> {tip.text}
@@ -143,7 +156,7 @@ export default function EmptyDashboardState({
                 href={`/projects/new?template=${template.id}`}
                 className="group p-4 rounded-xl border-2 border-gray-100 hover:border-gray-200 bg-white transition-all text-center hover:shadow-sm"
               >
-                <div className={`w-8 h-8 mx-auto mb-2 rounded-lg bg-${template.color}/10 flex items-center justify-center text-${template.color} group-hover:scale-110 transition-transform`}>
+                <div className={`w-8 h-8 mx-auto mb-2 rounded-lg ${getColorClasses(template.color)} group-hover:scale-110 transition-transform`}>
                    <Plus className="w-4 h-4" />
                 </div>
                 <span className="text-xs font-bold text-gray-700">{template.name}</span>
@@ -161,7 +174,7 @@ export default function EmptyDashboardState({
         </h4>
         <div className="flex flex-wrap gap-3">
            {examples.map((type) => (
-             <div key={type.name} className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 rounded-full text-[10px] font-bold text-gray-600 shadow-sm hover:translate-y-[-2px] transition-transform">
+             <div key={type.id} className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 rounded-full text-[10px] font-bold text-gray-600 shadow-sm hover:translate-y-[-2px] transition-transform">
                 <div className={`w-2 h-2 rounded-full ${type.color}`} />
                 {type.name}
              </div>

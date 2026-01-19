@@ -1,9 +1,53 @@
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
+import { db } from '@/lib/db';
 
-const prisma = new PrismaClient();
+async function fetchAndFormatTeamMembers(projectIds: string[]) {
+  if (projectIds.length === 0) {
+    return [];
+  }
+
+  // Get all team members from these projects
+  const teamMemberRecords = await db.teamMember.findMany({
+    where: {
+      projectId: { in: projectIds }
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+        }
+      }
+    }
+  });
+
+  // Extract unique users
+  const uniqueUsersMap = new Map();
+  teamMemberRecords.forEach(tm => {
+    if (!uniqueUsersMap.has(tm.user.id)) {
+      uniqueUsersMap.set(tm.user.id, tm.user);
+    }
+  });
+
+  const teamMembers = Array.from(uniqueUsersMap.values());
+
+  // Format the data to match the expected structure in TeamSidebar
+  const formattedMembers = teamMembers.map(member => ({
+    id: member.id,
+    name: member.name || member.email?.split('@')[0] || 'Unknown User',
+    status: 'online', // Default status, could be enhanced with real-time presence later
+    image: member.image || null,
+    initial: member.name?.charAt(0)?.toUpperCase() ||
+             member.email?.charAt(0)?.toUpperCase() ||
+             'U'
+  }));
+
+  return formattedMembers;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +62,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get the project IDs where the current user is a member
-    const userProjects = await prisma.teamMember.findMany({
+    const userProjects = await db.teamMember.findMany({
       where: {
         userId: session.user.id as string,
       },
@@ -27,53 +71,11 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Extract project IDs
+// Extract project IDs
     const projectIds = userProjects.map(up => up.projectId);
     
-    if (projectIds.length === 0) {
-      return new Response(JSON.stringify([]), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Get all team members from these projects
-    const teamMemberRecords = await prisma.teamMember.findMany({
-      where: {
-        projectId: { in: projectIds }
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          }
-        }
-      }
-    });
-
-    // Extract unique users
-    const uniqueUsersMap = new Map();
-    teamMemberRecords.forEach(tm => {
-      if (!uniqueUsersMap.has(tm.user.id)) {
-        uniqueUsersMap.set(tm.user.id, tm.user);
-      }
-    });
-
-    const teamMembers = Array.from(uniqueUsersMap.values());
-
-    // Format the data to match the expected structure in TeamSidebar
-    const formattedMembers = teamMembers.map(member => ({
-      id: member.id,
-      name: member.name || member.email?.split('@')[0] || 'Unknown User',
-      status: 'online', // Default status, could be enhanced with real-time presence later
-      image: member.image || null,
-      initial: member.name?.charAt(0)?.toUpperCase() || 
-               member.email?.charAt(0)?.toUpperCase() || 
-               'U'
-    }));
+    // Use the shared helper to fetch and format team members
+    const formattedMembers = await fetchAndFormatTeamMembers(projectIds);
 
     return new Response(JSON.stringify(formattedMembers), {
       status: 200,
@@ -85,8 +87,6 @@ export async function GET(request: NextRequest) {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
@@ -104,14 +104,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request body to potentially filter by specific project
-    const body = await request.json();
-    const { projectId } = body;
+    let body;
+    let projectId;
+    try {
+      body = await request.json();
+      projectId = body?.projectId;
+    } catch (error) {
+      // Handle JSON parsing errors (malformed/empty JSON)
+      if (error instanceof SyntaxError) {
+        return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      // Re-throw other errors to be caught by outer catch block
+      throw error;
+    }
 
     let projectIds: string[];
     
     if (projectId) {
       // Verify that the user has access to this specific project
-      const userProject = await prisma.teamMember.findFirst({
+      const userProject = await db.teamMember.findFirst({
         where: {
           userId: session.user.id as string,
           projectId: projectId,
@@ -131,7 +145,7 @@ export async function POST(request: NextRequest) {
       projectIds = [projectId];
     } else {
       // Get all projects the user belongs to
-      const userProjects = await prisma.teamMember.findMany({
+      const userProjects = await db.teamMember.findMany({
         where: {
           userId: session.user.id as string,
         },
@@ -143,50 +157,8 @@ export async function POST(request: NextRequest) {
       projectIds = userProjects.map(up => up.projectId);
     }
     
-    if (projectIds.length === 0) {
-      return new Response(JSON.stringify([]), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Get all team members from these projects
-    const teamMemberRecords = await prisma.teamMember.findMany({
-      where: {
-        projectId: { in: projectIds }
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          }
-        }
-      }
-    });
-
-    // Extract unique users
-    const uniqueUsersMap = new Map();
-    teamMemberRecords.forEach(tm => {
-      if (!uniqueUsersMap.has(tm.user.id)) {
-        uniqueUsersMap.set(tm.user.id, tm.user);
-      }
-    });
-
-    const teamMembers = Array.from(uniqueUsersMap.values());
-
-    // Format the data to match the expected structure in TeamSidebar
-    const formattedMembers = teamMembers.map(member => ({
-      id: member.id,
-      name: member.name || member.email?.split('@')[0] || 'Unknown User',
-      status: 'online', // Default status, could be enhanced with real-time presence later
-      image: member.image || null,
-      initial: member.name?.charAt(0)?.toUpperCase() ||
-               member.email?.charAt(0)?.toUpperCase() ||
-               'U'
-    }));
+    // Use the shared helper to fetch and format team members
+    const formattedMembers = await fetchAndFormatTeamMembers(projectIds);
 
     return new Response(JSON.stringify(formattedMembers), {
       status: 200,
@@ -198,7 +170,5 @@ export async function POST(request: NextRequest) {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
-  } finally {
-    await prisma.$disconnect();
   }
 }

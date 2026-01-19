@@ -16,11 +16,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
+const { searchParams } = new URL(req.url);
     const feature = searchParams.get("feature") as AIFeature | null;
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const skip = (page - 1) * limit;
+    
+    // Validate and sanitize pagination parameters
+    const rawPage = parseInt(searchParams.get("page") || "1");
+    const rawLimit = parseInt(searchParams.get("limit") || "10");
+    const maxLimit = 100;
+    
+    const page = isNaN(rawPage) || rawPage < 1 ? 1 : rawPage;
+    const limit = isNaN(rawLimit) || rawLimit < 1 ? 10 : Math.min(rawLimit, maxLimit);
+    const skip = Math.max(0, (page - 1) * limit);
 
     // Validate feature if provided
     if (feature && !Object.values(AIFeature).includes(feature)) {

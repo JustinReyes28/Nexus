@@ -6,15 +6,22 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/Button";
-import { WavyUnderline, Sparkle } from "@/components/ui/HandDrawnElements";
+import { authOptions } from "@/lib/auth"; // If needed, but checking imports
+// Sparkle and WavyUnderline were imported but not used, removing them as requested.
 
 export default function RegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGoogleSignIn = () => {
-    signIn("google", { callbackUrl: "/dashboard" });
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await signIn("google", { callbackUrl: "/dashboard" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -28,6 +35,13 @@ export default function RegisterPage() {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
+    // Client-side validation
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
@@ -35,15 +49,24 @@ export default function RegisterPage() {
         body: JSON.stringify({ name, email, password }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Something went wrong. Let's try again?");
+      let errorMessage = "Something went wrong. Let's try again?";
+      const contentType = response.headers.get("content-type");
+      
+      if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || errorMessage);
+        }
+      } else {
+        const text = await response.text();
+        if (!response.ok) {
+          throw new Error(text || errorMessage);
+        }
       }
 
       router.push("/login?registered=true");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsLoading(false);
     }
@@ -105,6 +128,7 @@ export default function RegisterPage() {
                     type="text"
                     required
                     disabled={isLoading}
+                    autoComplete="name"
                     placeholder="Alex Student"
                     className="block w-full rounded-xl border-2 border-gray-100 bg-gray-50/50 py-3 px-4 text-gray-900 focus:border-crimson/20 focus:ring-0 focus:bg-white transition-all font-body text-sm disabled:opacity-50"
                   />
@@ -120,6 +144,7 @@ export default function RegisterPage() {
                     type="email"
                     required
                     disabled={isLoading}
+                    autoComplete="email"
                     placeholder="alex@campus.edu"
                     className="block w-full rounded-xl border-2 border-gray-100 bg-gray-50/50 py-3 px-4 text-gray-900 focus:border-crimson/20 focus:ring-0 focus:bg-white transition-all font-body text-sm disabled:opacity-50"
                   />
@@ -135,6 +160,7 @@ export default function RegisterPage() {
                     type="password"
                     required
                     disabled={isLoading}
+                    autoComplete="new-password"
                     placeholder="••••••••"
                     className="block w-full rounded-xl border-2 border-gray-100 bg-gray-50/50 py-3 px-4 text-gray-900 focus:border-crimson/20 focus:ring-0 focus:bg-white transition-all font-body text-sm disabled:opacity-50"
                   />
@@ -159,6 +185,7 @@ export default function RegisterPage() {
               </div>
 
               <button
+                type="button"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading}
                 className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 text-sm font-bold text-gray-700 shadow-sm border-2 border-gray-100 hover:bg-gray-50 hover:border-gray-200 transition-all active:scale-[0.98] disabled:opacity-50"

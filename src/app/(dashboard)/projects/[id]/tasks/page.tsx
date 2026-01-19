@@ -24,8 +24,8 @@ interface Task {
   status: "TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED";
   priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
   dueDate: Date | null;
-  startDate: Date;
-  endDate: Date;
+  startDate: Date | null;
+  endDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,7 +72,11 @@ const MOCK_TASKS: Task[] = [
 
 export default function ProjectTasksPage() {
   const params = useParams();
-  const projectId = params.id as string;
+  const projectId = Array.isArray(params.id) ? params.id[0] : params.id;
+  
+  if (!projectId) {
+    throw new Error("Project ID is required");
+  }
 
   const [view, setView] = useState<"list" | "kanban" | "gantt">("kanban");
   const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
@@ -95,25 +99,30 @@ export default function ProjectTasksPage() {
     const now = new Date();
     if (editingTask) {
       setTasks(tasks.map(t => t.id === editingTask.id ? {
-        ...t,
-        ...data,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        id: t.id,
+        title: data.title,
         description: data.description,
+        status: data.status,
+        priority: data.priority,
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        startDate: t.startDate,
+        endDate: t.endDate,
+        createdAt: t.createdAt,
         updatedAt: now
-      } as Task : t));
+      } : t));
     } else {
-      const newTask = {
+      const newTask: Task = {
         id: crypto.randomUUID(),
         title: data.title,
         description: data.description,
         status: data.status,
         priority: data.priority,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        startDate: new Date(),
-        endDate: data.dueDate ? new Date(data.dueDate) : new Date(),
+        startDate: null,
+        endDate: null,
         createdAt: now,
         updatedAt: now
-      } as Task;
+      };
       setTasks([...tasks, newTask]);
     }
     setShowForm(false);
@@ -170,19 +179,24 @@ export default function ProjectTasksPage() {
         </div>
 
         <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="relative flex-grow md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
-            <Filter className="w-5 h-5" />
-          </button>
+         <div className="relative flex-grow md:w-64">
+             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+             <input
+               type="text"
+               placeholder="Search tasks..."
+               className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+               value={searchQuery}
+               onChange={(e) => setSearchQuery(e.target.value)}
+               aria-label="Search tasks"
+             />
+           </div>
+<button 
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all" 
+              aria-label="Open filters"
+              onClick={() => {}}
+            >
+              <Filter className="w-5 h-5" />
+            </button>
         </div>
       </div>
 
@@ -193,12 +207,12 @@ export default function ProjectTasksPage() {
             {statusColumns.map((status) => (
               <div key={status} className="flex flex-col gap-4">
                 <div className="flex items-center justify-between px-2">
-                  <h3 className="font-bold text-gray-400 text-xs uppercase tracking-widest flex items-center gap-2">
-                    {status.replace("_", " ")}
-                    <span className="bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded text-[10px]">
-                      {filteredTasks.filter(t => t.status === status).length}
-                    </span>
-                  </h3>
+                   <h3 className="font-bold text-gray-400 text-xs uppercase tracking-widest flex items-center gap-2">
+                     {status.replaceAll("_", " ")}
+                     <span className="bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded text-[10px]">
+                       {filteredTasks.filter(t => t.status === status).length}
+                     </span>
+                   </h3>
                 </div>
                 <div className="flex flex-col gap-4 min-h-[100px] p-2 rounded-xl bg-gray-50/50 border border-dashed border-gray-200">
                   {filteredTasks.filter(t => t.status === status).map(task => (
@@ -206,9 +220,9 @@ export default function ProjectTasksPage() {
                       key={task.id}
                       task={task}
                       onEdit={(id) => { setEditingTask(tasks.find(t => t.id === id) || null); setShowForm(true); }}
-                      onStatusChange={(id, newStatus) => {
-                        setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus } : t));
-                      }}
+                       onStatusChange={(id, newStatus) => {
+                         setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus, updatedAt: new Date() } : t));
+                       }}
                     />
 
                   ))}
@@ -242,17 +256,17 @@ export default function ProjectTasksPage() {
                          <td className="px-6 py-4">
                             <span className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{task.title}</span>
                          </td>
-                         <td className="px-6 py-4">
-                             <Badge variant={task.status === "COMPLETED" ? "success" : "info"}>{task.status.replace("_", " ")}</Badge>
-                         </td>
+                          <td className="px-6 py-4">
+                              <Badge variant={task.status === "COMPLETED" ? "success" : "info"}>{task.status.replaceAll("_", " ")}</Badge>
+                          </td>
                          <td className="px-6 py-4">
                             <Badge variant={task.priority === "HIGH" || task.priority === "URGENT" ? "danger" : "warning"}>{task.priority}</Badge>
                          </td>
-                         <td className="px-6 py-4">
-                            <span className="text-xs text-gray-500">
-                               {task.dueDate ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(task.dueDate)) : "N/A"}
-                            </span>
-                         </td>
+                          <td className="px-6 py-4">
+                             <span className="text-xs text-gray-500">
+                                {task.dueDate ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(task.dueDate) : "N/A"}
+                             </span>
+                          </td>
                       </tr>
                    ))}
                 </tbody>
@@ -260,9 +274,20 @@ export default function ProjectTasksPage() {
           </div>
         )}
 
-        {view === "gantt" && (
-          <GanttChart tasks={tasks.map(t => ({ ...t, description: t.description ?? undefined }))} />
-        )}
+         {view === "gantt" && (
+           <GanttChart tasks={tasks.map(t => ({ 
+             id: t.id,
+             title: t.title,
+             status: t.status,
+             priority: t.priority,
+             dueDate: t.dueDate,
+             startDate: t.startDate ?? undefined,
+             endDate: t.endDate ?? undefined,
+             createdAt: t.createdAt,
+             updatedAt: t.updatedAt,
+             description: t.description ?? undefined 
+           }))} />
+         )}
       </div>
 
       {showForm && (

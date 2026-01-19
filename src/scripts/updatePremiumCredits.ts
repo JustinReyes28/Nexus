@@ -51,14 +51,19 @@ async function updatePremiumUserCredits() {
     console.log('Premium user credit update completed!');
   } catch (error) {
     console.error('Error updating premium user credits:', error);
+    process.exitCode = 1;
+    throw error;
   } finally {
     await db.$disconnect();
   }
 }
 
 // Run the function if this file is executed directly
-if (require.main === module) {
-  updatePremiumUserCredits();
+if (typeof require !== 'undefined' ? require.main === module : import.meta && import.meta.url === `file://${process.argv[1]}`) {
+  updatePremiumUserCredits().catch((error) => {
+    console.error('Error in premium credits update:', error);
+    process.exit(1);
+  });
 }
 
 export default updatePremiumUserCredits;

@@ -5,6 +5,7 @@ import { ChatInterface } from "./ChatInterface";
 import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { Button } from "@/components/ui/Button";
 import { BookOpen, Search, Tags, Beaker, Quote, Sparkles, History } from "lucide-react";
+import { ChatMessage, Conversation } from "@/types/aiTypes";
 
 export const ResearchAssistantView: React.FC = () => {
   const [topic, setTopic] = useState("");
@@ -12,16 +13,23 @@ export const ResearchAssistantView: React.FC = () => {
   const [focusAreas, setFocusAreas] = useState<string[]>([]);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [historyMessages, setHistoryMessages] = useState<any[] | undefined>();
+  const [historyMessages, setHistoryMessages] = useState<ChatMessage[] | undefined>();
   const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
 
-  const handleHistorySelect = (conv: any) => {
+  const handleHistorySelect = (conv: Conversation) => {
     setActiveHistoryId(conv.id);
     setHistoryMessages([
       { role: "user", content: conv.prompt },
       { role: "bot", content: conv.response }
     ]);
+    // Restore topic and focus areas from history if available
+    if (conv.topic) {
+      setTopic(conv.topic);
+    }
+    if (conv.focusAreas && Array.isArray(conv.focusAreas)) {
+      setFocusAreas(conv.focusAreas);
+    }
     setIsSubmitted(true);
     setIsHistoryOpen(false);
   };
@@ -94,7 +102,12 @@ export const ResearchAssistantView: React.FC = () => {
                   placeholder="e.g. Mental health, productivity..."
                   value={focusArea}
                   onChange={(e) => setFocusArea(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddFocusArea())}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddFocusArea();
+                    }
+                  }}
                   className="flex-1 bg-white border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-blue-500 transition-all"
                 />
                 <Button type="button" variant="outline" onClick={handleAddFocusArea} className="px-4">
@@ -129,12 +142,14 @@ export const ResearchAssistantView: React.FC = () => {
               </div>
               <div className="border-2 border-blue-200 bg-blue-50/50 p-1 rounded-xl">
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={webSearchEnabled}
-                    onChange={(e) => setWebSearchEnabled(e.target.checked)}
-                    className="sr-only peer"
-                  />
+                   <input
+                     type="checkbox"
+                     id="webSearchToggle"
+                     checked={webSearchEnabled}
+                     onChange={(e) => setWebSearchEnabled(e.target.checked)}
+                     className="sr-only peer"
+                     aria-label="Enable web search"
+                   />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
                 </label>
               </div>
@@ -180,15 +195,20 @@ export const ResearchAssistantView: React.FC = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 gap-2 pt-4">
-                 <Button variant="ghost" size="sm" className="justify-start text-xs text-gray-500 hover:text-blue-500 group">
-                    <Beaker size={14} className="mr-2 group-hover:scale-110 transition-transform" />
-                    Cite this search
-                 </Button>
-                 <Button variant="outline" size="sm" onClick={() => setIsSubmitted(false)} className="text-xs">
-                    Reset parameters
-                 </Button>
-              </div>
+               <div className="grid grid-cols-1 gap-2 pt-4">
+                   <Button variant="ghost" size="sm" className="justify-start text-xs text-gray-500 hover:text-blue-500 group" disabled aria-label="Cite this search - Coming soon" title="Cite this search - Coming soon">
+                      <Beaker size={14} className="mr-2 group-hover:scale-110 transition-transform" />
+                      <span className="flex items-center gap-1">
+                         Cite this search
+                         <span className="text-[8px] bg-gray-200 text-gray-600 px-1 py-0.5 rounded-full font-medium">
+                            Soon
+                         </span>
+                      </span>
+                   </Button>
+                  <Button variant="outline" size="sm" onClick={() => setIsSubmitted(false)} className="text-xs">
+                     Reset parameters
+                  </Button>
+               </div>
             </div>
 
             <div className="bg-blue-50 border-2 border-blue-100 p-6 rounded-3xl space-y-4 text-center">
@@ -199,27 +219,30 @@ export const ResearchAssistantView: React.FC = () => {
             </div>
           </div>
 
-          {/* Chat Interface */}
-          <div className="lg:col-span-8">
-            <ChatInterface 
-              endpoint="/api/ai/research"
-              feature="RESEARCH_ASSISTANT"
-              placeholder="Ask for literature suggestions or summaries..."
-              submitOnMount={true}
-              initialInput={topic}
-              additionalData={{ topic, focusAreas, historyMessages, webSearchEnabled }}
-            />
-          </div>
+           {/* Chat Interface */}
+           <div className="lg:col-span-8">
+             <ChatInterface 
+               endpoint="/api/ai/research"
+               feature="RESEARCH_ASSISTANT"
+               placeholder="Ask for literature suggestions or summaries..."
+               submitOnMount={!historyMessages || historyMessages.length === 0}
+               initialInput={topic}
+               loadedHistoryId={activeHistoryId}
+               additionalData={{ topic, focusAreas, historyMessages, webSearchEnabled }}
+             />
+           </div>
         </div>
       )}
 
-      <ChatHistoryPanel
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        onSelect={handleHistorySelect}
-        featureFilter="RESEARCH_ASSISTANT"
-        activeId={activeHistoryId}
-      />
+      {!isSubmitted && (
+        <ChatHistoryPanel
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          onSelect={handleHistorySelect}
+          featureFilter="RESEARCH_ASSISTANT"
+          activeId={activeHistoryId}
+        />
+      )}
     </div>
   );
 };

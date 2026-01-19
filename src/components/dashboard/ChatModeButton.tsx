@@ -7,12 +7,10 @@ import { MessageCircle } from "lucide-react";
 interface ChatModeButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isActive?: boolean;
   isCollapsed?: boolean;
-  onClick?: () => void;
-  className?: string;
 }
 
 export const ChatModeButton = React.forwardRef<HTMLButtonElement, ChatModeButtonProps>(
-  ({ isActive = false, isCollapsed = false, onClick, className, ...props }, ref) => {
+  ({ isActive = false, isCollapsed = false, className, ...props }, ref) => {
     return (
       <button
         ref={ref}
@@ -38,16 +36,16 @@ export const ChatModeButton = React.forwardRef<HTMLButtonElement, ChatModeButton
         />
         <span className={cn(
           "whitespace-nowrap overflow-hidden transition-all duration-300",
-          isCollapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100 block"
+          isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100 block"
         )}>
           Chat Mode
         </span>
 
-        {isActive && !isCollapsed && (
-          <div className="absolute left-0 w-1 h-6 bg-crimson rounded-r-full" />
-        )}
-        {isActive && isCollapsed && (
-          <div className="absolute left-0 w-1 h-3 bg-crimson rounded-r-full" />
+        {isActive && (
+          <div className={cn(
+            "absolute left-0 w-1 bg-crimson rounded-r-full",
+            isCollapsed ? "h-3" : "h-6"
+          )} />
         )}
       </button>
     );

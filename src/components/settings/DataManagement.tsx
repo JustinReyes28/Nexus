@@ -1,22 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
 
 interface DataManagementProps {
   userId: string;
 }
 
+interface UserStats {
+  accountCreated: string;
+  projectsCreated: number;
+  tasksCompleted: number;
+  storageUsed: string;
+}
+
 export default function DataManagement({ userId }: DataManagementProps) {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const handleExportData = async () => {
-    setIsLoading(true);
+    setIsExporting(true);
     try {
       const response = await fetch("/api/user/export", {
         method: "GET",
@@ -26,26 +37,35 @@ export default function DataManagement({ userId }: DataManagementProps) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to export data");
+        const errorData = await response.json().catch(() => response.text());
+        const errorMessage = typeof errorData === 'string' ? errorData : errorData?.message || errorData?.error || "Unknown server error";
+        throw new Error(`Failed to export data: ${errorMessage}`);
       }
 
       const data = await response.json();
-      // In a real implementation, this would download a file
-      alert(`Data export would download: ${JSON.stringify(data, null, 2)}`);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "export.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (error) {
       alert(error instanceof Error ? error.message : "Failed to export data");
     } finally {
-      setIsLoading(false);
+    setIsExporting(false);
     }
   };
 
   const handleDeleteAccount = async () => {
-    if (!deletePassword) {
+    if (!deletePassword?.trim()) {
       alert("Please enter your password to confirm account deletion");
       return;
     }
 
-    setIsLoading(true);
+    setIsDeleting(true);
     try {
       const response = await fetch("/api/user/account", {
         method: "DELETE",
@@ -58,20 +78,48 @@ export default function DataManagement({ userId }: DataManagementProps) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to delete account");
+        const errorData = await response.json().catch(() => response.text());
+        const errorMessage = typeof errorData === 'string' ? errorData : errorData?.message || errorData?.error || "Unknown server error";
+        throw new Error(`Failed to delete account: ${errorMessage}`);
       }
 
-      alert("Account deleted successfully. You will be logged out.");
-      // In a real implementation, this would redirect to login
-      router.push("/login");
+      router.push("/login?accountDeleted=true");
     } catch (error) {
       alert(error instanceof Error ? error.message : "Failed to delete account");
     } finally {
-      setIsLoading(false);
+    setIsDeleting(false);
       setShowDeleteConfirm(false);
       setDeletePassword("");
     }
   };
+
+  const fetchUserStats = async () => {
+    try {
+      const response = await fetch(`/api/user/stats?userId=${userId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => response.text());
+        const errorMessage = typeof errorData === 'string' ? errorData : errorData?.message || errorData?.error || "Unknown server error";
+        throw new Error(`Failed to fetch user stats: ${errorMessage}`);
+      }
+
+      const data = await response.json();
+      setStats(data);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to fetch user stats");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserStats();
+  }, [userId]);
 
   return (
     <div className="card rounded-xl shadow-md bg-white">
@@ -91,10 +139,10 @@ export default function DataManagement({ userId }: DataManagementProps) {
             <Button
               variant="secondary"
               onClick={handleExportData}
-              disabled={isLoading}
+              disabled={isExporting || isDeleting}
               className="animate-float-slow"
             >
-              {isLoading ? "Preparing Export..." : "Export All Data"}
+              {isExporting ? "Preparing Export..." : "Export All Data"}
             </Button>
           </div>
         </div>
@@ -121,21 +169,25 @@ export default function DataManagement({ userId }: DataManagementProps) {
                   <label htmlFor="deletePassword" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">
                     Current Password
                   </label>
-                  <input
-                    id="deletePassword"
-                    name="deletePassword"
-                    type="password"
-                    value={deletePassword}
-                    onChange={(e) => setDeletePassword(e.target.value)}
-                    className="w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-crimson/30 focus:ring-4 focus:ring-crimson/5 outline-none transition-all font-body text-gray-800"
-                    placeholder="Enter your password"
-                    required
-                  />
+                 <input
+                   id="deletePassword"
+                   name="deletePassword"
+                   type="password"
+                   value={deletePassword}
+                   onChange={(e) => setDeletePassword(e.target.value)}
+                   className="w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-crimson/30 focus:ring-4 focus:ring-crimson/5 outline-none transition-all font-body text-gray-800"
+                   placeholder="Enter your password"
+                   required
+                   autoComplete="current-password"
+                 />
                 </div>
                 <div className="flex gap-4">
                   <Button
                     variant="ghost"
-                    onClick={() => setShowDeleteConfirm(false)}
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setDeletePassword("");
+                    }}
                     className="flex-1 text-gray-600 hover:text-gray-800"
                   >
                     Cancel
@@ -143,10 +195,10 @@ export default function DataManagement({ userId }: DataManagementProps) {
                   <Button
                     variant="outline"
                     onClick={handleDeleteAccount}
-                    disabled={isLoading}
+                    disabled={isExporting || isDeleting}
                     className="flex-1 border-crimson text-crimson hover:bg-crimson/5 animate-bounce-slow"
                   >
-                    {isLoading ? "Deleting..." : "Permanently Delete Account"}
+                    {isDeleting ? "Deleting..." : "Permanently Delete Account"}
                   </Button>
                 </div>
               </div>
@@ -154,7 +206,7 @@ export default function DataManagement({ userId }: DataManagementProps) {
               <Button
                 variant="outline"
                 onClick={() => setShowDeleteConfirm(true)}
-                disabled={isLoading}
+                disabled={isExporting || isDeleting}
                 className="border-crimson text-crimson hover:bg-crimson/5 animate-bounce-slow"
               >
                 Delete My Account
@@ -166,29 +218,37 @@ export default function DataManagement({ userId }: DataManagementProps) {
         {/* Data Information */}
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
           <h4 className="text-md font-heading font-semibold text-primary mb-3">Your Data Information</h4>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Account Created</span>
-              <span className="font-semibold">Date not available</span>
+          {isLoading ? (
+            <p className="text-sm text-gray-500">Loading data...</p>
+          ) : error ? (
+            <p className="text-sm text-red-500">Error: {error}</p>
+          ) : stats ? (
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Account Created</span>
+                <span className="font-semibold">{stats.accountCreated}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Projects Created</span>
+                <span className="font-semibold">{stats.projectsCreated}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Tasks Completed</span>
+                <span className="font-semibold">{stats.tasksCompleted}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Storage Used</span>
+                <span className="font-semibold">{stats.storageUsed}</span>
+              </div>
+              <div className="pt-3 mt-3 border-t border-gray-200">
+                <Link href="/privacy" className="text-sm text-blue-600 hover:text-blue-800 underline">
+                  View Privacy Policy
+                </Link>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Projects Created</span>
-              <span className="font-semibold">Data not available</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Tasks Completed</span>
-              <span className="font-semibold">Data not available</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Storage Used</span>
-              <span className="font-semibold">Data not available</span>
-            </div>
-            <div className="pt-3 mt-3 border-t border-gray-200">
-              <a href="/privacy" className="text-sm text-blue-600 hover:text-blue-800 underline">
-                View Privacy Policy
-              </a>
-            </div>
-          </div>
+          ) : (
+            <p className="text-sm text-gray-500">No data available</p>
+          )}
         </div>
       </div>
     </div>

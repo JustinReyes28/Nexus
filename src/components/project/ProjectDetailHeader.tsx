@@ -50,7 +50,7 @@ export default function ProjectDetailHeader({ project }: ProjectDetailHeaderProp
         <div className="space-y-2">
           <div className="flex items-center gap-3">
              <Badge variant={isDraft ? "default" : statusVariants[project.status]}>
-               {isDraft ? "Draft Mode" : project.status.replace("_", " ")}
+               {isDraft ? "Draft Mode" : project.status.replaceAll("_", " ")}
              </Badge>
              {project.discipline && (
                <div className="flex items-center gap-1.5 text-xs font-bold text-teal uppercase tracking-wider">
@@ -65,12 +65,17 @@ export default function ProjectDetailHeader({ project }: ProjectDetailHeaderProp
           </h1>
         </div>
 
-        <div className="flex items-center gap-4 bg-white p-3 rounded-xl shadow-sm border border-gray-100 -rotate-0">
+        <div className="flex items-center gap-4 bg-white p-3 rounded-xl shadow-sm border border-gray-100">
           <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest px-2">
             <Calendar className="w-4 h-4 text-sunny" />
             <span>
-              {project.deadline 
-                ? new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(project.deadline))
+              {project.deadline
+                ? (() => {
+                    const date = new Date(project.deadline);
+                    return isNaN(date.getTime())
+                      ? "Invalid deadline"
+                      : new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(date)
+                  })()
                 : "No Deadline Set"}
             </span>
           </div>

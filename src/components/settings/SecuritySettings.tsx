@@ -2,26 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
 
 interface SecuritySettingsProps {
-  user: {
-    id: string;
-    email: string | null;
-  } | null;
   hasGoogleAccount: boolean;
 }
 
-export default function SecuritySettings({ user, hasGoogleAccount }: SecuritySettingsProps) {
+export default function SecuritySettings({ hasGoogleAccount }: SecuritySettingsProps) {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isDisconnectingGoogle, setIsDisconnectingGoogle] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
     confirmNewPassword: "",
   });
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -31,11 +27,11 @@ export default function SecuritySettings({ user, hasGoogleAccount }: SecuritySet
   const handleSubmitPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmNewPassword) {
-      alert("New passwords do not match");
+      toast.error("New passwords do not match");
       return;
     }
-
-    setIsLoading(true);
+  
+    setIsChangingPassword(true);
     try {
       const response = await fetch("/api/user/password", {
         method: "PUT",
@@ -47,12 +43,19 @@ export default function SecuritySettings({ user, hasGoogleAccount }: SecuritySet
           newPassword: passwordData.newPassword,
         }),
       });
-
+  
       if (!response.ok) {
-        throw new Error("Failed to change password");
+        let errorMessage = "Failed to change password";
+        try {
+          const json = await response.json();
+          errorMessage = json.message || json.error || response.statusText || errorMessage;
+        } catch (e) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
-
-      alert("Password changed successfully!");
+  
+      toast.success("Password changed successfully!");
       setPasswordData({
         currentPassword: "",
         newPassword: "",
@@ -61,9 +64,9 @@ export default function SecuritySettings({ user, hasGoogleAccount }: SecuritySet
       setIsChangingPassword(false);
       router.refresh();
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to change password");
+      toast.error(error instanceof Error ? error.message : "Failed to change password");
     } finally {
-      setIsLoading(false);
+      setIsChangingPassword(false);
     }
   };
 
@@ -71,32 +74,53 @@ export default function SecuritySettings({ user, hasGoogleAccount }: SecuritySet
     if (!confirm("Are you sure you want to disconnect your Google account?")) {
       return;
     }
-
-    setIsLoading(true);
+  
+    setIsDisconnectingGoogle(true);
     try {
+      // Check if user has alternative authentication methods
+      const authMethodsResponse = await fetch("/api/auth/methods");
+      if (!authMethodsResponse.ok) {
+        throw new Error("Could not verify authentication methods");
+      }
+      
+      const authMethods = await authMethodsResponse.json();
+      if (!authMethods.canDisconnectGoogle) {
+        // User would lose access, require password setup first
+        toast.error("Please set up a password before disconnecting Google account to avoid losing access");
+        setIsDisconnectingGoogle(false);
+        return;
+      }
+  
       const response = await fetch("/api/auth/google/unlink", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
       });
-
+  
       if (!response.ok) {
-        throw new Error("Failed to disconnect Google account");
+        let errorMessage = "Failed to disconnect Google account";
+        try {
+          const json = await response.json();
+          errorMessage = json.message || json.error || response.statusText || errorMessage;
+        } catch (e) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
-
-      alert("Google account disconnected successfully!");
+  
+      toast.success("Google account disconnected successfully!");
       router.refresh();
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to disconnect Google account");
+      toast.error(error instanceof Error ? error.message : "Failed to disconnect Google account");
     } finally {
-      setIsLoading(false);
+      setIsDisconnectingGoogle(false);
     }
   };
 
   const handleGoogleConnect = async () => {
-    // This would typically redirect to Google OAuth flow
-    alert("Google account connection would be handled by OAuth flow");
+    // Redirect to Google OAuth flow
+    router.push('/api/auth/google');
   };
 
   return (
@@ -181,7 +205,14 @@ export default function SecuritySettings({ user, hasGoogleAccount }: SecuritySet
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsChangingPassword(false)}
+                  onClick={() => {
+                    setIsChangingPassword(false);
+                    setPasswordData({
+                      currentPassword: "",
+                      newPassword: "",
+                      confirmNewPassword: "",
+                    });
+                  }}
                   className="flex-1"
                 >
                   Cancel
@@ -189,7 +220,7 @@ export default function SecuritySettings({ user, hasGoogleAccount }: SecuritySet
                 <Button
                   type="submit"
                   variant="primary"
-                  isLoading={isLoading}
+                  isLoading={isChangingPassword}
                   className="flex-1 shadow-xl shadow-crimson/10"
                 >
                   Save New Password
@@ -221,7 +252,7 @@ export default function SecuritySettings({ user, hasGoogleAccount }: SecuritySet
                     variant="outline"
                     size="sm"
                     onClick={handleGoogleDisconnect}
-                    disabled={isLoading}
+                    disabled={isDisconnectingGoogle}
                     className="text-crimson border-crimson hover:bg-crimson/5"
                   >
                     Disconnect
@@ -231,7 +262,7 @@ export default function SecuritySettings({ user, hasGoogleAccount }: SecuritySet
                     variant="secondary"
                     size="sm"
                     onClick={handleGoogleConnect}
-                    disabled={isLoading}
+                    disabled={isDisconnectingGoogle}
                   >
                     Connect
                   </Button>

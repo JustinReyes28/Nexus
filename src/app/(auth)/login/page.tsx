@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/auth/LoginForm";
 import Link from "next/link";
-import { WavyUnderline, Sparkle } from "@/components/ui/HandDrawnElements";
+import { Sparkle } from "@/components/ui/HandDrawnElements";
 
 export default async function LoginPage() {
   const session = await getServerSession(authOptions);
@@ -38,20 +38,20 @@ export default async function LoginPage() {
                "Focus is the master key to success. We help you lock the door to distractions."
             </p>
             
-            <div className="flex flex-col gap-6">
-               <div className="flex gap-4 items-center">
+            <ul className="flex flex-col gap-6 list-none">
+               <li className="flex gap-4 items-center">
                   <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center flex-shrink-0 border border-white/20">
                      <Sparkle className="text-sunny w-6 h-6" />
                   </div>
                   <p className="font-bold">AI-Powered Structure</p>
-               </div>
-               <div className="flex gap-4 items-center">
+               </li>
+               <li className="flex gap-4 items-center">
                   <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center flex-shrink-0 border border-white/20">
                      <div className="w-5 h-5 bg-sunny rounded-sm rotate-12" />
                   </div>
                   <p className="font-bold">Collaborative Canvas</p>
-               </div>
-            </div>
+               </li>
+            </ul>
          </div>
       </div>
 

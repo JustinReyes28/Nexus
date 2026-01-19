@@ -8,6 +8,41 @@ import { Plus, Sparkles, Pencil } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { WavyUnderline } from "@/components/ui/HandDrawnElements";
+import { ProjectStatus } from "@prisma/client";
+
+// Define types based on the Prisma schema
+interface Task {
+  id: string;
+}
+
+interface Project {
+  id: string;
+  title: string;
+  description: string | null;
+  discipline: string | null;
+  status: ProjectStatus;
+  startDate: Date | null;
+  deadline: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  ownerId: string;
+  tasks: Task[];
+  _count: {
+    tasks: number;
+  };
+}
+
+interface ProcessedProject {
+  id: string;
+  title: string;
+  description: string | null;
+  status: ProjectStatus;
+  deadline: Date | null;
+  _count: {
+    tasks: number;
+  };
+  completedTasks: number;
+}
 
 export default async function DraftsPage() {
   const session = await getServerSession(authOptions);
@@ -17,8 +52,8 @@ export default async function DraftsPage() {
   }
 
   // Fetch drafts (projects with IDEATION status)
-  const drafts = await db.project.findMany({
-    where: { 
+  const drafts: Project[] = await db.project.findMany({
+    where: {
       ownerId: session.user.id,
       status: "IDEATION"
     },
@@ -34,7 +69,7 @@ export default async function DraftsPage() {
     orderBy: { updatedAt: "desc" }
   });
 
-  const processedDrafts = drafts.map((p: any) => ({
+  const processedDrafts: ProcessedProject[] = drafts.map((p) => ({
     ...p,
     completedTasks: p.tasks.length
   }));
@@ -63,7 +98,7 @@ export default async function DraftsPage() {
       <div className="space-y-8">
         {processedDrafts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {processedDrafts.map((draft: any) => (
+            {processedDrafts.map((draft) => (
               <div key={draft.id} className="flex flex-col">
                 <ProjectCard project={draft} />
                 <DraftActions projectId={draft.id} />
@@ -102,6 +137,21 @@ export default async function DraftsPage() {
                     <p className="text-gray-500 text-sm max-w-[400px] font-body">Once you're happy with your draft, you can publish it to move it to your main dashboard and start collaborating.</p>
                  </div>
               </div>
+              {processedDrafts.length > 0 && (
+                <div className="flex gap-3">
+                  <Link href="/dashboard">
+                    <Button variant="outline" className="border-teal text-teal hover:bg-teal/5">
+                      View Published
+                    </Button>
+                  </Link>
+                  <Link href={`/projects/${processedDrafts[0].id}`}>
+                    <Button variant="ai">
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Publish Draft
+                    </Button>
+                  </Link>
+                </div>
+              )}
            </div>
         </div>
       </div>

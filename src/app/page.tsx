@@ -1,3 +1,5 @@
+"use client";
+
 import { HeroSection } from "@/components/home/HeroSection";
 import { ProblemSolutionGrid } from "@/components/home/ProblemSolutionGrid";
 import { AICompanionPreview } from "@/components/home/AICompanionPreview";
@@ -5,27 +7,61 @@ import { TeamFeaturePreview } from "@/components/home/TeamFeaturePreview";
 import { FeaturesSection } from "@/components/home/FeaturesSection";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import React from "react";
+
+function Logo({ className }: { className?: string }) {
+  return (
+    <div className={`flex items-center gap-2 ${className || ''}`}>
+      <div className="w-6 h-6 bg-crimson rounded rotate-3" />
+      <span className="text-xl font-heading font-extrabold tracking-tighter text-gray-900">NEXUS</span>
+    </div>
+  );
+}
 
 export default function Home() {
+  const [isMobileOpen, setIsMobileOpen] = React.useState(false);
   return (
     <main className="flex min-h-screen flex-col bg-background font-body">
       {/* Navigation Header (Simplified for Landing) */}
       <nav className="fixed w-full z-50 bg-white/10 backdrop-blur-md border-b border-white/20 px-6 py-4">
         <div className="container mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-crimson rounded-lg rotate-3" />
-            <span className="text-2xl font-heading font-extrabold tracking-tighter text-gray-900">NEXUS</span>
+            <Logo className="text-2xl" />
           </Link>
           <div className="hidden md:flex items-center gap-8">
             <Link href="#features" className="text-sm font-semibold text-gray-600 hover:text-crimson transition-colors">Features</Link>
-            <Link href="https://github.com/JustinReyes28/Nexus" className="text-sm font-semibold text-gray-600 hover:text-crimson transition-colors">See the Code</Link>
-            <Link href="/login">
-              <Button variant="ghost" size="sm">Sign In</Button>
-            </Link>
-            <Link href="/register">
-              <Button size="sm">Get Started</Button>
-            </Link>
+            <Link href="https://github.com/JustinReyes28/Nexus" target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-gray-600 hover:text-crimson transition-colors">See the Code</Link>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/login">Sign In</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link href="/register">Get Started</Link>
+              </Button>
           </div>
+          <button
+            className="md:hidden p-2"
+            aria-label="Toggle menu"
+            aria-expanded={isMobileOpen}
+            onClick={() => setIsMobileOpen(!isMobileOpen)}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+          {isMobileOpen && (
+            <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-lg border-t border-gray-100 p-4">
+              <div className="flex flex-col gap-4">
+                <Link href="#features" className="text-sm font-semibold text-gray-600 hover:text-crimson transition-colors">Features</Link>
+                <Link href="https://github.com/JustinReyes28/Nexus" target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-gray-600 hover:text-crimson transition-colors">See the Code</Link>
+             <Button variant="ghost" size="sm" asChild>
+               <Link href="/login">Sign In</Link>
+             </Button>
+             <Button size="sm" asChild>
+               <Link href="/register">Get Started</Link>
+             </Button>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 
@@ -65,12 +101,9 @@ export default function Home() {
       {/* Footer */}
       <footer className="py-12 bg-white border-t border-gray-100">
         <div className="container px-6 mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-           <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-crimson rounded rotate-3" />
-              <span className="text-xl font-heading font-extrabold tracking-tighter text-gray-900">NEXUS</span>
-           </div>
+          <Logo />
            <div className="flex flex-col md:flex-row items-center gap-6">
-             <p className="text-sm text-gray-400">© 2026 Nexus AI. All rights reserved. Human-centric by design.</p>
+             <p className="text-sm text-gray-400">© {new Date().getFullYear()} Nexus AI. All rights reserved. Human-centric by design.</p>
              <div className="flex gap-4">
                <Link href="/privacy" className="text-sm text-gray-500 hover:text-crimson transition-colors">Privacy Policy</Link>
              </div>

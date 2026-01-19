@@ -34,6 +34,7 @@ export default function LoginForm() {
         router.refresh();
       }
     } catch (err) {
+      console.error("Login error:", err);
       setError("An unexpected error occurred. Even The Guide is confused!");
     } finally {
       setIsLoading(false);
@@ -47,7 +48,7 @@ export default function LoginForm() {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="p-3 bg-red-50 border-2 border-red-100 text-red-700 rounded-xl text-xs font-bold font-body animate-in fade-in slide-in-from-top-1">
+        <div className="p-3 bg-red-50 border-2 border-red-100 text-red-700 rounded-xl text-xs font-bold font-body animate-in fade-in slide-in-from-top-1" role="alert">
           {error}
         </div>
       )}
@@ -109,6 +110,7 @@ export default function LoginForm() {
       </div>
 
       <button
+        type="button"
         onClick={handleGoogleSignIn}
         disabled={isLoading}
         className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-3 text-sm font-bold text-gray-700 shadow-sm border-2 border-gray-100 hover:bg-gray-50 hover:border-gray-200 transition-all active:scale-[0.98] disabled:opacity-50"

@@ -15,8 +15,7 @@ interface TeamMember {
 
 export default function TeamSidebar({ className }: { className?: string }) {
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
+const [isOpen, setIsOpen] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,14 +43,16 @@ export default function TeamSidebar({ className }: { className?: string }) {
     );
   };
 
-  // Fetch team members
+// Fetch team members
   useEffect(() => {
+    const controller = new AbortController();
+    
     const fetchTeamMembers = async () => {
       try {
-        const response = await fetch('/api/team/members');
+        const response = await fetch('/api/team/members', { signal: controller.signal });
         if (response.ok) {
           const data = await response.json();
-          
+           
           if (isValidTeamMemberResponse(data)) {
             setTeamMembers(data);
           } else {
@@ -63,6 +64,7 @@ export default function TeamSidebar({ className }: { className?: string }) {
           setTeamMembers([]);
         }
       } catch (error) {
+        if ((error as Error).name === 'AbortError') return;
         console.error('Error fetching team members:', error);
         setTeamMembers([]);
       } finally {
@@ -74,16 +76,22 @@ export default function TeamSidebar({ className }: { className?: string }) {
       setLoading(true); // Reset loading state when opening
       fetchTeamMembers();
     }
+    
+    return () => controller.abort();
   }, [isOpen]);
 
-  // Close on escape key
+// Close on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") handleClose();
     };
-    document.addEventListener("keydown", handleEscape);
+    
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscape);
+    }
+    
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [handleClose]);
+  }, [handleClose, isOpen]);
 
   // Prevent body scroll when menu is open
   useEffect(() => {
@@ -124,17 +132,18 @@ export default function TeamSidebar({ className }: { className?: string }) {
       )}
 
       {/* Slide-in Panel */}
-      <aside
-        className={cn(
-          "fixed top-0 right-0 z-50 h-full w-[320px] bg-white shadow-xl",
-          "flex flex-col py-8 px-6 border-l border-gray-200",
-          "transition-transform duration-300 ease-out",
-          isOpen ? "translate-x-0" : "translate-x-full",
-          className
-        )}
-        role="dialog"
-        aria-label="Team sidebar"
-      >
+<aside
+          className={cn(
+            "fixed top-0 right-0 z-50 h-full w-[320px] bg-white shadow-xl",
+            "flex flex-col py-8 px-6 border-l border-gray-200",
+            "transition-transform duration-300 ease-out",
+            isOpen ? "translate-x-0" : "translate-x-full",
+            className
+          )}
+          role="dialog"
+          aria-label="Team sidebar"
+          aria-modal={isOpen ? "true" : undefined}
+        >
         {/* Close Button */}
         <button
           onClick={handleClose}
@@ -162,9 +171,9 @@ export default function TeamSidebar({ className }: { className?: string }) {
               </div>
             ) : teamMembers.length > 0 ? (
               teamMembers.map((member) => (
-                <div
+<div
                   key={member.id}
-                  className="flex items-center justify-between group cursor-pointer"
+                  className="flex items-center justify-between group"
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative">
@@ -191,7 +200,7 @@ export default function TeamSidebar({ className }: { className?: string }) {
                       {member.name}
                     </span>
                   </div>
-                  <MessageCircle className="w-4 h-4 text-gray-300 group-hover:text-crimson opacity-0 group-hover:opacity-100 transition-all" />
+                  <MessageCircle className="w-4 h-4 text-gray-300 opacity-0 transition-all" />
                 </div>
               ))
             ) : (
@@ -204,7 +213,7 @@ export default function TeamSidebar({ className }: { className?: string }) {
         <div className="mt-auto">
           <div className="bg-canvas p-6 rounded-2xl border-2 border-dashed border-teal/30 relative overflow-hidden text-center">
             {/* Breathing Mascot Preview */}
-            <div className="w-20 h-20 bg-teal/10 rounded-[35% 65% 45% 5% / 5% 45% 65% 35%] animate-[pulse-organic_4s_infinite] mx-auto mb-4 flex items-center justify-center">
+            <div className="w-20 h-20 bg-teal/10 rounded-[35%_65%_45%_5%_/_5%_45%_65%_35%] animate-[pulse-organic_4s_infinite] mx-auto mb-4 flex items-center justify-center">
               <div className="flex gap-4">
                 <div className="w-1.5 h-1.5 bg-teal rounded-full" />
                 <div className="w-1.5 h-1.5 bg-teal rounded-full" />

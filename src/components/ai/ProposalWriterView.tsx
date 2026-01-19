@@ -6,6 +6,21 @@ import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { Button } from "@/components/ui/Button";
 import { FileEdit, ClipboardList, CheckCircle, Info, Sparkles, History } from "lucide-react";
 
+interface Message {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp?: string;
+}
+
+interface Conversation {
+  id: string;
+  prompt: string;
+  response: string;
+  section?: string;
+  context?: string;
+}
+
 const SECTIONS = [
   "Introduction",
   "Problem Statement",
@@ -14,22 +29,24 @@ const SECTIONS = [
   "Methodology",
   "Expected Outcomes",
   "Timeline & Resources",
-];
+] as const;
 
 export const ProposalWriterView: React.FC = () => {
-  const [section, setSection] = useState("Introduction");
+  const [section, setSection] = useState<typeof SECTIONS[number]>("Introduction");
   const [context, setContext] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [historyMessages, setHistoryMessages] = useState<any[] | undefined>();
+  const [historyMessages, setHistoryMessages] = useState<Message[] | undefined>();
   const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
 
-  const handleHistorySelect = (conv: any) => {
+const handleHistorySelect = (conv: Conversation) => {
     setActiveHistoryId(conv.id);
     setHistoryMessages([
-      { role: "user", content: conv.prompt },
-      { role: "bot", content: conv.response }
+      { id: Date.now().toString(), role: "user", content: conv.prompt },
+      { id: (Date.now() + 1).toString(), role: "assistant", content: conv.response }
     ]);
+    if (conv.section) setSection(conv.section as typeof SECTIONS[number]);
+    if (conv.context) setContext(conv.context);
     setIsSubmitted(true);
     setIsHistoryOpen(false);
   };
@@ -71,15 +88,15 @@ export const ProposalWriterView: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                <div className="space-y-2">
                  <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Proposal Section</label>
-                 <select 
-                   value={section}
-                   onChange={(e) => setSection(e.target.value)}
-                   className="w-full bg-white border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-crimson transition-all appearance-none cursor-pointer"
-                 >
-                   {SECTIONS.map(s => (
-                     <option key={s} value={s}>{s}</option>
-                   ))}
-                 </select>
+<select 
+                    value={section}
+                    onChange={(e) => setSection(e.target.value as typeof SECTIONS[number])}
+                    className="w-full bg-white border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-crimson transition-all appearance-none cursor-pointer"
+                  >
+                    {SECTIONS.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
                </div>
                
                <div className="space-y-2">
@@ -92,13 +109,12 @@ export const ProposalWriterView: React.FC = () => {
 
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Section Context or Draft</label>
-              <textarea
+<textarea
                 placeholder="Paste your rough draft here or describe what you want to include in this section..."
                 value={context}
                 onChange={(e) => setContext(e.target.value)}
                 rows={6}
                 className="w-full bg-white border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-body focus:outline-none focus:border-crimson transition-all resize-none"
-                required
               />
               <div className="flex items-center gap-2 text-[10px] text-gray-400 italic mt-1 px-1">
                  <Info size={12} />
@@ -159,9 +175,9 @@ export const ProposalWriterView: React.FC = () => {
                <div className="flex justify-center">
                   <Sparkles className="text-crimson animate-pulse-organic" size={24} />
                </div>
-               <p className="text-xs font-body text-crimson/80 font-medium">
-                  "I'm reviewing your tone, structure, and academic clarity. Any feedback I give will be tailored specifically to the **${section}** module."
-               </p>
+<p className="text-xs font-body text-crimson/80 font-medium">
+                   I'm reviewing your tone, structure, and academic clarity. Any feedback I give will be tailored specifically to the <strong>{section}</strong> module.
+                </p>
             </div>
           </div>
 
@@ -171,21 +187,24 @@ export const ProposalWriterView: React.FC = () => {
               endpoint="/api/ai/proposal"
               feature="PROPOSAL_WRITER"
               placeholder="Ask for revisions or specific improvements..."
-              submitOnMount={true}
+              submitOnMount={!historyMessages || historyMessages.length === 0}
               initialInput={`Draft the ${section} section based on this context.`}
+              loadedHistoryId={activeHistoryId}
               additionalData={{ section, context, historyMessages }}
             />
           </div>
         </div>
       )}
 
-      <ChatHistoryPanel
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        onSelect={handleHistorySelect}
-        featureFilter="PROPOSAL_WRITER"
-        activeId={activeHistoryId}
-      />
+      {!isSubmitted && (
+        <ChatHistoryPanel
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          onSelect={handleHistorySelect}
+          featureFilter="PROPOSAL_WRITER"
+          activeId={activeHistoryId}
+        />
+      )}
     </div>
   );
 };

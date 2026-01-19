@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { featureColors, FeatureVariant } from "@/lib/featureColors";
@@ -10,12 +11,10 @@ interface FeatureCardProps {
   description: string;
   icon: LucideIcon;
   variant?: FeatureVariant;
-  size?: "sm" | "md" | "lg";
   onClick?: () => void;
   href?: string;
   showSparkle?: boolean;
   rotation?: number;
-  animation?: "pulse" | "float" | "bounce";
   ariaLabel?: string;
   tabIndex?: number;
   className?: string;
@@ -27,12 +26,10 @@ export const FeatureCard: React.FC<FeatureCardProps> = ({
   description,
   icon: Icon,
   variant = "collaboration",
-  size = "md",
   onClick,
   href,
   showSparkle,
   rotation = 0,
-  animation,
   ariaLabel,
   tabIndex = 0,
   className,
@@ -40,11 +37,18 @@ export const FeatureCard: React.FC<FeatureCardProps> = ({
 }) => {
   const colors = featureColors[variant];
 
+  const router = useRouter();
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      onClick?.();
-      if (href) window.location.href = href;
+      if (onClick) {
+        onClick();
+        return;
+      }
+      if (href) {
+        router.push(href);
+      }
     }
   };
 
@@ -52,11 +56,11 @@ export const FeatureCard: React.FC<FeatureCardProps> = ({
 
   return (
     <CardWrapper
-      href={href}
+      {...(href ? { href } : {})}
       onClick={onClick}
       onKeyDown={handleKeyDown}
       tabIndex={tabIndex}
-      role={onClick || href ? "button" : undefined}
+      role={!href && (onClick) ? "button" : undefined}
       aria-label={ariaLabel || `Feature: ${title}`}
       style={{
         transform: rotation ? `rotate(${rotation}deg)` : undefined,
@@ -75,18 +79,11 @@ export const FeatureCard: React.FC<FeatureCardProps> = ({
       )}
     >
       {/* Background Glow for different Variants */}
-      {variant === "ai" && (
-        <div className="absolute inset-0 bg-teal/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl -z-10 blur-xl" />
-      )}
-      {variant === "collaboration" && (
-        <div className="absolute inset-0 bg-crimson/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl -z-10 blur-xl" />
-      )}
-      {variant === "research" && (
-        <div className="absolute inset-0 bg-indigo/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl -z-10 blur-xl" />
-      )}
-      {variant === "management" && (
-        <div className="absolute inset-0 bg-sunny/5 opacity-100 group-hover:opacity-100 transition-opacity rounded-xl -z-10 blur-2xl" />
-      )}
+      <div
+        className={`absolute inset-0 ${colors.glow} ${
+          variant === "management" ? "opacity-100 blur-2xl" : "opacity-0 group-hover:opacity-100 blur-xl"
+        } transition-opacity rounded-xl -z-10`}
+      />
 
       {/* Card Header: Icon + Title */}
       <div className="flex items-center gap-4 mb-4">
@@ -95,10 +92,8 @@ export const FeatureCard: React.FC<FeatureCardProps> = ({
             "flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 group-hover:scale-110",
             colors.background,
             colors.icon,
-            variant === "ai" && "animate-pulse-organic",
-            variant === "research" && "animate-pulse-organic",
-            variant === "collaboration" && "animate-pulse-organic",
-            variant === "management" && "animate-pulse-organic group-hover:bg-sunny/20 group-hover:shadow-md"
+            "animate-pulse-organic",
+            variant === "management" && "group-hover:bg-sunny/20 group-hover:shadow-md"
           )}
         >
           <Icon className="w-6 h-6" />

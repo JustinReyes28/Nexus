@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { cn } from "@/lib/utils";
 import { PushPin } from "@/components/ui/HandDrawnElements";
 
 export const TeamFeaturePreview = () => {
@@ -31,7 +30,7 @@ export const TeamFeaturePreview = () => {
                  <PushPin className="absolute -top-3 left-1/2 -translate-x-1/2" />
                  <h4 className="font-heading font-bold text-gray-900 mb-2">Literature Review</h4>
                  <p className="text-xs text-gray-500 mb-4 font-body">Due in 2 days • Sarah is editing</p>
-                 <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                 <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden" role="progressbar" aria-valuenow={65} aria-valuemin={0} aria-valuemax={100} aria-label="Literature review progress: 65%">
                     <div className="h-full bg-crimson w-[65%]" />
                  </div>
               </div>
@@ -58,14 +57,14 @@ export const TeamFeaturePreview = () => {
            </div>
 
            {/* Floating Cursor Avatars (Anti-AI personality) */}
-           <div className="absolute top-1/2 left-1/4 animate-float">
+           <div className="absolute top-1/2 left-1/4 animate-float hidden sm:block">
               <div className="flex items-center gap-2">
                  <div className="w-4 h-4 bg-crimson rotate-45" />
                  <span className="px-2 py-1 bg-crimson text-white text-[10px] font-bold rounded shadow-lg">Sarah</span>
               </div>
            </div>
            
-           <div className="absolute top-3/4 right-1/4 animate-float [animation-delay:2s]">
+           <div className="absolute top-3/4 right-1/4 animate-float [animation-delay:2s] hidden sm:block">
               <div className="flex items-center gap-2">
                  <div className="w-4 h-4 bg-teal rotate-45" />
                  <span className="px-2 py-1 bg-teal text-white text-[10px] font-bold rounded shadow-lg">The Guide</span>

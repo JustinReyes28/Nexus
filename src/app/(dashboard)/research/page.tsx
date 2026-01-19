@@ -4,6 +4,11 @@ import { redirect } from "next/navigation";
 import { WavyUnderline } from "@/components/ui/HandDrawnElements";
 import { Search } from "lucide-react";
 
+export const metadata = {
+  title: "Research Tools | Nexus",
+  description: "Advanced research assistance and literature review tools for your academic projects"
+};
+
 export default async function ResearchPage() {
   const session = await getServerSession(authOptions);
 

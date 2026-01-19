@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { ProjectStatus } from "@prisma/client";
 import ProgressRing from "./ProgressRing";
 import { Badge } from "@/components/ui/Badge";
-import { Calendar, Users, Paperclip } from "lucide-react";
+import { Calendar, Paperclip } from "lucide-react";
 import { PushPin } from "@/components/ui/HandDrawnElements";
 
 
@@ -39,10 +39,10 @@ export default function ProjectCard({ project }: ProjectCardProps) {
     ? ((project.completedTasks || 0) / project._count.tasks) * 100 
     : 0;
 
-  // Anti-AI: Random subtle rotation for pinned feel
+// Anti-AI: Deterministic subtle rotation for pinned feel based on project.id
   const rotations = ["rotate-1", "-rotate-1", "rotate-0", "rotate-[0.5deg]", "-rotate-[0.5deg]"];
   const isDraft = project.status === "IDEATION";
-  const rotation = rotations[Math.floor(Math.random() * rotations.length)];
+  const rotation = rotations[project.id.charCodeAt(0) % rotations.length];
 
   return (
     <Link href={`/projects/${project.id}`} className={cn("block transition-all duration-300 hover:scale-[1.02] hover:z-20", rotation)}>
@@ -54,8 +54,8 @@ export default function ProjectCard({ project }: ProjectCardProps) {
         <PushPin className="absolute -top-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
         
         <div className="flex justify-between items-start mb-4">
-          <Badge variant={isDraft ? "default" : (statusVariants[project.status] || "default")}>
-            {isDraft ? "Draft" : project.status.replace("_", " ")}
+<Badge variant={isDraft ? "default" : (statusVariants[project.status] || "default")}>
+            {isDraft ? "Draft" : project.status.replace(/_/g, " ")}
           </Badge>
           <ProgressRing value={completionPercentage} size={36} strokeWidth={3} className={isDraft ? "text-gray-400" : "text-crimson"} />
         </div>

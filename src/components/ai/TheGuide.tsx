@@ -7,17 +7,43 @@ interface TheGuideProps {
   expression?: "idle" | "thinking" | "happy" | "celebrating";
   className?: string;
   size?: "sm" | "md" | "lg";
+  ariaLabel?: string;
+  decorative?: boolean;
 }
 
-export const TheGuide = ({ expression = "idle", className, size = "md" }: TheGuideProps) => {
+export const TheGuide = ({ expression = "idle", className, size = "md", ariaLabel, decorative = false }: TheGuideProps) => {
   const sizes = {
     sm: "w-10 h-10",
     md: "w-24 h-24",
     lg: "w-48 h-48",
   };
 
+  const bubbleSizes = {
+    sm: {
+      sizeLarge: "w-3 h-3",
+      sizeSmall: "w-2 h-2",
+      posLarge: "-top-1 -right-1",
+      posSmall: "-top-3 -right-3"
+    },
+    md: {
+      sizeLarge: "w-4 h-4",
+      sizeSmall: "w-3 h-3",
+      posLarge: "-top-2 -right-2",
+      posSmall: "-top-6 -right-6"
+    },
+    lg: {
+      sizeLarge: "w-6 h-6",
+      sizeSmall: "w-4 h-4",
+      posLarge: "-top-4 -right-4",
+      posSmall: "-top-10 -right-10"
+    }
+  };
+
   return (
-    <div className={cn("relative flex items-center justify-center", sizes[size], className)}>
+    <div
+      className={cn("relative flex items-center justify-center", sizes[size], className)}
+      {...(decorative ? { "aria-hidden": "true" } : { role: "img", "aria-label": ariaLabel || `AI Guide expression: ${expression}` })}
+    >
       {/* Background Breathing Aura */}
       <div className="absolute inset-0 bg-teal/10 rounded-full blur-xl animate-pulse-organic" />
       
@@ -31,12 +57,12 @@ export const TheGuide = ({ expression = "idle", className, size = "md" }: TheGui
         <div className="absolute inset-0 flex items-center justify-center gap-2 lg:gap-4">
           <div className={cn(
             "bg-white rounded-full transition-all duration-300",
-            size === "sm" ? "w-1 h-1" : "w-2.5 h-2.5",
+            size === "sm" ? "w-1 h-1" : size === "lg" ? "w-4 h-4" : "w-2.5 h-2.5",
             expression === "thinking" ? "opacity-30 scale-x-150" : "scale-100"
           )} />
           <div className={cn(
             "bg-white rounded-full transition-all duration-300",
-            size === "sm" ? "w-1 h-1" : "w-2.5 h-2.5",
+            size === "sm" ? "w-1 h-1" : size === "lg" ? "w-4 h-4" : "w-2.5 h-2.5",
             expression === "thinking" ? "opacity-30 scale-x-150" : "scale-100"
           )} />
         </div>
@@ -44,8 +70,8 @@ export const TheGuide = ({ expression = "idle", className, size = "md" }: TheGui
         {/* Thinking Bubbles if thinking */}
         {expression === "thinking" && (
            <>
-             <div className="absolute -top-2 -right-2 w-4 h-4 bg-sunny rounded-full animate-bounce [animation-delay:0.1s]" />
-             <div className="absolute -top-6 -right-6 w-3 h-3 bg-teal rounded-full animate-bounce [animation-delay:0.3s]" />
+             <div className={cn("absolute bg-sunny rounded-full animate-bounce [animation-delay:0.1s]", bubbleSizes[size].posLarge, bubbleSizes[size].sizeLarge)} />
+             <div className={cn("absolute bg-teal rounded-full animate-bounce [animation-delay:0.3s]", bubbleSizes[size].posSmall, bubbleSizes[size].sizeSmall)} />
            </>
         )}
       </div>

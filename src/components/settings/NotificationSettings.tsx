@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
 
 interface NotificationSettingsProps {
   preferences: {
@@ -24,13 +23,13 @@ export default function NotificationSettings({ preferences, userId }: Notificati
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    emailProjectDeadlines: preferences?.emailProjectDeadlines || true,
-    emailTeamUpdates: preferences?.emailTeamUpdates || true,
-    emailAICompletions: preferences?.emailAICompletions || true,
-    emailFeatureAnnouncements: preferences?.emailFeatureAnnouncements || true,
-    inAppTaskUpdates: preferences?.inAppTaskUpdates || true,
-    inAppMentions: preferences?.inAppMentions || true,
-    inAppAINudges: preferences?.inAppAINudges || true,
+    emailProjectDeadlines: preferences?.emailProjectDeadlines ?? true,
+    emailTeamUpdates: preferences?.emailTeamUpdates ?? true,
+    emailAICompletions: preferences?.emailAICompletions ?? true,
+    emailFeatureAnnouncements: preferences?.emailFeatureAnnouncements ?? true,
+    inAppTaskUpdates: preferences?.inAppTaskUpdates ?? true,
+    inAppMentions: preferences?.inAppMentions ?? true,
+    inAppAINudges: preferences?.inAppAINudges ?? true,
   });
 
   const [hasChanges, setHasChanges] = useState(false);
@@ -38,13 +37,13 @@ export default function NotificationSettings({ preferences, userId }: Notificati
   useEffect(() => {
     // Check if there are unsaved changes
     const initialState = {
-      emailProjectDeadlines: preferences?.emailProjectDeadlines || true,
-      emailTeamUpdates: preferences?.emailTeamUpdates || true,
-      emailAICompletions: preferences?.emailAICompletions || true,
-      emailFeatureAnnouncements: preferences?.emailFeatureAnnouncements || true,
-      inAppTaskUpdates: preferences?.inAppTaskUpdates || true,
-      inAppMentions: preferences?.inAppMentions || true,
-      inAppAINudges: preferences?.inAppAINudges || true,
+      emailProjectDeadlines: preferences?.emailProjectDeadlines ?? true,
+      emailTeamUpdates: preferences?.emailTeamUpdates ?? true,
+      emailAICompletions: preferences?.emailAICompletions ?? true,
+      emailFeatureAnnouncements: preferences?.emailFeatureAnnouncements ?? true,
+      inAppTaskUpdates: preferences?.inAppTaskUpdates ?? true,
+      inAppMentions: preferences?.inAppMentions ?? true,
+      inAppAINudges: preferences?.inAppAINudges ?? true,
     };
 
     const hasUnsavedChanges = Object.keys(formData).some(
@@ -81,10 +80,9 @@ export default function NotificationSettings({ preferences, userId }: Notificati
         throw new Error("Failed to update notification preferences");
       }
 
-      alert("Notification preferences updated successfully!");
       router.refresh();
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to update notification preferences");
+      console.error(error instanceof Error ? error.message : "Failed to update notification preferences");
     } finally {
       setIsLoading(false);
     }
@@ -124,9 +122,12 @@ export default function NotificationSettings({ preferences, userId }: Notificati
                       {item.field === "emailFeatureAnnouncements" && "Stay informed about new features and improvements"}
                     </p>
                   </div>
-                  <button
+                   <button
                     type="button"
                     onClick={() => handleToggleChange(item.field as keyof typeof formData)}
+                    role="switch"
+                    aria-checked={formData[item.field as keyof typeof formData]}
+                    aria-label={item.label}
                     className={`relative w-14 h-8 rounded-full transition-all duration-300 ${formData[item.field as keyof typeof formData] ? 'bg-crimson' : 'bg-gray-300'}`}
                   >
                     <span className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-all duration-300 ${formData[item.field as keyof typeof formData] ? 'translate-x-6' : 'translate-x-0'}`} />
@@ -154,9 +155,12 @@ export default function NotificationSettings({ preferences, userId }: Notificati
                       {item.field === "inAppAINudges" && "Get helpful reminders from the AI assistant"}
                     </p>
                   </div>
-                  <button
+                   <button
                     type="button"
                     onClick={() => handleToggleChange(item.field as keyof typeof formData)}
+                    role="switch"
+                    aria-checked={formData[item.field as keyof typeof formData]}
+                    aria-label={item.label}
                     className={`relative w-14 h-8 rounded-full transition-all duration-300 ${formData[item.field as keyof typeof formData] ? 'bg-teal' : 'bg-gray-300'}`}
                   >
                     <span className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-all duration-300 ${formData[item.field as keyof typeof formData] ? 'translate-x-6' : 'translate-x-0'}`} />
