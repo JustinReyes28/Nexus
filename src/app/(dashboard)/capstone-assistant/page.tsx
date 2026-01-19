@@ -16,7 +16,6 @@ import { WavyUnderline } from "@/components/ui/HandDrawnElements";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { TheGuide } from "@/components/ai/TheGuide";
-
 // Tool View Imports
 import { IdeaGeneratorView } from "@/components/ai/IdeaGeneratorView";
 import { ResearchAssistantView } from "@/components/ai/ResearchAssistantView";

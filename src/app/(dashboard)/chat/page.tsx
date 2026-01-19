@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+// Test
 import { ChatInterface } from "@/components/ai/ChatInterface";
 
 const CHAT_ADDITIONAL_DATA = { discipline: "general" } as const;

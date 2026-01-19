@@ -1,3 +1,4 @@
+//test
 // MongoDB TTL index creation script for AIConversation collection
 // Run with: npx prisma db execute --file prisma/create-ttl-index.js --schema prisma/schema.prisma
 

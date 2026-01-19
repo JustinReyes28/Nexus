@@ -1,3 +1,4 @@
+
 // MongoDB TTL index creation script for AIConversation collection
 // This script creates a TTL index on the expiresAt field using Prisma's MongoDB connection
 // Run with: npx prisma db execute --file prisma/create-ttl-index.js

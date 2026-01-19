@@ -1,0 +1,8 @@
+reviews:
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!package-lock.json"
+    - "!yarn.lock"
+    - "!**/*.md"
+    - "!dist/**" # Optional: ignore build folders
