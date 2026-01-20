@@ -69,7 +69,7 @@ export default async function DashboardPage() {
     },
     include: projectInclude,
     orderBy: { updatedAt: "desc" },
-    take: 3,
+    take: 4,
   });
 
   const upcomingTasks = await db.task.findMany({
@@ -98,23 +98,40 @@ export default async function DashboardPage() {
     type: "TASK" as const 
   }));
 
-  // TODO: Replace with real activity data from database
-  // Currently using mock data for demonstration purposes
-  const activities: {
-    id: string;
-    type: "PROJECT_CREATED" | "TASK_CREATED" | "TASK_COMPLETED" | "MEMBER_ADDED" | "STATUS_CHANGE";
-    user: { name: string; image?: string };
-    target: string;
-    timestamp: Date;
-  }[] = (activeProjects.length > 0 || recentDrafts.length > 0) ? [
-    {
-      id: "1",
-      type: "PROJECT_CREATED",
-      user: { name: session.user.name?.split(" ")[0] || "Student" },
-      target: activeProjects[0]?.title || recentDrafts[0]?.title || "Visionary Project",
-      timestamp: activeProjects[0]?.createdAt || recentDrafts[0]?.createdAt || new Date(),
-    }
-  ] : [];
+  // Fetch activities for projects owned by the user or where the user is a member
+  const activitiesData = await db.activity.findMany({
+    where: {
+      OR: [
+        { userId: session.user.id }, // Actions I performed
+        { project: { ownerId: session.user.id } }, // Actions on my projects
+        { 
+          project: {
+            team: {
+              some: { userId: session.user.id }
+            }
+          }
+        }
+      ]
+    },
+    include: {
+      user: {
+        select: { name: true, image: true }
+      }
+    },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+  });
+
+  const activities = activitiesData.map(a => ({
+    id: a.id,
+    type: a.type,
+    user: { 
+      name: a.user.name?.split(" ")[0] || "Student",
+      image: a.user.image || undefined
+    },
+    target: a.targetName,
+    timestamp: a.createdAt,
+  }));
 
   const processedProjects = activeProjects.map((p: ProjectWithTasks) => ({
     ...p,
@@ -165,13 +182,13 @@ export default async function DashboardPage() {
                   View All Drafts
                 </Link>
               </div>
-              <div className="border-2 border-gray-400 rounded-2xl p-6 bg-gray-200">
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                 {processedDrafts.map((draft: ProjectWithTasks) => (
-                   <ProjectCard key={draft.id} project={draft} />
-                 ))}
+               <div className="border-2 border-gray-400 rounded-2xl p-6 bg-gray-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  {processedDrafts.map((draft: ProjectWithTasks) => (
+                    <ProjectCard key={draft.id} project={draft} />
+                  ))}
+                </div>
                </div>
-              </div>
             </div>
           )}
 
@@ -187,13 +204,13 @@ export default async function DashboardPage() {
             </div>
             
 {processedProjects.length > 0 ? (
-              <div className="border-2 border-gray-400 rounded-2xl p-6 bg-gray-200">
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="border-2 border-gray-400 rounded-2xl p-6 bg-gray-200">
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                {processedProjects.map((project: ProjectWithTasks) => (
                  <ProjectCard key={project.id} project={project} />
                ))}
              </div>
-              </div>
+               </div>
             ) : processedDrafts.length === 0 ? (
               <EmptyDashboardState />
             ) : (

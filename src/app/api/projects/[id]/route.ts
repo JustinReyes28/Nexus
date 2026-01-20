@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { recordActivity } from "@/lib/activities";
 
 const projectUpdateSchema = z.object({
   title: z.string().min(1, "Title is required").max(100).optional(),
@@ -100,6 +101,17 @@ export async function PATCH(
       where: { id: params.id, ownerId: session.user.id },
       data: updatedData,
     });
+
+    // Log activity if status changed
+    if (validatedData.status && validatedData.status !== project.status) {
+      await recordActivity({
+        type: "STATUS_CHANGE",
+        userId: session.user.id,
+        projectId: params.id,
+        targetId: params.id,
+        targetName: updatedProject.status.replace(/_/g, " "),
+      });
+    }
 
     return NextResponse.json(updatedProject);
   } catch (error) {

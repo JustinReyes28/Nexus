@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { recordActivity } from "@/lib/activities";
 
 const projectSchema = z.object({
   title: z.string().min(1, "Title is required").max(100),
@@ -63,6 +64,15 @@ try {
         ownerId: session.user.id,
         deadline: validatedData.deadline ? new Date(validatedData.deadline) : null,
       }
+    });
+
+    // Log activity
+    await recordActivity({
+      type: "PROJECT_CREATED",
+      userId: session.user.id,
+      projectId: project.id,
+      targetId: project.id,
+      targetName: project.title,
     });
 
     return NextResponse.json(project, { status: 201 });

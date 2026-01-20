@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { recordActivity } from "@/lib/activities";
 
 const taskSchema = z.object({
   title: z.string().min(1, "Title is required").max(100),
@@ -80,6 +81,15 @@ export async function POST(
         projectId: params.id,
         dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : null,
       }
+    });
+
+    // Log activity
+    await recordActivity({
+      type: "TASK_CREATED",
+      userId: session.user.id,
+      projectId: params.id,
+      targetId: task.id,
+      targetName: task.title,
     });
 
     return NextResponse.json(task, { status: 201 });
