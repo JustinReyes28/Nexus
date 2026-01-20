@@ -84,7 +84,7 @@ _What Nexus Offers_
 
 - **Next.js API Routes** for server-side logic
 - **MongoDB** with **Prisma ORM** for database management
-- **Mistral AI API** (ministral-3b-2512) for AI features
+- **Mistral AI API** (mistral-small-latest) for AI features
 - **NextAuth.js** for authentication
 
 ### Authentication
@@ -105,65 +105,59 @@ _What Nexus Offers_
 
 ```
 nexus/
+├── .coderabbit.yaml         # Code review configuration
+├── .env                     # Environment variables
+├── .env.local               # Local environment variables
+├── .eslintrc.js             # ESLint configuration
 ├── .gitignore
-├── README.md
-├── middleware.ts
-├── next.config.mjs
-├── package.json
-├── postcss.config.js
-├── tailwind.config.ts
-├── tsconfig.json
-├── images/                  # Image assets
-├── MD Files/                # Documentation
-│   ├── Design.md
-│   ├── DesignPRD.md
-│   ├── Phase1.md
-│   ├── Phase2.md
-│   ├── Phase3.md
-│   ├── Phase4.md
-│   ├── Phase5.md
-│   ├── Phase6.md
-│   ├── Phase7.md
-│   ├── PRD1.md
-│   ├── PRD2.md
-│   ├── PRD3.md
-│   ├── PRD4.md
-│   ├── Security.md
-│   └── SettingsPage.md
+├── .next/                   # Next.js build output
+├── middleware.ts            # Middleware for authentication and security
+├── next.config.mjs          # Next.js configuration
+├── package.json             # Dependencies and scripts
+├── postcss.config.js        # PostCSS configuration
+├── tailwind.config.ts       # Tailwind CSS configuration
+├── tsconfig.json            # TypeScript configuration
 ├── prisma/
-│   └── schema.prisma         # Database schema with MongoDB models
+│   ├── create-ttl-index.js  # MongoDB TTL index creation
+│   ├── create-ttl-index.ts  # TypeScript version of TTL index script
+│   ├── schema.prisma        # Database schema with MongoDB models
+│   └── seed.ts              # Database seeding script
+├── public/                  # Static assets
 ├── src/
-│   ├── app/                  # Next.js app router pages
-│   │   ├── (auth)/          # Authentication routes (login, register, etc.)
+│   ├── app/                 # Next.js app router pages
+│   │   ├── (auth)/          # Authentication routes
+│   │   │   ├── login/
+│   │   │   ├── register/
+│   │   │   ├── reset-password/
+│   │   │   └── verify/
 │   │   ├── (dashboard)/     # Dashboard routes with protected layout
-│   │   ├── api/             # API routes for backend functionality
-│   │   │   ├── ai/          # AI feature endpoints (ideas, research, writing, etc.)
-│   │   │   ├── auth/        # Authentication API routes
-│   │   │   ├── dashboard/   # Dashboard statistics API
-│   │   │   ├── email/       # Email sending functionality
-│   │   │   └── projects/    # Project management API
-│   │   └── page.tsx         # Home page
+│   │   │   ├── capstone-assistant/
+│   │   │   ├── chat/
+│   │   │   ├── dashboard/
+│   │   │   ├── drafts/
+│   │   │   └── projects/
+│   │   └── api/             # API routes for backend functionality
 │   ├── components/          # React components organized by feature
-│   │   ├── ai/              # AI-related components (TheGuide, ChatInterface, etc.)
-│   │   ├── auth/            # Authentication components
-│   │   ├── dashboard/       # Dashboard components (Sidebar, ProjectCard, etc.)
-│   │   ├── home/            # Landing page components
-│   │   ├── settings/        # User settings components
-│   │   ├── tasks/           # Task management components
-│   │   └── ui/              # Reusable UI components (Button, etc.)
+│   ├── config/              # Configuration files
 │   ├── emails/              # Email templates for notifications
 │   ├── lib/                 # Utility functions and libraries
+│   │   ├── actions.ts       # Server actions
 │   │   ├── ai.ts            # AI integration with Mistral AI
 │   │   ├── auth.ts          # Authentication configuration
+│   │   ├── creditLimits.ts  # AI credit limits configuration
+│   │   ├── dashboard-data.ts # Dashboard data utilities
 │   │   ├── db.ts            # Database connection
-│   │   ├── email-queue.ts   # Email queue management
 │   │   ├── email.ts         # Email sending utilities
+│   │   ├── email-queue.ts   # Email queue management
 │   │   ├── featureColors.ts # UI color definitions
 │   │   ├── featuresData.ts  # Feature data configuration
+│   │   ├── logger.ts        # Logging utilities
+│   │   ├── prisma.ts        # Prisma client configuration
 │   │   ├── rate-limit.ts    # Rate limiting implementation
 │   │   ├── utils.ts         # General utility functions
 │   │   ├── validation.ts    # Validation utilities
 │   │   └── validations/     # Zod validation schemas
+│   ├── scripts/             # Utility scripts
 │   ├── styles/              # CSS files
 │   └── types/               # TypeScript type definitions
 ```
@@ -220,65 +214,5 @@ nexus/
    yarn dev
    # or
    pnpm dev
+   `
    ```
-
-## ✦ Configuration
-
-### ✦ Environment Variables
-
-Create a `.env.local` file with the following variables:
-
-```
-# Database
-DATABASE_URL=mongodb+srv://<username>:<password>@cluster.mongodb.net/nexus
-
-# Mistral AI
-MISTRAL_API_KEY=your-api-key
-
-# Google OAuth (for NextAuth)
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# Authentication
-NEXTAUTH_SECRET=your-secret-key
-NEXTAUTH_URL=http://localhost:3000
-
-# SMTP (for email)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-```
-
-## ✦ Documentation
-
-- [PRD1.md](plans/PRD1.md) - Complete Product Requirements Document
-- [Security.md](MD%20Files/Security.md) - Security and Privacy Requirements
-- [Design.md](MD%20Files/Design.md) - Design documentation
-- [Phase1.md](plans/Phase1.md) - Phase-specific documentation files
-
-## ✦ Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -m 'Add some feature'`
-4. Push to the branch: `git push origin feature/your-feature`
-5. Open a pull request
-
-## ✦ License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## ✦ Contact
-
-For questions or support, please contact:
-
-- **Project Lead**: Justin Reyes
-- **GitHub**: [JustinReyes28](https://github.com/JustinReyes28)
-- **Email**: JustinReyes28@proton.me
-
----
-
-**Nexus** - Empowering students to succeed in their capstone projects with AI-assisted guidance and comprehensive project management tools.
