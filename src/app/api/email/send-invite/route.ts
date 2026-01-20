@@ -9,8 +9,9 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { randomBytes } from "crypto";
 
 const inviteSchema = z.object({
-  projectId: z.string().cuid(), // Require CUID format for projectId
+  projectId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid project ID format"),
   email: z.string().email(),
+  role: z.enum(["OWNER", "ADMIN", "MEMBER", "VIEWER"]).default("MEMBER").optional(),
 });
 
 export async function POST(req: Request) {

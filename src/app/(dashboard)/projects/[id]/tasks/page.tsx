@@ -31,46 +31,6 @@ interface Task {
   updatedAt: Date;
 }
 
-// Mock data for initial implementation
-const MOCK_TASKS: Task[] = [
-  {
-    id: "1",
-    title: "Research existing solutions",
-    description: "Analyze competitors and existing academic papers on the topic.",
-    status: "COMPLETED",
-    priority: "HIGH",
-    dueDate: new Date(Date.now() - 86400000 * 2),
-    startDate: new Date(Date.now() - 86400000 * 5),
-    endDate: new Date(Date.now() - 86400000 * 2),
-    createdAt: new Date(Date.now() - 86400000 * 7),
-    updatedAt: new Date(Date.now() - 86400000 * 2),
-  },
-  {
-    id: "2",
-    title: "Draft project proposal",
-    description: "Prepare the initial proposal for advisor review.",
-    status: "IN_PROGRESS",
-    priority: "MEDIUM",
-    dueDate: new Date(Date.now() + 86400000 * 3),
-    startDate: new Date(Date.now()),
-    endDate: new Date(Date.now() + 86400000 * 3),
-    createdAt: new Date(Date.now() - 86400000 * 1),
-    updatedAt: new Date(Date.now()),
-  },
-  {
-    id: "3",
-    title: "Setup development environment",
-    description: "Initialize git repo, install dependencies, and configure CI/CD.",
-    status: "TODO",
-    priority: "LOW",
-    dueDate: new Date(Date.now() + 86400000 * 7),
-    startDate: new Date(Date.now() + 86400000 * 4),
-    endDate: new Date(Date.now() + 86400000 * 7),
-    createdAt: new Date(Date.now()),
-    updatedAt: new Date(Date.now()),
-  }
-];
-
 export default function ProjectTasksPage() {
   const params = useParams();
   const projectId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -80,7 +40,7 @@ export default function ProjectTasksPage() {
   }
 
   const [view, setView] = useState<"list" | "kanban" | "gantt">("kanban");
-  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchQuery, setSearchQuery] = useState("");

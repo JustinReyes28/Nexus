@@ -58,10 +58,7 @@ export default function ProgressRing({
           cx={size / 2}
           cy={size / 2}
         />
-      </svg>
-<span className="absolute text-xs font-semibold">
-        {Math.round(clampedValue)}%
-      </span>
+     </svg>
     </div>
   );
 }

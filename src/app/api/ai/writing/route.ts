@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-const rateKey = session.user.id || session.id || session.user?.email || "anonymous";
+    const rateKey = session.user.id || session.user?.email || "anonymous";
     if (rateLimiter.isRateLimited(rateKey)) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
     const body = await req.json();

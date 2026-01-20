@@ -27,7 +27,7 @@ export default function ChatModePage() {
             feature="CHAT"
             placeholder="Ask The Guide anything about your project..."
             initialMessage="**The Guide:** Hello! I'm here to help with your capstone project. What would you like to discuss today?"
-            additionalData={CHAT_ADDITIONAL_DATA}
+            discipline={CHAT_ADDITIONAL_DATA.discipline}
           />
         </div>
       </div>
