@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { getCreditLimitForTier } from "@/lib/creditLimits";
+import { emailQueue } from "@/lib/email-queue";
+import { renderWelcomeEmail } from "@/emails/welcome";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { email, name, password } = body;
 
-if (!email || !name || !password) {
+    if (!email || !name || !password) {
       return new NextResponse("Missing fields", { status: 400 });
     }
 
@@ -46,7 +48,7 @@ if (!email || !name || !password) {
       return new NextResponse("User already exists", { status: 400 });
     }
 
-const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await db.user.create({
       data: {
@@ -57,6 +59,18 @@ const hashedPassword = await bcrypt.hash(password, 10);
         aiCreditsLimit: getCreditLimitForTier('FREE'), // Set appropriate credit limit based on tier
       },
     });
+
+    // Send welcome email
+    try {
+      await emailQueue.add({
+        to: email,
+        subject: "Welcome to Nexus - Your Capstone Project Assistant",
+        html: renderWelcomeEmail(name),
+      });
+    } catch (emailError) {
+      console.error("Failed to send welcome email:", emailError);
+      // Don't fail the registration if email fails
+    }
 
     // Create safe user object without password
     const { password: _, ...safeUser } = user;
