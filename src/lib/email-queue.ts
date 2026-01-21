@@ -32,9 +32,20 @@ class EmailQueue {
 
     this.isProcessing = true;
     const now = Date.now();
-    const batch = this.queue
-      .filter((job) => !job.nextAttemptAt || job.nextAttemptAt <= now)
-      .splice(0, EmailQueue.BATCH_SIZE);
+    // Find indices of eligible jobs (up to BATCH_SIZE)
+    const eligibleIndices: number[] = [];
+    for (let i = 0; i < this.queue.length && eligibleIndices.length < EmailQueue.BATCH_SIZE; i++) {
+      const job = this.queue[i];
+      if (!job.nextAttemptAt || job.nextAttemptAt <= now) {
+        eligibleIndices.push(i);
+      }
+    }
+    
+    // Extract jobs from queue in reverse order to maintain correct indices
+    const batch: EmailJob[] = [];
+    for (let i = eligibleIndices.length - 1; i >= 0; i--) {
+      batch.unshift(this.queue.splice(eligibleIndices[i], 1)[0]);
+    }
     
     await Promise.all(
       batch.map(async (job) => {

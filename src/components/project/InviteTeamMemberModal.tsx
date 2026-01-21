@@ -96,8 +96,9 @@ export default function InviteTeamMemberModal({
         }
         throw new Error(
           `HTTP ${response.status}: ${errorMessage}`
-        );
-      }
+    );
+  }
+
 
       toast.success(`Invitation sent to ${email}`);
       if (onSuccess) onSuccess();
@@ -228,11 +229,45 @@ export default function InviteTeamMemberModal({
                         <Icon className="w-5 h-5" />
                       </div>
                       <div className="flex-1">
-                        <p
-                          className={`font-bold text-sm ${
-                            isSelected ? "text-teal" : "text-gray-700"
-                          }`}
-                        >
-                          {r.label}
-                        </p>
-                
+                         <p
+                           className={`font-bold text-sm ${
+                             isSelected ? "text-teal" : "text-gray-700"
+                           }`}
+                         >
+                           {r.label}
+                         </p>
+                         <p className="text-xs text-gray-400 font-medium">
+                           {r.description}
+                         </p>
+                       </div>
+                       {isSelected && (
+                         <div className="w-2 h-2 rounded-full bg-teal animate-pulse" />
+                       )}
+                     </button>
+                   );
+                 })}</div>
+             </div>
+
+             <div className="pt-4">
+               <Button
+                 type="submit"
+                 disabled={isSubmitting || !email}
+                 className="w-full h-14 text-lg font-extrabold shadow-lg shadow-teal/20 transition-all active:scale-95 disabled:grayscale"
+                 variant="primary"
+               >
+                 {isSubmitting ? (
+                   <Loader2 className="w-6 h-6 animate-spin" />
+                 ) : (
+                   <>
+                     <UserPlus className="w-5 h-5 mr-3" />
+                     Send Invitation
+                   </>
+                 )}
+               </Button>
+             </div>
+           </form>
+         </div>
+       </div>
+     </div>
+   );
+ }

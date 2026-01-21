@@ -238,12 +238,6 @@ export default async function DashboardPage() {
               <h2 className="text-xl font-heading font-extrabold text-gray-900 flex items-center gap-2">
                 Active Projects
               </h2>
-              <Link
-                href="/projects"
-                className="text-xs font-bold text-gray-400 hover:text-crimson transition-colors uppercase tracking-widest"
-              >
-                Browse Archive
-              </Link>
             </div>
 
             {processedProjects.length > 0 ? (
