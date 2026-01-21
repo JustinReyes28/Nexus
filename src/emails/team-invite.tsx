@@ -7,8 +7,10 @@ export const renderTeamInviteEmail = (inviterName: string, projectName: string, 
   const escapedInviterName = escapeHtml(inviterName);
   const escapedProjectName = escapeHtml(projectName);
   
-  // Validate and sanitize the inviteLink - allow http for local development
-  const sanitizedInviteLink = validateAndSanitizeUrl(inviteLink, ["https:", "http:"]);
+  // Validate and sanitize the inviteLink
+  const isDev = process.env.NODE_ENV === "development";
+  const allowedProtocols = isDev ? ["https:", "http:"] : ["https:"];
+  const sanitizedInviteLink = validateAndSanitizeUrl(inviteLink, allowedProtocols);
   if (!sanitizedInviteLink) {
     throw new Error("Invalid inviteLink provided to renderTeamInviteEmail");
   }

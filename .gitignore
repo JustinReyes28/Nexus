@@ -87,6 +87,9 @@ Thumbs.db
 debug.log
 *.log
 
+# Backup files
+*.backup
+
 # Local storage
 storage/
 

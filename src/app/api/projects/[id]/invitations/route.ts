@@ -62,7 +62,14 @@ export async function DELETE(
   }
 
   try {
-    const { invitationId } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (jsonError) {
+      return NextResponse.json({ error: "Invalid or missing JSON body" }, { status: 400 });
+    }
+    
+    const { invitationId } = body;
 
     if (!invitationId) {
       return NextResponse.json({ error: "Invitation ID is required" }, { status: 400 });
@@ -108,7 +115,14 @@ export async function PATCH(
   }
 
   try {
-    const { invitationId } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (jsonError) {
+      return NextResponse.json({ error: "Invalid or missing JSON body" }, { status: 400 });
+    }
+    
+    const { invitationId } = body;
 
     if (!invitationId) {
       return NextResponse.json({ error: "Invitation ID is required" }, { status: 400 });
@@ -122,6 +136,10 @@ export async function PATCH(
 
     if (!invitation) {
       return NextResponse.json({ error: "Invitation not found" }, { status: 404 });
+    }
+
+    if (invitation.projectId !== params.id) {
+      return NextResponse.json({ error: "Invalid invitation for this project" }, { status: 400 });
     }
 
     if (invitation.project.ownerId !== session.user.id && invitation.invitedBy !== session.user.id) {

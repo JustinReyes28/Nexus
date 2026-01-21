@@ -1,4 +1,4 @@
-// Test
+
 import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth/next";
@@ -104,17 +104,24 @@ export async function PATCH(
 
     // Log activity if status changed
     if (validatedData.status && validatedData.status !== project.status) {
-      await recordActivity({
-        type: "STATUS_CHANGE",
-        userId: session.user.id,
-        projectId: params.id,
-        targetId: params.id,
-        targetName: updatedProject.status.replace(/_/g, " "),
-      });
+      try {
+        await recordActivity({
+          type: "STATUS_CHANGE",
+          userId: session.user.id,
+          projectId: params.id,
+          targetId: params.id,
+          targetName: updatedProject.status.replace(/_/g, " "),
+        });
+      } catch (activityError) {
+        console.error("[ACTIVITY_LOG]", activityError);
+      }
     }
 
     return NextResponse.json(updatedProject);
   } catch (error) {
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Invalid JSON format" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid input data" }, { status: 400 });
     }
@@ -159,6 +166,9 @@ export async function DELETE(
         where: { projectId: params.id }
       }),
       db.teamMember.deleteMany({
+        where: { projectId: params.id }
+      }),
+      db.activity.deleteMany({
         where: { projectId: params.id }
       }),
       db.project.delete({

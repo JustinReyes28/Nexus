@@ -20,7 +20,14 @@ export async function recordActivity({
   targetId,
   targetName,
 }: RecordActivityParams) {
-  console.log(`[ACTIVITY_RECORDER] Recording ${type} for user ${userId} on project ${projectId}`);
+  const maskedUserId = userId
+    ? userId.length <= 4
+      ? "****"
+      : userId.length <= 8
+        ? `${userId.slice(0, 2)}...${userId.slice(-2)}`
+        : `${userId.slice(0, 4)}...${userId.slice(-4)}`
+    : "unknown";
+  console.log(`[ACTIVITY_RECORDER] Recording ${type} for user <${maskedUserId}> on project ${projectId}`);
   try {
     const activity = await db.activity.create({
       data: {

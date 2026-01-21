@@ -15,7 +15,12 @@ export async function POST(req: Request) {
     const rateLimitResponse = checkRateLimit(req);
     if (rateLimitResponse) return rateLimitResponse;
 
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (error) {
+      return NextResponse.json({ error: "Invalid JSON format" }, { status: 400 });
+    }
     const { email, taskTitle, dueDate } = deadlineReminderSchema.parse(body);
 
     // Parse the due date string to a Date object

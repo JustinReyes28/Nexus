@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { X, UserPlus, Mail, Loader2, ShieldCheck, User, Eye } from "lucide-react";
 import { toast } from "sonner";
-import { ProjectStatus } from "@prisma/client";
 
 interface InviteTeamMemberModalProps {
   projectId: string;
@@ -86,8 +85,18 @@ export default function InviteTeamMemberModal({
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || error.error || "Failed to send invitation");
+        let errorMessage = "Failed to send invitation";
+        try {
+          const error = await response.json();
+          errorMessage = error.message || error.error || errorMessage;
+        } catch (jsonError) {
+          // If JSON parsing fails, fall back to text
+          const text = await response.text();
+          errorMessage = text || response.statusText || errorMessage;
+        }
+        throw new Error(
+          `HTTP ${response.status}: ${errorMessage}`
+        );
       }
 
       toast.success(`Invitation sent to ${email}`);
@@ -226,39 +235,4 @@ export default function InviteTeamMemberModal({
                         >
                           {r.label}
                         </p>
-                        <p className="text-xs text-gray-400 font-medium">
-                          {r.description}
-                        </p>
-                      </div>
-                      {isSelected && (
-                        <div className="w-2 h-2 rounded-full bg-teal animate-pulse" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <Button
-                type="submit"
-                disabled={isSubmitting || !email}
-                className="w-full h-14 text-lg font-extrabold shadow-lg shadow-teal/20 transition-all active:scale-95 disabled:grayscale"
-                variant="primary"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                ) : (
-                  <>
-                    <UserPlus className="w-5 h-5 mr-3" />
-                    Send Invitation
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
+                

@@ -35,47 +35,48 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  institution   String?
-  program       String?
-  year          String?
-  role          Role      @default(STUDENT)
-  tier          Tier      @default(FREE)
-  aiCreditsUsed Int       @default(0)
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  name           String?
+  email          String?   @unique
+  emailVerified  DateTime?
+  image          String?
+  password       String?
+  institution    String?
+  program        String?
+  year           String?
+  role           Role      @default(STUDENT)
+  tier           Tier      @default(FREE)
+  aiCreditsUsed  Int       @default(0)
   // Default is 25 for FREE users, updated to 1000 for PREMIUM users via application logic
   aiCreditsLimit Int       @default(25)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  accounts      Account[]
-  sessions      Session[]
-  projects      Project[]
-  tasks         Task[]
-  documents     Document[]
-  conversations AIConversation[]
-  teamMemberships TeamMember[]
-  invitations   Invitation[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  accounts                Account[]
+  sessions                Session[]
+  projects                Project[]
+  tasks                   Task[]
+  documents               Document[]
+  conversations           AIConversation[]
+  teamMemberships         TeamMember[]
+  invitations             Invitation[]
   notificationPreferences NotificationPreference?
-  activities    Activity[]
+  activities              Activity[]
+  passwordResetTokens     PasswordResetToken[]
 }
 
 model NotificationPreference {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String   @db.ObjectId @unique
-  emailProjectDeadlines Boolean @default(true)
-  emailTeamUpdates     Boolean @default(true)
-  emailAICompletions   Boolean @default(true)
-  emailFeatureAnnouncements Boolean @default(true)
-  inAppTaskUpdates     Boolean @default(true)
-  inAppMentions        Boolean @default(true)
-  inAppAINudges        Boolean @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                    String   @unique @db.ObjectId
+  emailProjectDeadlines     Boolean  @default(true)
+  emailTeamUpdates          Boolean  @default(true)
+  emailAICompletions        Boolean  @default(true)
+  emailFeatureAnnouncements Boolean  @default(true)
+  inAppTaskUpdates          Boolean  @default(true)
+  inAppMentions             Boolean  @default(true)
+  inAppAINudges             Boolean  @default(true)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
 }
@@ -89,122 +90,132 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model PasswordResetToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 model Project {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
   title       String
   description String?
   discipline  String?
   status      ProjectStatus @default(IDEATION)
   startDate   DateTime?
   deadline    DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-ownerId     String   @db.ObjectId
-   owner       User     @relation(fields: [ownerId], references: [id])
-  
-  tasks       Task[]
-  documents   Document[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  ownerId String @db.ObjectId
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  tasks         Task[]
+  documents     Document[]
   conversations AIConversation[]
-  team        TeamMember[]
-  invitations Invitation[]
-  activities  Activity[]
+  team          TeamMember[]
+  invitations   Invitation[]
+  activities    Activity[]
 }
 
 model Task {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
   title       String
   description String?
   status      TaskStatus @default(TODO)
-  priority    Priority @default(MEDIUM)
+  priority    Priority   @default(MEDIUM)
   dueDate     DateTime?
   completedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-   
-  projectId   String   @db.ObjectId
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-   
-  assigneeId  String?  @db.ObjectId
-  assignee    User?    @relation(fields: [assigneeId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  projectId String  @db.ObjectId
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  assigneeId String? @db.ObjectId
+  assignee   User?   @relation(fields: [assigneeId], references: [id])
 }
 
 model Document {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  title       String
-  content     String?
-  fileUrl     String?
-  fileType    String?
-  version     Int      @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-projectId   String   @db.ObjectId
-   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-   
-   authorId    String   @db.ObjectId
-   author      User     @relation(fields: [authorId], references: [id])
-  
-  versions    DocumentVersion[]
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  content   String?
+  fileUrl   String?
+  fileType  String?
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String  @db.ObjectId
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  authorId String @db.ObjectId
+  author   User   @relation(fields: [authorId], references: [id])
+
+  versions DocumentVersion[]
 }
 
 model DocumentVersion {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  content     String
-  version     Int
-  createdAt   DateTime @default(now())
-   
-documentId  String   @db.ObjectId
-   document    Document @relation(fields: [documentId], references: [id])
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  content   String
+  version   Int
+  createdAt DateTime @default(now())
+
+  documentId String   @db.ObjectId
+  document   Document @relation(fields: [documentId], references: [id])
 
   @@unique([documentId, version])
 }
 
 model AIConversation {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  feature     AIFeature
-  prompt      String
-  response    String
-  tokensUsed  Int
-  createdAt   DateTime  @default(now())
-  expiresAt   DateTime?  // TTL index managed at MongoDB level, nullable to support existing data
-  
-userId      String    @db.ObjectId
-   user        User      @relation(fields: [userId], references: [id])
-   
-projectId   String?   @db.ObjectId
-   project     Project?  @relation(fields: [projectId], references: [id])
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  feature    AIFeature
+  prompt     String
+  response   String
+  tokensUsed Int
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime? // TTL index managed at MongoDB level, nullable to support existing data
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  projectId String?  @db.ObjectId
+  project   Project? @relation(fields: [projectId], references: [id])
 
   @@index([expiresAt]) // Normal index, TTL handled at MongoDB level
 }
 
 model TeamMember {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  role        TeamRole @default(MEMBER)
-  joinedAt    DateTime @default(now())
-  
-userId      String   @db.ObjectId
-   user        User     @relation(fields: [userId], references: [id])
-   
-   projectId   String   @db.ObjectId
-   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  role     TeamRole @default(MEMBER)
+  joinedAt DateTime @default(now())
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  projectId String  @db.ObjectId
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   @@unique([userId, projectId])
 }
 
 model Invitation {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  projectId   String   @db.ObjectId
-  email       String
-  token       String   @unique
-  invitedBy   String   @db.ObjectId
-  role        TeamRole @default(MEMBER)
-  expiresAt   DateTime
-  used        Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  
-  project     Project  @relation(fields: [projectId], references: [id])
-  inviter     User     @relation(fields: [invitedBy], references: [id])
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  projectId String   @db.ObjectId
+  email     String
+  token     String   @unique
+  invitedBy String   @db.ObjectId
+  role      TeamRole @default(MEMBER)
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id])
+  inviter User    @relation(fields: [invitedBy], references: [id])
 }
 
 model Template {
@@ -272,18 +283,20 @@ enum TeamRole {
 }
 
 model Activity {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  type        ActivityType
-  userId      String   @db.ObjectId
-  user        User     @relation(fields: [userId], references: [id])
-  projectId   String?  @db.ObjectId
-  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  targetId    String?  // ID of the task, member, etc.
-  targetName  String   // Name of the task, member, etc. for display
-  createdAt   DateTime @default(now())
+  id         String       @id @default(auto()) @map("_id") @db.ObjectId
+  type       ActivityType
+  userId     String       @db.ObjectId
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId  String?      @db.ObjectId
+  project    Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  targetId   String?      @db.ObjectId // ID of the task, member, etc.
+  targetName String? // Name of the task, member, etc. for display, nullable for activities without targets
+  createdAt  DateTime     @default(now())
 
   @@index([userId])
   @@index([projectId])
+  @@index([projectId, createdAt])
+  @@index([userId, createdAt])
 }
 
 enum ActivityType {

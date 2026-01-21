@@ -84,13 +84,17 @@ export async function POST(
     });
 
     // Log activity
-    await recordActivity({
-      type: "TASK_CREATED",
-      userId: session.user.id,
-      projectId: params.id,
-      targetId: task.id,
-      targetName: task.title,
-    });
+    try {
+      await recordActivity({
+        type: "TASK_CREATED",
+        userId: session.user.id,
+        projectId: params.id,
+        targetId: task.id,
+        targetName: task.title,
+      });
+    } catch (activityError) {
+      console.error("[ACTIVITY_LOG]", activityError);
+    }
 
     return NextResponse.json(task, { status: 201 });
   } catch (error) {

@@ -51,7 +51,7 @@ export default function TeamSection({
 
       if (response.ok) {
         toast.success("Invitation resent successfully");
-        fetchInvitations();
+        await fetchInvitations();
       } else {
         throw new Error("Failed to resend");
       }
@@ -75,7 +75,7 @@ export default function TeamSection({
 
       if (response.ok) {
         toast.success("Invitation cancelled");
-        fetchInvitations();
+        await fetchInvitations();
       } else {
         throw new Error("Failed to cancel");
       }
@@ -153,7 +153,7 @@ export default function TeamSection({
                   </div>
                   
                   {isOwner && (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 opacity-30 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleResend(invite.id)}
                         disabled={processingId === invite.id}
@@ -172,7 +172,11 @@ export default function TeamSection({
                         className="p-1.5 hover:bg-crimson/10 rounded-lg text-crimson transition-colors"
                         title="Cancel Invitation"
                       >
-                         <X className="w-3.5 h-3.5" />
+                        {processingId === invite.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <X className="w-3.5 h-3.5" />
+                        )}
                       </button>
                     </div>
                   )}

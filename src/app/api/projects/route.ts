@@ -67,13 +67,17 @@ try {
     });
 
     // Log activity
-    await recordActivity({
-      type: "PROJECT_CREATED",
-      userId: session.user.id,
-      projectId: project.id,
-      targetId: project.id,
-      targetName: project.title,
-    });
+    try {
+      await recordActivity({
+        type: "PROJECT_CREATED",
+        userId: session.user.id,
+        projectId: project.id,
+        targetId: project.id,
+        targetName: project.title,
+      });
+    } catch (activityError) {
+      console.error("[ACTIVITY_LOG]", activityError);
+    }
 
     return NextResponse.json(project, { status: 201 });
   } catch (error) {

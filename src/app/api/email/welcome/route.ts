@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 });
     }
-    console.error("[WELCOME_EMAIL_POST]", error);
+    console.error("[WELCOME_EMAIL_POST]", { name: error.name, message: error.message });
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
