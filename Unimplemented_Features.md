@@ -17,8 +17,8 @@ This document outlines the features that are mentioned in the project's README b
 ### Team Workspaces with Advanced Permissions
 
 - **Status**: Partially Implemented
-- **Description**: The codebase includes basic team functionality with role-based permissions (OWNER, ADMIN, MEMBER, VIEWER), but lacks advanced workspace features.
-- **Evidence**: Found `TeamMember` model in Prisma schema and team-related API routes, but advanced workspace features like granular permissions are not implemented.
+- **Description**: The codebase includes team functionality with role-based permissions (OWNER, ADMIN, MEMBER, VIEWER) and fully functional User Invitations. Advanced workspace features like granular permissions per project resource are still in progress.
+- **Evidence**: `TeamMember` model and team-related API routes are implemented. `InviteTeamMemberModal` and `TeamSection` components are functional.
 
 ### Advisor Communication: Structured Feedback Request System
 
@@ -55,12 +55,6 @@ This document outlines the features that are mentioned in the project's README b
 - **Evidence**: `Role` enum in Prisma schema includes ADVISOR and ADMIN, but no advisor-specific features are implemented.
 
 ## Additional Missing Features
-
-### Activity Feed with Real Data
-
-- **Status**: Partially Implemented
-- **Description**: The dashboard shows an activity feed component, but it uses mock data instead of real database data.
-- **Evidence**: Found TODO comment in `src/app/(dashboard)/dashboard/page.tsx` line 101: "Replace with real activity data from database".
 
 ### Master Plan Route/Modal
 
