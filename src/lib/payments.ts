@@ -1,0 +1,111 @@
+import { db } from '@/lib/db';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { BILLING_CONSTANTS } from '@/config/constants';
+
+export interface PaymentResult {
+  success: boolean;
+  user: {
+    id: string;
+    tier: string;
+    aiCreditsUsed: number;
+    aiCreditsLimit: number;
+  };
+  payment: {
+    id: string;
+    creditsPurchased: number;
+    amount: number;
+    bundleType: string;
+  };
+}
+
+export async function processCreditPurchase(
+  userId: string,
+  bundleType: 'starter' | 'pro' | 'power',
+  paymentIntentId: string
+): Promise<PaymentResult> {
+  const bundle = BILLING_CONSTANTS.CREDIT_BUNDLES[bundleType];
+
+  return await db.$transaction(async (tx) => {
+    // Get current user data
+    const user = await tx.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Auto-upgrade logic
+    let finalCreditsUsed = user.aiCreditsUsed;
+    let finalCreditsLimit = user.aiCreditsLimit;
+    let finalTier = user.tier;
+
+    if (user.tier === 'FREE') {
+      finalTier = 'PREMIUM';
+      finalCreditsLimit = 1000;
+      finalCreditsUsed = Math.min(user.aiCreditsUsed, 1000);
+    }
+
+    // Add purchased credits
+    finalCreditsUsed = Math.min(
+      finalCreditsUsed + bundle.credits,
+      finalCreditsLimit
+    );
+
+    // Update user
+    const updatedUser = await tx.user.update({
+      where: { id: userId },
+      data: {
+        tier: finalTier,
+        aiCreditsLimit: finalCreditsLimit,
+        aiCreditsUsed: finalCreditsUsed,
+      },
+    });
+
+    // Create payment record
+    const payment = await tx.payment.create({
+      data: {
+        userId,
+        paymentIntentId,
+        amount: bundle.price * 100, // Store in cents
+        currency: 'USD',
+        status: 'succeeded',
+        creditsPurchased: bundle.credits,
+        bundleType,
+        receiptUrl: `/receipts/${paymentIntentId}`,
+      },
+    });
+
+    return {
+      success: true,
+      user: {
+        id: updatedUser.id,
+        tier: updatedUser.tier,
+        aiCreditsUsed: updatedUser.aiCreditsUsed,
+        aiCreditsLimit: updatedUser.aiCreditsLimit,
+      },
+      payment: {
+        id: payment.id,
+        creditsPurchased: payment.creditsPurchased,
+        amount: payment.amount / 100, // Convert back to dollars
+        bundleType: payment.bundleType,
+      },
+    };
+  });
+}
+
+export async function getUserPaymentHistory(userId: string) {
+  return await db.payment.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+export async function verifyAuthenticatedUser(request: Request) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  return session.user.id;
+}
