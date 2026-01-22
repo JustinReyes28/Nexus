@@ -13,7 +13,7 @@ export interface ActivityItem {
   user: {
     name: string;
   };
-  target: string;
+  target: string | null;
   timestamp: Date;
 }
 
@@ -105,10 +105,10 @@ export default function ActivityFeed({ activities, onViewHistory }: ActivityFeed
                       className="font-bold text-crimson group-hover:underline underline-offset-4 cursor-pointer bg-transparent border-none p-0"
                       onClick={() => handleTargetClick(activity)}
                       onKeyDown={(e) => e.key === 'Enter' && handleTargetClick(activity)}
-                      aria-label={`View ${activity.target}`}
+                      aria-label={activity.target ? `View ${activity.target}` : "View activity"}
                       tabIndex={0}
                     >
-                      {activity.target}
+                      {activity.target || "something"}
                     </button>
                   </div>
                   <div className="flex items-center gap-2">

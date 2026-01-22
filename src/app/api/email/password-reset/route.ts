@@ -43,6 +43,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, message: "If an account exists with this email, you will receive a password reset link" });
     }
 
+    // Delete any existing tokens for this user first
+    await db.passwordResetToken.deleteMany({
+      where: { userId: user.id }
+    });
+
     // Generate cryptographically secure token
     const resetToken = randomBytes(32).toString('hex');
     const hashedToken = createHash('sha256').update(resetToken).digest('hex');

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { processCreditPurchase, verifyAuthenticatedUser } from '@/lib/payments';
+import Stripe from 'stripe';
 
 export async function POST(request: Request) {
   try {
@@ -16,11 +17,26 @@ export async function POST(request: Request) {
       );
     }
 
-    // Extract bundle type from payment intent ID (mock implementation)
-    // In real implementation, this would come from Stripe metadata
-    let bundleType: 'starter' | 'pro' | 'power' = 'pro';
-    if (paymentIntentId.includes('starter')) bundleType = 'starter';
-    else if (paymentIntentId.includes('power')) bundleType = 'power';
+    // Verify payment with Stripe
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (paymentIntent.status !== 'succeeded') {
+      return NextResponse.json(
+        { error: 'Payment intent is not in succeeded state' },
+        { status: 400 }
+      );
+    }
+
+    // Extract bundle type from payment intent metadata
+    const bundleType = paymentIntent.metadata.bundleType as 'starter' | 'pro' | 'power';
+    
+    if (!bundleType || !['starter', 'pro', 'power'].includes(bundleType)) {
+      return NextResponse.json(
+        { error: 'Invalid or missing bundle type in payment intent metadata' },
+        { status: 400 }
+      );
+    }
 
     const result = await processCreditPurchase(userId, bundleType, paymentIntentId);
 

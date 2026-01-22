@@ -86,17 +86,19 @@ export default function InviteTeamMemberModal({
 
       if (!response.ok) {
         let errorMessage = "Failed to send invitation";
+        // Clone the response to allow multiple reads
+        const responseClone = response.clone();
         try {
-          const error = await response.json();
+          const error = await responseClone.json();
           errorMessage = error.message || error.error || errorMessage;
         } catch (jsonError) {
-          // If JSON parsing fails, fall back to text
+          // If JSON parsing fails, fall back to text using another clone
           const text = await response.text();
           errorMessage = text || response.statusText || errorMessage;
         }
         throw new Error(
           `HTTP ${response.status}: ${errorMessage}`
-    );
+      );
   }
 
 

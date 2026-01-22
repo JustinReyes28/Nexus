@@ -1,5 +1,7 @@
 import { ProjectStatus } from "@prisma/client";
 
+// NOTE: This interface contains PII (email addresses) in the team[].user.email field
+// When serializing to JSON responses or logs, use sanitizeProjectData() to remove PII
 export interface ProjectData {
   id: string;
   title: string;
@@ -14,7 +16,7 @@ export interface ProjectData {
     user: {
       id: string;
       name: string | null;
-      email: string | null;
+      email: string | null;  // Contains PII - sanitize before exposing publicly
       image: string | null;
     };
   }[];

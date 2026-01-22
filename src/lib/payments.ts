@@ -24,6 +24,36 @@ export async function processCreditPurchase(
   bundleType: 'starter' | 'pro' | 'power',
   paymentIntentId: string
 ): Promise<PaymentResult> {
+  // Check if this paymentIntentId has already been processed
+  const existingPayment = await db.payment.findUnique({
+    where: { paymentIntentId },
+  });
+
+  if (existingPayment) {
+    // Return the existing payment result to ensure idempotency
+    const user = await db.user.findUnique({ where: { id: userId } });
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        tier: user.tier,
+        aiCreditsUsed: user.aiCreditsUsed,
+        aiCreditsLimit: user.aiCreditsLimit,
+      },
+      payment: {
+        id: existingPayment.id,
+        creditsPurchased: existingPayment.creditsPurchased,
+        amount: existingPayment.amount / 100, // Convert back to dollars
+        bundleType: existingPayment.bundleType,
+      },
+    };
+  }
+
   const bundle = BILLING_CONSTANTS.CREDIT_BUNDLES[bundleType];
 
   return await db.$transaction(async (tx) => {

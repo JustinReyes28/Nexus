@@ -101,11 +101,15 @@ export const emailLayout = (content: string) => `
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nexus</title>
   <style>
+    /* Webfont imports - Note: Many email clients don't support webfonts,
+       so system fonts are used as fallbacks which are the expected behavior */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
+    
     /* Reset & Typography */
-    body { 
-      margin: 0; 
-      padding: 0; 
-      background-color: #f8f9fa; 
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f8f9fa;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       color: #1f2937;
       line-height: 1.6;

@@ -28,6 +28,15 @@ export default function TeamSection({
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
+  // Sync state with props when they change
+  useEffect(() => {
+    setMembers(initialMembers);
+  }, [initialMembers]);
+
+  useEffect(() => {
+    setInvitations(initialInvitations);
+  }, [initialInvitations]);
+
   const fetchInvitations = async () => {
     try {
       const response = await fetch(`/api/projects/${projectId}/invitations`);

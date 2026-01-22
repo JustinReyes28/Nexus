@@ -142,8 +142,13 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid invitation for this project" }, { status: 400 });
     }
 
-    if (invitation.project.ownerId !== session.user.id && invitation.invitedBy !== session.user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+     if (invitation.project.ownerId !== session.user.id && invitation.invitedBy !== session.user.id) {
+       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+     }
+
+    // Check if invitation is already used
+    if (invitation.used) {
+      return NextResponse.json({ error: "Invitation already accepted" }, { status: 400 });
     }
 
     // Reset expiry and generate new token

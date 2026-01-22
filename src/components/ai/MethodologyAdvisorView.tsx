@@ -41,8 +41,8 @@ export const MethodologyAdvisorView: React.FC = () => {
 const handleHistorySelect = (conv: Conversation) => {
     setActiveHistoryId(conv.id);
     setHistoryMessages([
-      { role: "user", content: conv.prompt },
-      { role: "bot", content: conv.response }
+      { id: `hist-user-${conv.id}`, role: "user", content: conv.prompt },
+      { id: `hist-bot-${conv.id}`, role: "bot", content: conv.response }
     ]);
     setIsSubmitted(true);
     setIsHistoryOpen(false);

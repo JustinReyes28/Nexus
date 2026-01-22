@@ -19,6 +19,12 @@ interface ConversationHistory {
   response: string;
 }
 
+interface Message {
+  id: string;
+  role: "user" | "bot";
+  content: string;
+}
+
 export const ProgressAnalyzerView: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -27,14 +33,13 @@ export const ProgressAnalyzerView: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
   const [historyMessages, setHistoryMessages] = useState<ConversationHistory[] | undefined>();
+  
   const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
   const [isLoadingProjects, setIsLoadingProjects] = useState<boolean>(true);
 
 const handleHistorySelect = (conv: ConversationHistory) => {
     setActiveHistoryId(conv.id);
-    setHistoryMessages([
-      { id: conv.id, prompt: conv.prompt, response: conv.response }
-    ]);
+    setHistoryMessages([conv]);
     setIsSubmitted(true);
     setIsHistoryOpen(false);
   };
@@ -270,10 +275,13 @@ const handleSubmit = (e: React.FormEvent) => {
               submitOnMount={!historyMessages || historyMessages.length === 0}
               initialInput={`Analyze the progress for ${selectedProject?.title ?? 'the project'}.`}
               loadedHistoryId={activeHistoryId}
-              additionalData={{ 
-                projectId: selectedProjectId, 
-                currentStatus, 
-                historyMessages,
+              additionalData={{
+                projectId: selectedProjectId,
+                currentStatus,
+                historyMessages: historyMessages?.flatMap(hm => [
+                  { id: `user-${hm.id}`, role: "user" as const, content: hm.prompt },
+                  { id: `bot-${hm.id}`, role: "bot" as const, content: hm.response }
+                ]),
                 fromHistory: !!historyMessages && historyMessages.length > 0
               }}
             />

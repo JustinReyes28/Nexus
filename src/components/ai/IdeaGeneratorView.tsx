@@ -21,7 +21,8 @@ const DISCIPLINES = [
 ];
 
 interface Message {
-  role: string;
+  id: string;
+  role: "user" | "bot";
   content: string;
 }
 
@@ -45,8 +46,8 @@ export const IdeaGeneratorView: React.FC = () => {
   const handleHistorySelect = (conv: Conversation) => {
     setActiveHistoryId(conv.id);
     setHistoryMessages([
-      { role: "user", content: conv.prompt },
-      { role: "bot", content: conv.response }
+      { id: `hist-user-${conv.id}`, role: "user", content: conv.prompt },
+      { id: `hist-bot-${conv.id}`, role: "bot", content: conv.response }
     ]);
     setIsSubmitted(true);
     setIsHistoryOpen(false);

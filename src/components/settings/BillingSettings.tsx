@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { HandCoins, Zap, Sparkles, Rocket, CheckCircle, AlertCircle } from "lucide-react";
 import { BILLING_CONSTANTS } from "@/config/constants";
@@ -57,23 +57,33 @@ export default function BillingSettings() {
     type: "success" | "error" | "info";
     message: string;
   } | null>(null);
+  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradedFromFree, setUpgradedFromFree] = useState(false);
 
   const showSuccess = (message: string) => {
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+    }
     setNotification({ type: "success", message });
-    setTimeout(() => setNotification(null), 5000);
+    notificationTimeoutRef.current = setTimeout(() => setNotification(null), 5000);
   };
 
   const showError = (message: string) => {
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+    }
     setNotification({ type: "error", message });
-    setTimeout(() => setNotification(null), 5000);
+    notificationTimeoutRef.current = setTimeout(() => setNotification(null), 5000);
   };
 
   const showInfo = (message: string) => {
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+    }
     setNotification({ type: "info", message });
-    setTimeout(() => setNotification(null), 5000);
+    notificationTimeoutRef.current = setTimeout(() => setNotification(null), 5000);
   };
 
   const fetchPaymentHistory = async () => {
@@ -133,8 +143,8 @@ export default function BillingSettings() {
           setShowUpgradeModal(true);
         }
 
-        // Refresh payment history
-        fetchPaymentHistory();
+    // Refresh payment history
+    await fetchPaymentHistory();
       } else {
         showError("Payment failed. Please try again.");
       }
@@ -147,9 +157,9 @@ export default function BillingSettings() {
   };
 
   // Fetch payment history on component mount
-  useState(() => {
+  useEffect(() => {
     fetchPaymentHistory();
-  });
+  }, []);
 
   return (
     <div className="card rounded-xl shadow-md border border-gray-100 overflow-hidden">

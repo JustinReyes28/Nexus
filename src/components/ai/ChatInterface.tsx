@@ -35,6 +35,7 @@ interface Message {
 interface AdditionalData {
   historyMessages?: Message[];
   fromHistory?: boolean;
+  [key: string]: any; // Allow additional properties
 }
 
 interface ChatInterfaceProps {

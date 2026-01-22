@@ -25,11 +25,14 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, message: "Welcome email sent" });
-  } catch (error) {
+   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 });
     }
-    console.error("[WELCOME_EMAIL_POST]", { name: error.name, message: error.message });
+    const errorMessage = error instanceof Error 
+      ? { name: error.name, message: error.message } 
+      : { name: "UnknownError", message: String(error) };
+    console.error("[WELCOME_EMAIL_POST]", errorMessage);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

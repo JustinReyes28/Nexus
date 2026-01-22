@@ -3,6 +3,8 @@ import { emailQueue } from "@/lib/email-queue";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 const deadlineReminderSchema = z.object({
   email: z.string().email(),
@@ -12,8 +14,15 @@ const deadlineReminderSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    // Rate limiting check
     const rateLimitResponse = checkRateLimit(req);
     if (rateLimitResponse) return rateLimitResponse;
+
+    // Authentication check
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     let body;
     try {

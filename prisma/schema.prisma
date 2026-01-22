@@ -183,7 +183,7 @@ model DocumentVersion {
   createdAt DateTime @default(now())
 
   documentId String   @db.ObjectId
-  document   Document @relation(fields: [documentId], references: [id])
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@unique([documentId, version])
 }

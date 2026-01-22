@@ -9,7 +9,7 @@ import { FileEdit, ClipboardList, CheckCircle, Info, Sparkles, History } from "l
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'bot';
   content: string;
   timestamp?: string;
 }
@@ -44,7 +44,7 @@ const handleHistorySelect = (conv: Conversation) => {
     setActiveHistoryId(conv.id);
     setHistoryMessages([
       { id: Date.now().toString(), role: "user", content: conv.prompt },
-      { id: (Date.now() + 1).toString(), role: "assistant", content: conv.response }
+      { id: (Date.now() + 1).toString(), role: "bot", content: conv.response }
     ]);
     if (conv.section) setSection(conv.section as typeof SECTIONS[number]);
     if (conv.context) setContext(conv.context);

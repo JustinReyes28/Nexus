@@ -1,7 +1,7 @@
 // Test
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -44,13 +44,49 @@ export default function ProjectTasksPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Load tasks when component mounts or projectId changes
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        // Try to read from localStorage first as fallback
+        const cachedTasks = localStorage.getItem(`project_${projectId}_tasks`);
+        if (cachedTasks) {
+          setTasks(JSON.parse(cachedTasks));
+        }
+        
+        // Fetch fresh tasks from API
+        const response = await fetch(`/api/projects/${projectId}/tasks`);
+        if (response.ok) {
+          const fetchedTasks = await response.json();
+          setTasks(fetchedTasks);
+          // Cache in localStorage
+          localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(fetchedTasks));
+        } else {
+          // If API fails, we already have cached data, or use empty array
+          console.error('Failed to fetch tasks:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Error loading tasks:', error);
+        // Fallback to cached data if available
+        const cachedTasks = localStorage.getItem(`project_${projectId}_tasks`);
+        if (cachedTasks) {
+          setTasks(JSON.parse(cachedTasks));
+        }
+      }
+    };
+
+    if (projectId) {
+      loadTasks();
+    }
+  }, [projectId]);
 
   const filteredTasks = tasks.filter(t =>
     t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     t.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSaveTask = (data: {
+  const handleSaveTask = async (data: {
     title: string;
     description: string;
     status: "TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED";
@@ -58,36 +94,80 @@ export default function ProjectTasksPage() {
     dueDate: string;
   }) => {
     const now = new Date();
-    if (editingTask) {
-      setTasks(tasks.map(t => t.id === editingTask.id ? {
-        id: t.id,
-        title: data.title,
-        description: data.description,
-        status: data.status,
-        priority: data.priority,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        startDate: t.startDate,
-        endDate: t.endDate,
-        createdAt: t.createdAt,
-        updatedAt: now
-      } : t));
-    } else {
-      const newTask: Task = {
-        id: crypto.randomUUID(),
-        title: data.title,
-        description: data.description,
-        status: data.status,
-        priority: data.priority,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        startDate: null,
-        endDate: null,
-        createdAt: now,
-        updatedAt: now
-      };
-      setTasks([...tasks, newTask]);
+    try {
+      if (editingTask) {
+        // Update existing task
+        const response = await fetch(`/api/projects/${projectId}/tasks`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            taskId: editingTask.id,
+            ...data,
+            dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null
+          })
+        });
+
+        if (response.ok) {
+          const updatedTask = {
+            ...editingTask,
+            title: data.title,
+            description: data.description,
+            status: data.status,
+            priority: data.priority,
+            dueDate: data.dueDate ? new Date(data.dueDate) : null,
+            updatedAt: now
+          };
+          
+          const updatedTasks = tasks.map(t =>
+            t.id === editingTask.id ? updatedTask : t
+          );
+          setTasks(updatedTasks);
+          // Update localStorage
+          localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(updatedTasks));
+        } else {
+          throw new Error('Failed to update task');
+        }
+      } else {
+        // Create new task
+        const response = await fetch(`/api/projects/${projectId}/tasks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...data,
+            dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null
+          })
+        });
+
+        if (response.ok) {
+          const newTask = {
+            id: crypto.randomUUID(), // This will be replaced by the API response
+            title: data.title,
+            description: data.description,
+            status: data.status,
+            priority: data.priority,
+            dueDate: data.dueDate ? new Date(data.dueDate) : null,
+            startDate: null,
+            endDate: null,
+            createdAt: now,
+            updatedAt: now
+          };
+          
+          const result = await response.json();
+          // Use the task returned from the API which includes the proper ID
+          const updatedTasks = [...tasks, { ...newTask, id: result.task.id }];
+          setTasks(updatedTasks);
+          // Update localStorage
+          localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(updatedTasks));
+        } else {
+          throw new Error('Failed to create task');
+        }
+      }
+      setShowForm(false);
+      setEditingTask(null);
+    } catch (error) {
+      console.error('Error saving task:', error);
+      alert('Failed to save task. Please try again.');
     }
-    setShowForm(false);
-    setEditingTask(null);
   };
 
   const statusColumns: ("TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED")[] = ["TODO", "IN_PROGRESS", "REVIEW", "COMPLETED"];
@@ -181,8 +261,41 @@ export default function ProjectTasksPage() {
                       key={task.id}
                       task={task}
                       onEdit={(id) => { setEditingTask(tasks.find(t => t.id === id) || null); setShowForm(true); }}
-                       onStatusChange={(id, newStatus) => {
-                         setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus, updatedAt: new Date() } : t));
+                       onStatusChange={async (id, newStatus) => {
+                         try {
+                           // Optimistically update the UI
+                           const now = new Date();
+                           const updatedTasks = tasks.map(t =>
+                             t.id === id ? { ...t, status: newStatus, updatedAt: now } : t
+                           );
+                           setTasks(updatedTasks);
+                           
+                           // Update localStorage
+                           localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(updatedTasks));
+                           
+                           // Persist to backend
+                           const response = await fetch(`/api/projects/${projectId}/tasks`, {
+                             method: 'PUT',
+                             headers: { 'Content-Type': 'application/json' },
+                             body: JSON.stringify({
+                               taskId: id,
+                               status: newStatus
+                             })
+                           });
+                           
+                           if (!response.ok) {
+                             // Rollback on failure
+                             const revertedTasks = tasks.map(t =>
+                               t.id === id ? { ...t, status: t.status, updatedAt: t.updatedAt } : t
+                             );
+                             setTasks(revertedTasks);
+                             localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(revertedTasks));
+                             throw new Error('Failed to update task status');
+                           }
+                         } catch (error) {
+                           console.error('Error updating task status:', error);
+                           alert('Failed to update task status. Please try again.');
+                         }
                        }}
                     />
 

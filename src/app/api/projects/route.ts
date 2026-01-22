@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { recordActivity } from "@/lib/activities";
+import { sanitizeProjectData, sanitizeProjectDataArray } from "@/lib/sanitize-project-data";
 
 const projectSchema = z.object({
   title: z.string().min(1, "Title is required").max(100),
@@ -34,8 +35,8 @@ export async function GET() {
       },
       orderBy: { updatedAt: "desc" }
     });
-
-    return NextResponse.json(projects);
+    
+    return NextResponse.json(sanitizeProjectDataArray(projects));
   } catch (error) {
     console.error("[PROJECTS_GET]", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -78,8 +79,8 @@ try {
     } catch (activityError) {
       console.error("[ACTIVITY_LOG]", activityError);
     }
-
-    return NextResponse.json(project, { status: 201 });
+    
+    return NextResponse.json(sanitizeProjectData(project), { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 });

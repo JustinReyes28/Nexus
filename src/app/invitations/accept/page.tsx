@@ -88,9 +88,10 @@ export default async function AcceptInvitationPage({
     );
   }
 
-  if (!session || !session.user?.id) {
-    redirect(`/login?callbackUrl=/invitations/accept?token=${encodeURIComponent(token)}`);
-  }
+   if (!session || !session.user?.id) {
+    const callbackPath = `/invitations/accept?token=${encodeURIComponent(token)}`;
+    redirect(`/login?callbackUrl=${encodeURIComponent(callbackPath)}`);
+   }
 
   // Check if user is already a member of the project
   const existingMembership = await db.teamMember.findFirst({
