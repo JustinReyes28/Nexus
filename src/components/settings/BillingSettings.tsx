@@ -26,7 +26,7 @@ const BUNDLES = [
     iconColor: "text-indigo-500",
     description: "The best value for individual researchers.",
     color: "bg-indigo-50",
-    borderColor: "border-indigo-200",
+    borderColor: "border-crimson/30",
     popular: true,
   },
   {
@@ -60,6 +60,7 @@ export default function BillingSettings() {
   const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showNotImplementedModal, setShowNotImplementedModal] = useState(false);
   const [upgradedFromFree, setUpgradedFromFree] = useState(false);
 
   const showSuccess = (message: string) => {
@@ -99,6 +100,9 @@ export default function BillingSettings() {
   };
 
   const handleBuyCredits = async (bundleType: "starter" | "pro" | "power") => {
+    setShowNotImplementedModal(true);
+    return;
+
     try {
       setLoadingBundle(bundleType);
       showInfo("Creating payment session...");
@@ -183,7 +187,7 @@ export default function BillingSettings() {
               }`}
             >
               {bundle.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-crimson text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-md border border-crimson/20">
                   Most Popular
                 </div>
               )}
@@ -286,6 +290,33 @@ export default function BillingSettings() {
             >
               Got it!
             </Button>
+          </div>
+        </div>
+      )}
+
+      {showNotImplementedModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-6 p-4 bg-amber-100 rounded-full">
+                <AlertCircle className="w-12 h-12 text-amber-600" />
+              </div>
+              <h3 className="text-2xl font-heading font-bold text-gray-900 mb-2">
+                Coming Soon!
+              </h3>
+              <p className="text-gray-600 mb-8 leading-relaxed">
+                Thank you for your interest in Nexus Premium! The payment and credit purchase system is currently in development. 
+                <br /><br />
+                We're working hard to bring you a seamless billing experience. Please check back soon!
+              </p>
+              <Button
+                variant="popular"
+                className="w-full py-6 text-lg font-bold"
+                onClick={() => setShowNotImplementedModal(false)}
+              >
+                Got it, thanks!
+              </Button>
+            </div>
           </div>
         </div>
       )}
