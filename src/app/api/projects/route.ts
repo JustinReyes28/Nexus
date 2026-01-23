@@ -10,6 +10,13 @@ const projectSchema = z.object({
   title: z.string().min(1, "Title is required").max(100),
   description: z.string().max(500).optional(),
   discipline: z.string().max(100).optional(),
+  templateId: z.string().optional(),
+  startDate: z.string().optional().nullable().refine((val) => {
+    if (val === null || val === undefined || val === "") return true;
+    return !isNaN(Date.parse(val));
+  }, {
+    message: "Invalid date format"
+  }),
   deadline: z.string().optional().nullable().refine((val) => {
     if (val === null || val === undefined || val === "") return true;
     return !isNaN(Date.parse(val));
@@ -59,12 +66,51 @@ try {
     }
     const validatedData = projectSchema.parse(body);
 
-    const project = await db.project.create({
-      data: {
-        ...validatedData,
-        ownerId: session.user.id,
-        deadline: validatedData.deadline ? new Date(validatedData.deadline) : null,
+    const project = await db.$transaction(async (tx) => {
+      const newProject = await tx.project.create({
+        data: {
+          title: validatedData.title,
+          description: validatedData.description,
+          discipline: validatedData.discipline,
+          ownerId: session.user.id,
+          startDate: validatedData.startDate ? new Date(validatedData.startDate) : new Date(),
+          deadline: validatedData.deadline ? new Date(validatedData.deadline) : null,
+        }
+      });
+
+      if (validatedData.templateId) {
+        const template = await tx.template.findUnique({
+          where: { id: validatedData.templateId }
+        });
+
+        if (template && template.content) {
+          try {
+            const tasks = JSON.parse(template.content);
+            const baseDate = validatedData.startDate ? new Date(validatedData.startDate) : new Date();
+
+            await tx.task.createMany({
+              data: tasks.map((t: any) => ({
+                title: t.title,
+                description: t.description,
+                priority: t.priority || "MEDIUM",
+                projectId: newProject.id,
+                dueDate: t.daysAfterStart 
+                  ? new Date(baseDate.getTime() + t.daysAfterStart * 24 * 60 * 60 * 1000)
+                  : null,
+              }))
+            });
+
+            await tx.template.update({
+              where: { id: template.id },
+              data: { usageCount: { increment: 1 } }
+            });
+          } catch (e) {
+            console.error("Failed to parse template content or create tasks", e);
+          }
+        }
       }
+
+      return newProject;
     });
 
     // Log activity
@@ -89,3 +135,4 @@ try {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+

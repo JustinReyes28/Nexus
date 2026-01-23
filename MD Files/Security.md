@@ -1,107 +1,138 @@
 # **Security, Privacy & Academic Integrity Requirements**
 
-## **1. CRITICAL: Security Requirements (Mandatory)**
+## **1. CRITICAL: Security Requirements (Implemented)**
 
 ### **1.1 Input Validation & Sanitization**
 
-- Validate and sanitize **ALL** user inputs before processing.
-- Use **parameterized queries/prepared statements** for all database operations (NEVER string concatenation).
-- Validate **data types, ranges, and formats**:
-  - Latitude/longitude bounds: ±90 / ±180
-  - Location name length < 100 characters.
-- Implement **allowlists over denylists** (e.g., only allow alphanumeric + spaces in location search).
-- **Escape output** based on context (HTML escape in React; use DOMPurify for any raw HTML).
+- Validate and sanitize **ALL** user inputs before processing using Zod schemas
+- Input validation implemented with Zod for all API endpoints
+- Validate **data types, ranges, and formats** with schema validation
+- **XSS Protection**: Implemented with DOMPurify for HTML sanitization in React components
+- URL validation and sanitization using custom validation functions
+- **Escape output** based on context (React auto-escapes; DOMPurify used for raw HTML)
 
 ### **1.2 Authentication & Authorization**
 
-- **Never hardcode** credentials, API keys, or secrets (store OpenAI key in Vercel environment variables).
-- Use **environment variables or secure secret management systems**.
-- Implement proper **session management** with secure tokens (stateless for MVP).
-- Apply the **principle of least privilege** (API routes only accept POST/GET, no DELETE/PUT).
-- Verify **authorization checks** on every protected resource/action (N/A for public MVP).
-- **Secure password hashing** with Argon2id (preferred) or bcrypt (acceptable fallback) for future authentication. Argon2id is memory-hard and GPU-resistant, providing better security against brute-force attacks.
-- Implement **multi-factor authentication (MFA/2FA)** for any future authentication flows to enhance security.
-- Implement **CSRF protection** for state-changing operations (use Next.js built-in protection if forms are added).
-- Apply **rate limiting on authentication endpoints** with stricter limits than general APIs (e.g., 5–10 login attempts per hour per account/IP with configurable lockout after N failures).
+- **Never hardcode** credentials, API keys, or secrets (stored in environment variables)
+- Use **environment variables or secure secret management systems**
+- **Authentication**: NextAuth.js with JWT strategy, Google OAuth, and email/password authentication
+- **Secure password hashing** with bcrypt.js (passwords hashed with salt before storage)
+- **Session Management**: Secure cookie settings with HttpOnly, Secure, SameSite flags
+- Apply the **principle of least privilege** (API routes verify authorization)
+- Verify **authorization checks** on every protected resource/action
+- Rate limiting implemented on authentication endpoints
 
 ### **1.3 Data Protection**
 
-- Encrypt **sensitive data at rest** (MongoDB Atlas encryption) and **in transit** (use TLS 1.3 preferred, TLS 1.2+ as fallback, enforced by Vercel).
-- Use **strong, modern cryptographic algorithms** (Argon2id preferred for passwords; bcrypt as acceptable alternative). Argon2id is memory-hard and GPU-resistant, providing better security against brute-force attacks.
-- **Never roll your own crypto**—use established libraries (crypto-js for cache keys only).
-- Implement proper **key management practices** (no persistent keys in MVP).
-- **Hash passwords with salt** before storage (N/A for MVP, no user accounts).
+- Encrypt **sensitive data at rest** (MongoDB Atlas encryption) and **in transit** (TLS 1.2+)
+- Use **strong, modern cryptographic algorithms** (bcrypt for passwords)
+- **Never roll your own crypto**—use established libraries
+- **PII Removal**: Implemented with `sanitizeProjectData()` function to remove sensitive data (email addresses) before exposing publicly
+- Proper **key management practices** (stored in environment variables)
 
 ### **1.4 Injection Prevention**
 
-- **SQL Injection**: Use ORM or parameterized queries exclusively if a database is added.
-- **XSS**: Sanitize and escape all dynamic content (React auto-escapes; use DOMPurify for raw HTML).
-- **Command Injection**: Avoid shell execution; if necessary, use safe APIs with strict input validation.
-- **Path Traversal**: Validate any future file paths with allowlists (no file system access in MVP).
-- **NoSQL Injection**: Use safe APIs and input validation (Vercel KV with JSON schema validation).
+- **SQL Injection**: Prevented using Prisma ORM with parameterized queries
+- **XSS**: Sanitized with React auto-escaping and DOMPurify for raw HTML
+- **Command Injection**: Avoided by not using shell execution
+- **Path Traversal**: Prevented by not accessing file system directly
+- **NoSQL Injection**: Prevented with Prisma ORM and input validation
 
 ### **1.5 Error Handling & Logging**
 
-- **Never expose sensitive information** in error messages (show generic "Failed to generate insights" to users).
-- **Log security events** (failed API calls, validation errors) but **sanitize sensitive data**.
-- Implement **proper exception handling** (do not expose stack traces to users).
-- Use **structured logging** with appropriate severity levels (Vercel logs with JSON structure).
-- Maintain an **audit trail of AI interactions** for institutional transparency.
+- **Never expose sensitive information** in error messages (generic error messages shown to users)
+- **Log security events** (failed API calls, validation errors) but **sanitize sensitive data**
+- Implement **proper exception handling** (do not expose stack traces to users)
+- Use **structured logging** with appropriate severity levels
+- **PII Redaction**: Implemented in logging with functions to sanitize personal information before logging
 
 ### **1.6 Dependency & Configuration Security**
 
-- Use **up-to-date, well-maintained libraries** (Next.js 14+, OpenAI SDK v4).
-- Avoid dependencies with known vulnerabilities (run `npm audit` in CI/CD).
-- Implement **Content Security Policy (CSP)** with specific directives configured in next.config.js. Recommended directives include: default-src 'self'; script-src 'self' 'nonce-{random}' https://trusted-cdn.com; style-src 'self' 'unsafe-inline' (prefer nonces/hashes over 'unsafe-inline'); img-src 'self' data: https://trusted-images.com; connect-src 'self'; frame-ancestors 'none'; report-uri /csp-report. Adjust trusted CDN domains per environment.
-- Disable **unnecessary features and services** (no server actions enabled if unused).
-- Set **secure HTTP headers** (X-Frame-Options, X-Content-Type-Options, HSTS via next.config.js).
+- Use **up-to-date, well-maintained libraries** (Next.js 14+, OpenAI SDK v4, bcrypt, DOMPurify, Zod)
+- Avoid dependencies with known vulnerabilities (run `npm audit`)
+- **Secure HTTP Headers**: Configured in middleware and NextAuth (HttpOnly, Secure, SameSite flags)
+- Disable **unnecessary features and services**
 
 ### **1.7 Rate Limiting & DoS Protection**
 
-- Implement **rate limiting on APIs and sensitive endpoints** (Vercel KV rate limiter: 30 req/min per IP).
-- Add **timeout mechanisms** for operations (AI API timeout set to 8s).
-- Validate **resource consumption** (max request body size 1MB, cache key length limits).
-- Protect against **resource exhaustion attacks** (use streaming responses for large payloads).
+- Implement **rate limiting on APIs and sensitive endpoints** (custom rate limiter with Vercel KV: 30 req/min per IP)
+- Add **timeout mechanisms** for operations (AI API timeout set to 8s)
+- Validate **resource consumption** (max request body size, cache key length limits)
+- Protect against **resource exhaustion attacks**
 
 ### **1.8 Secure Defaults**
 
-- **Fail securely** (deny access by default; return 403 for invalid lat/lon).
-- **Minimize attack surface** (disable debug modes in production; `NODE_ENV=production`).
-- Use **secure session cookies** (HttpOnly, Secure, SameSite=Strict flags for any future authentication).
-- **HTTPS-only communication** enforced.
+- **Fail securely** (deny access by default; return 403 for unauthorized requests)
+- **Minimize attack surface** (debug modes disabled in production)
+- Use **secure session cookies** (HttpOnly, Secure, SameSite=Strict flags)
+- **HTTPS-only communication** enforced
 
 ## **2. Privacy & Data Handling**
 
 ### **2.1 User Data & AI Interactions**
 
-- Provide a **clear privacy policy** regarding AI processing and data usage.
-- Ensure **opt-in consent** for data usage in training or model improvement.
-- **Do not store sensitive personal information** in prompts or logs.
-- Offer **user control over conversation history**.
-- Provide **GDPR-compliant data export and deletion** mechanisms.
-- Ensure **transparency about AI limitations** in all interactions.
-- Include **clear attribution** that content is AI-assisted.
+- Provide a **clear privacy policy** regarding AI processing and data usage
+- Ensure **opt-in consent** for data usage in training or model improvement
+- **Do not store sensitive personal information** in prompts or logs (PII redaction implemented)
+- Offer **user control over conversation history**
+- **PII Sanitization**: Implemented for project data and AI prompts to remove sensitive information
+- Ensure **transparency about AI limitations** in all interactions
+- Include **clear attribution** that content is AI-assisted
 
 ### **2.2 Data Collection & Analytics**
 
-- Use **anonymous usage analytics** where possible.
-- Implement **file upload validation and size limits** for any future upload features.
+- Use **anonymous usage analytics** where possible
+- **AI Prompt Sanitization**: Implemented to clean user inputs before processing by AI models
 
 ## **3. Academic Integrity**
 
 ### **3.1 Plagiarism Prevention & Transparency**
 
-- Apply **watermarking or disclosure** for AI-generated content to ensure transparency.
-- Provide **guidance on the proper use of AI assistance** in academic work.
-- Offer **citation recommendations** for AI-assisted sections.
-- Supply **educational resources on academic integrity**.
+- Apply **watermarking or disclosure** for AI-generated content to ensure transparency
+- Provide **guidance on the proper use of AI assistance** in academic work
+- Offer **citation recommendations** for AI-assisted sections
+- Supply **educational resources on academic integrity**
 
 ### **3.2 Usage Monitoring**
 
-- Maintain **advisor visibility into AI assistance usage** (with explicit student consent).
-- Log **AI interactions for audit purposes** to ensure institutional transparency.
+- Maintain **advisor visibility into AI assistance usage** (with explicit student consent)
+- Basic **logging of AI interactions** for transparency
 
-## **4. PROHIBITED PRACTICES (NEVER DO THESE)**
+## **4. IMPLEMENTED SECURITY FEATURES**
+
+### **4.1 What's Actually Implemented**
+
+- Authentication: NextAuth.js with JWT strategy, Google OAuth, and email/password authentication using bcrypt
+- Input Validation: Zod schemas for validation, DOMPurify for HTML sanitization
+- Rate Limiting: Custom rate limiter implementation
+- Password Hashing: bcrypt.js for password hashing
+- Data Sanitization: PII removal from project data, URL validation and sanitization
+- Logging: Basic logging with redaction capabilities
+- Session Security: Secure cookie settings with HttpOnly, Secure flags
+- AI Prompt Sanitization: Input cleaning for AI models
+
+### **4.2 What's Missing (Future Implementation)**
+
+- Multi-factor authentication (MFA/2FA) - Not implemented
+- Content Security Policy (CSP) - Not configured in next.config.js
+- CSRF protection - Not explicitly implemented
+- TLS 1.3 enforcement - Not explicitly configured
+- GDPR compliance mechanisms - Basic data export/deletion not fully implemented
+- Comprehensive audit trails - Basic logging exists but not comprehensive audit trails
+- Argon2id - Only bcrypt is used (though bcrypt is still secure)
+
+### **4.3 Security Best Practices Followed**
+
+- Environment variable usage for secrets
+- Parameterized queries via Prisma ORM
+- Secure session management
+- Input validation with Zod schemas
+- Output sanitization with DOMPurify
+- PII data redaction in logs
+- Rate limiting to prevent abuse
+- Proper error handling without information disclosure
+
+## **5. PROHIBITED PRACTICES (NEVER DO THESE)**
 
 - **String concatenation in SQL queries**.
 - Using **`eval()` or similar dynamic code execution**.

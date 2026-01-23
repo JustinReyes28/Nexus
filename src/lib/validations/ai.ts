@@ -16,6 +16,7 @@ export const proposalSchema = z.object({
   section: z.string().min(1, "Section is required").max(100, "Section must be at most 100 characters"),
   context: z.string().min(10, "Context must be at least 10 characters").max(2000, "Context must be at most 2000 characters"),
   discipline: z.string().max(100, "Discipline must be at most 100 characters").optional(),
+  templateLevel: z.enum(["Standard", "Advanced", "Academic"]).default("Standard"),
 });
 
 export const methodologySchema = z.object({

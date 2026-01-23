@@ -34,6 +34,7 @@ const SECTIONS = [
 
 export const ProposalWriterView: React.FC = () => {
   const [section, setSection] = useState<typeof SECTIONS[number]>("Introduction");
+  const [templateLevel, setTemplateLevel] = useState<"Standard" | "Advanced" | "Academic">("Standard");
   const [context, setContext] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -100,12 +101,25 @@ const handleHistorySelect = (conv: Conversation) => {
                   </select>
                </div>
                
-               <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Template Level</label>
-                  <div className="flex gap-2">
-                     <span className="flex-1 bg-white border-2 border-gray-100 rounded-xl px-4 py-3 text-xs font-bold text-gray-400 text-center uppercase tracking-widest opacity-50">Standard</span>
-                  </div>
-               </div>
+                <div className="space-y-2">
+                   <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Template Level</label>
+                   <div className="flex gap-2">
+                      {["Standard", "Advanced", "Academic"].map((level) => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => setTemplateLevel(level as any)}
+                          className={`flex-1 border-2 rounded-xl py-3 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                            templateLevel === level
+                              ? "border-crimson bg-crimson/5 text-crimson shadow-sm"
+                              : "border-gray-100 bg-white text-gray-400 hover:border-gray-200"
+                          }`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                   </div>
+                </div>
             </div>
 
             <div className="space-y-2">
@@ -191,7 +205,7 @@ const handleHistorySelect = (conv: Conversation) => {
               submitOnMount={!historyMessages || historyMessages.length === 0}
               initialInput={`Draft the ${section} section based on this context.`}
               loadedHistoryId={activeHistoryId}
-              additionalData={{ section, context, historyMessages }}
+              additionalData={{ section, context, historyMessages, templateLevel }}
             />
           </div>
         </div>

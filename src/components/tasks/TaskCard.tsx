@@ -26,7 +26,7 @@ interface TaskCardProps {
 
 
 export default function TaskCard({ task, onStatusChange, onEdit }: TaskCardProps) {
-  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "COMPLETED";
+  const isOverdue = task.dueDate && !isNaN(new Date(task.dueDate).getTime()) && new Date(task.dueDate) < new Date() && task.status !== "COMPLETED";
   const isCompleted = task.status === "COMPLETED";
 
   const priorityVariants: Record<TaskPriority, "secondary" | "default" | "danger"> = {
@@ -117,7 +117,7 @@ export default function TaskCard({ task, onStatusChange, onEdit }: TaskCardProps
             )}>
               {isOverdue ? <AlertCircle className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5 text-sunny" />}
               <span>
-                {task.dueDate 
+                {task.dueDate && !isNaN(new Date(task.dueDate).getTime())
                   ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(task.dueDate))
                   : "No date"}
               </span>

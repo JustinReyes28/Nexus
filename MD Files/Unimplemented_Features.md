@@ -30,9 +30,9 @@ This document outlines the features that are mentioned in the project's README b
 
 ### Template Center by Discipline
 
-- **Status**: Partially Implemented
-- **Description**: Basic template infrastructure exists in the database schema, but no UI or API endpoints for managing templates by discipline.
-- **Evidence**: `Template` model exists in Prisma schema but no corresponding API routes or UI components for template management.
+- **Status**: Fully Implemented
+- **Description**: Pre-built templates for common capstone project structures across different disciplines are now available. Users can select a template during project creation which automatically populates relevant tasks.
+- **Evidence**: `Template` model is seeded, API routes are functional, and `TemplateSelector` is integrated into the "New Project" page. `createProject` action now handles automatic task generation.
 
 ### Knowledge Base
 

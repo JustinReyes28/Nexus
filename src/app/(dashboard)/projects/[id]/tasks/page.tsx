@@ -338,7 +338,7 @@ export default function ProjectTasksPage() {
                          </td>
                           <td className="px-6 py-4">
                              <span className="text-xs text-gray-500">
-                                {task.dueDate ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(task.dueDate) : "N/A"}
+                                {task.dueDate && !isNaN(new Date(task.dueDate).getTime()) ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(task.dueDate)) : "N/A"}
                              </span>
                           </td>
                       </tr>

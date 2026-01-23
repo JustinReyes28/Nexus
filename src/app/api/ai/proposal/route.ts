@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const validatedData = proposalSchema.safeParse(body);
     if (!validatedData.success) return NextResponse.json({ error: validatedData.error.errors[0].message }, { status: 400 });
 
-    const { section, context, discipline } = validatedData.data;
+    const { section, context, discipline, templateLevel = "Standard" } = validatedData.data;
     
     // Get user with both credits and tier in a single query
     const user = await db.user.findUnique({
@@ -32,10 +32,22 @@ export async function POST(req: NextRequest) {
     const sanitizedSection = sanitizePrompt(section || "");
     const sanitizedDiscipline = sanitizePrompt(discipline || "");
     const sanitizedContext = sanitizePrompt(context || "");
+    const sanitizedLevel = sanitizePrompt(templateLevel);
+
+    let levelInstruction = "";
+    if (templateLevel === "Advanced") {
+      levelInstruction = "Use sophisticated vocabulary and deeper technical analysis. Assume a knowledgeable audience.";
+    } else if (templateLevel === "Academic") {
+      levelInstruction = "Adhere to strict academic standards. Emphasize methodology, citation readiness, and formal structure.";
+    } else {
+      levelInstruction = "Maintain a balanced, professional tone suitable for general academic proposals.";
+    }
 
     const prompt = `
       As an academic writing expert, provide guidance and a drafted outline for the "${sanitizedSection}" section of a research proposal.
       Discipline: ${sanitizedDiscipline || "General Academic"}
+      Template Level: ${sanitizedLevel}
+      Specific Instructions: ${levelInstruction}
       Target Context: ${sanitizedContext}
        
       Structure your response:
@@ -90,7 +102,7 @@ export async function POST(req: NextRequest) {
         await tx.aIConversation.create({
           data: {
             feature: "PROPOSAL_WRITER",
-            prompt: `Section: ${section} | Context: ${context.substring(0, 50)}${context.length > 50 ? "..." : ""}`,
+            prompt: `Section: ${section} | Level: ${templateLevel} | Context: ${context.substring(0, 50)}${context.length > 50 ? "..." : ""}`,
             response: processedResponse,
             tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
             userId: session.user.id,
