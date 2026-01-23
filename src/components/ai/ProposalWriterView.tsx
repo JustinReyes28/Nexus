@@ -43,10 +43,25 @@ export const ProposalWriterView: React.FC = () => {
 
 const handleHistorySelect = (conv: Conversation) => {
     setActiveHistoryId(conv.id);
-    setHistoryMessages([
-      { id: Date.now().toString(), role: "user", content: conv.prompt },
-      { id: (Date.now() + 1).toString(), role: "bot", content: conv.response }
-    ]);
+    
+    // Validate and clean history messages
+    const cleanedMessages: Message[] = [
+      { 
+        id: Date.now().toString(), 
+        role: "user", 
+        content: conv.prompt || "",
+        timestamp: new Date().toISOString()
+      },
+      { 
+        id: (Date.now() + 1).toString(), 
+        role: "bot", 
+        content: conv.response || "",
+        timestamp: new Date().toISOString()
+      }
+    ];
+    
+    setHistoryMessages(cleanedMessages);
+    
     if (conv.section) setSection(conv.section as typeof SECTIONS[number]);
     if (conv.context) setContext(conv.context);
     setIsSubmitted(true);
@@ -198,14 +213,27 @@ const handleHistorySelect = (conv: Conversation) => {
 
           {/* Chat Interface */}
           <div className="lg:col-span-8">
-            <ChatInterface 
+<ChatInterface 
               endpoint="/api/ai/proposal"
               feature="PROPOSAL_WRITER"
               placeholder="Ask for revisions or specific improvements..."
               submitOnMount={!historyMessages || historyMessages.length === 0}
               initialInput={`Draft the ${section} section based on this context.`}
               loadedHistoryId={activeHistoryId}
-              additionalData={{ section, context, historyMessages, templateLevel }}
+              additionalData={{ 
+                section, 
+                context, 
+                templateLevel,
+                // Only include historyMessages if it's a valid array
+                ...(historyMessages && Array.isArray(historyMessages) && historyMessages.length > 0 && {
+                  historyMessages: historyMessages.map(msg => ({
+                    id: msg.id,
+                    role: msg.role,
+                    content: msg.content,
+                    timestamp: msg.timestamp
+                  }))
+                })
+              }}
             />
           </div>
         </div>

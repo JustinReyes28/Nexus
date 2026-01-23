@@ -14,7 +14,17 @@ export async function POST(req: NextRequest) {
 
     if (rateLimiter.isRateLimited(session.user.id)) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      console.error("[JSON_PARSE_ERROR] Failed to parse request body:", parseError);
+      return NextResponse.json(
+        { error: "Invalid or empty request body" },
+        { status: 400 },
+      );
+    }
+
     const validatedData = proposalSchema.safeParse(body);
     if (!validatedData.success) return NextResponse.json({ error: validatedData.error.errors[0].message }, { status: 400 });
 
