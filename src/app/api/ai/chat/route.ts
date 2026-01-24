@@ -1,165 +1,133 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import crypto from "crypto";
 import { db } from "@/lib/db";
 import { model, sanitizePrompt, estimateTokens, calculateCredits } from "@/lib/ai";
 import { rateLimiter } from "@/lib/rate-limit";
-import { getConversationExpirationDate, CONVERSATION_RETENTION_POLICY } from "@/config/ai";
-import { logger } from "@/lib/logger";
-import { csrfMiddleware } from "@/lib/csrf";
-
-/**
- * Sanitizes text for logging by removing potential PII and sensitive content
- */
-function sanitizeForLogging(text: string): string {
-  if (!text || text.length === 0) return "[EMPTY]";
-  
-  // Remove potential email addresses
-  let sanitized = text.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL]');
-  
-  // Remove potential credit card numbers (basic pattern)
-  sanitized = sanitized.replace(/\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/g, '[CREDIT_CARD]');
-  
-  // Remove potential API keys/tokens (common patterns)
-  sanitized = sanitized.replace(/\b(api[_-]?key|token|access[_-]?key|secret)\b\s*[:=]?\s*['"]?[a-zA-Z0-9]{16,}['"]?/gi, '$1: [REDACTED]');
-  
-  // Truncate if too long to avoid log bloat
-  if (sanitized.length > 500) {
-    sanitized = sanitized.substring(0, 500) + "... [TRUNCATED]";
-  }
-  
-  return sanitized;
-}
+import { chatSchema } from "@/lib/validations/ai";
+import { getConversationExpirationDate } from "@/config/ai";
 
 export async function POST(req: NextRequest) {
-  // Apply CSRF protection
-  const csrfError = csrfMiddleware(req);
-  if (csrfError) return csrfError;
-
   try {
+    // 1. Authentication Check
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (rateLimiter.isRateLimited(session.user.id)) {
+    // 2. Rate Limiting Check
+    const rateLimitKey = session.user.id;
+    
+    if (rateLimiter.isRateLimited(rateLimitKey)) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-    let body;
+    // 3. Input Validation
+    const body = await req.json();
+    
+    const validatedData = chatSchema.safeParse(body);
+
+    if (!validatedData.success) {
+      return NextResponse.json({ error: validatedData.error.errors[0].message }, { status: 400 });
+    }
+
+    const { topic, discipline } = validatedData.data;
+    
+    // 4. Generate Prompt
+    const sanitizedTopic = sanitizePrompt(topic);
+    const prompt = `You are a helpful AI assistant. The user is asking about: "${sanitizedTopic}"
+${discipline ? `Context: ${sanitizePrompt(discipline)}` : ""}
+
+Provide a helpful, accurate, and concise response. Focus on being informative while maintaining a conversational tone.`;
+
+    // 5. Call AI
+    const result = await model.generateContent(prompt);
+    const responseTextRaw = result.response?.text();
+    const responseText = typeof responseTextRaw === 'string' ? responseTextRaw : Array.isArray(responseTextRaw) ? responseTextRaw.join(' ') : '';
+    const usage = result.usage;
+
+    // 6. Calculate credits needed
+    const creditsToDeduct = usage
+      ? calculateCredits(usage.promptTokens, usage.completionTokens)
+      : calculateCredits(estimateTokens(prompt), estimateTokens(typeof responseText === 'string' ? responseText : ''));
+
     try {
-      body = await req.json();
-    } catch (parseError) {
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+      // 7. Transactionally get user tier, deduct credits and log interaction
+      const transactionResult = await db.$transaction(async (tx) => {
+        // First, get user data to access tier for retention policy
+        const user = await tx.user.findUnique({
+          where: { id: session.user.id as string },
+          select: { aiCreditsUsed: true, aiCreditsLimit: true, tier: true },
+        });
+
+        if (!user) {
+          throw new Error("USER_NOT_FOUND");
+        }
+
+        // Attempt to deduct credits
+        const updateResult = await tx.user.updateMany({
+          where: {
+            id: session.user.id,
+            aiCreditsUsed: { lt: user.aiCreditsLimit },
+          },
+          data: {
+            aiCreditsUsed: { increment: creditsToDeduct }
+          },
+        });
+
+        if (updateResult.count === 0) {
+          throw new Error("AI credit limit reached");
+        }
+
+        // Create AI conversation record with response size handling
+        const MAX_RESPONSE_LENGTH = 15 * 1024 * 1024; // 15MB safe threshold
+        let processedResponse = responseText;
+        
+        if (responseText.length > MAX_RESPONSE_LENGTH) {
+          processedResponse = responseText.substring(0, MAX_RESPONSE_LENGTH) + 
+            "\n\n---\n*Response truncated due to length.*";
+        }
+
+        await tx.aIConversation.create({
+          data: {
+            feature: "CHAT",
+            prompt: prompt,
+            response: processedResponse,
+            tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + (typeof responseText === 'string' ? responseText : '')),
+            userId: session.user.id,
+            expiresAt: getConversationExpirationDate(user.tier || 'FREE'),
+          },
+        });
+
+        return { tier: user.tier };
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === "AI credit limit reached") {
+        return NextResponse.json({ error: "AI credit limit reached" }, { status: 403 });
+      }
+      if (error instanceof Error && error.message === "USER_NOT_FOUND") {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      throw error;
     }
 
-    const { projectId, message, conversationHistory, feature = "CHAT" } = body;
-
-    if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return NextResponse.json({ error: "Message is required" }, { status: 400 });
-    }
-
-    if (message.length > 10000) {
-      return NextResponse.json({ error: "Message too long. Maximum 10,000 characters." }, { status: 400 });
-    }
-
-    const project = projectId ? await db.project.findUnique({
-      where: { id: projectId, ownerId: session.user.id },
-    }) : null;
-
-    const sanitizedMessage = sanitizePrompt(message);
-    const conversationHistoryFormatted = conversationHistory?.map((msg: any) => ({
-      role: msg.role,
-      content: sanitizePrompt(msg.content)
-    })) || [];
-
-    const systemPrompt = project ? `
-      You are an AI assistant helping with project: ${project.title}
-      Project description: ${project.description || 'No description'}
-      Status: ${project.status}
-      ${project.discipline ? `Discipline: ${project.discipline}` : ''}
-      ${project.startDate ? `Start Date: ${project.startDate.toISOString().split('T')[0]}` : ''}
-      ${project.deadline ? `Deadline: ${project.deadline.toISOString().split('T')[0]}` : ''}
-      
-      Provide helpful, professional, and concise responses.
-    ` : "You are an AI assistant. Provide helpful, professional, and concise responses.";
-
-    const fullPrompt = `${systemPrompt}\n\nConversation History:\n${conversationHistoryFormatted.map((msg: any) => `${msg.role}: ${msg.content}`).join('\n')}\n\nUser: ${sanitizedMessage}`;
-
-    const estimatedTokens = estimateTokens(fullPrompt);
-    const creditCost = calculateCredits(estimatedTokens, 2000);
-
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { aiCreditsLimit: true, aiCreditsUsed: true },
-    });
-
-    if (!user || (user.aiCreditsUsed + creditCost) > user.aiCreditsLimit) {
-      return NextResponse.json({ error: "Insufficient credits" }, { status: 402 });
-    }
-
-    logger.info(`AI Chat request`, {
-      userId: session.user.id,
-      projectId,
-      feature,
-      messageLength: sanitizedMessage.length,
-      estimatedTokens,
-      creditCost,
-      sanitized: sanitizeForLogging(sanitizedMessage)
-    });
-
-    const completion = await model.chat.completions.create({
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...conversationHistoryFormatted,
-        { role: "user", content: sanitizedMessage }
-      ],
-      model: "gpt-4o",
-      max_tokens: 2000,
-      temperature: 0.7,
-    });
-
-    const response = completion.choices[0]?.message?.content;
-    if (!response) {
-      throw new Error("Failed to generate response");
-    }
-
-    const conversation = await db.aIConversation.create({
-      data: {
-        userId: session.user.id,
-        feature,
-        prompt: fullPrompt,
-        response,
-        tokenUsage: estimatedTokens,
-        creditCost,
-        projectId: projectId || null,
-        expiresAt: getConversationExpirationDate(),
-      },
-    });
-
-    await db.user.update({
-      where: { id: session.user.id },
-      data: { aiCreditsUsed: { increment: creditCost } },
-    });
-
-    logger.info(`AI Chat response generated`, {
-      userId: session.user.id,
-      conversationId: conversation.id,
-      creditsUsed: creditCost,
-      remainingCredits: user.aiCreditsLimit - (user.aiCreditsUsed + creditCost)
-    });
-
-    return NextResponse.json({ 
-      success: true, 
-      response,
-      conversationId: conversation.id,
-      creditsUsed: creditCost,
-      remainingCredits: user.aiCreditsLimit - (user.aiCreditsUsed + creditCost)
-    });
+    return NextResponse.json({ response: responseText });
   } catch (error) {
-    logger.error("[AI_CHAT_ERROR]", { error: error instanceof Error ? error.message : String(error) });
-    console.error("[AI_CHAT_ERROR]", error);
+    if (error instanceof Error) {
+      const errorCode = (error as any).code || (error as any).type || (error as any).name || '';
+      const errorDetails = (error as any).body || {};
+      
+      if (errorCode === 'invalid_api_key' || errorCode === 'unauthorized' || 
+          errorDetails.code === 'invalid_api_key' || errorDetails.code === 'unauthorized' ||
+          error.message.includes("API key not valid") || error.message.includes("Invalid API key")) {
+        return NextResponse.json({ error: "Invalid AI API configuration" }, { status: 500 });
+      } else if (errorCode === 'network_error' || errorCode === 'timeout' ||
+                 errorDetails.code === 'network_error' || errorDetails.code === 'timeout' ||
+                 error.message.includes("network") || error.message.includes("fetch")) {
+        return NextResponse.json({ error: "AI service unavailable. Please try again later." }, { status: 503 });
+      }
+    }
+
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

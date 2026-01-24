@@ -123,3 +123,8 @@ export const writingSchema = z.object({
   style: z.enum(["academic", "professional", "simplified"]).default("academic"),
   type: z.enum(["grammar", "tone", "summarize", "expand"]).default("grammar"),
 });
+
+export const chatSchema = z.object({
+  topic: z.string().min(3, "Message must be at least 3 characters").max(500, "Message is too long"),
+  discipline: z.string().max(100, "Discipline must be at most 100 characters").optional(),
+});

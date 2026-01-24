@@ -63,7 +63,7 @@ _What Nexus Offers_
 
 ### 🔐 Security & Access Control
 
-- **Rate Limiting**: Built-in rate limiting (30 requests per minute per IP)
+- **Rate Limiting**: Built-in rate limiting (5 requests per minute per IP)
 - **AI Credit System**: Credit-based AI usage tracking with limits
 - **Authentication**: Secure authentication with session management
 - **Data Validation**: Comprehensive input validation using Zod schemas
@@ -96,7 +96,7 @@ _What Nexus Offers_
 
 ### Security
 
-- **Rate Limiting**: Custom implementation with token bucket algorithm
+- **Rate Limiting**: Custom implementation with token bucket algorithm (5 requests per minute per IP)
 - **Input Sanitization**: Prompt sanitization to prevent injection attacks
 - **Token Estimation**: Built-in token usage tracking
 - **Zod Validation**: Comprehensive request validation schemas

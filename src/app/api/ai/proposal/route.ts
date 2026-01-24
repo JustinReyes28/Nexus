@@ -31,87 +31,62 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid request data", details: validationResult.error.format() }, { status: 400 });
     }
 
-    const { projectId, requirements, features, additionalInfo } = validationResult.data;
-    
-    const project = await db.project.findUnique({
-      where: { id: projectId, userId: session.user.id },
-    });
-
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 });
-    }
+    const { section, context, discipline, templateLevel } = validationResult.data;
 
     const prompt = sanitizePrompt(`
-      Create a detailed project proposal based on:
-      Requirements: ${requirements}
-      Features: ${features}
-      Additional Information: ${additionalInfo}
+      As an expert in ${discipline || 'general'} field, create a ${templateLevel.toLowerCase()} level proposal for the ${section} section.
       
-      Project Details:
-      - Title: ${project.title}
-      - Description: ${project.description}
-      - Target Audience: ${project.targetAudience || 'Not specified'}
-      - Budget: ${project.budget || 'Not specified'}
-      - Timeline: ${project.timeline || 'Not specified'}
+      Context: ${context}
       
-      Include:
-      1. Executive Summary
-      2. Problem Statement
-      3. Proposed Solution
-      4. Scope of Work
-      5. Timeline and Milestones
-      6. Budget Breakdown
-      7. Success Metrics
-      8. Risk Assessment
+      Provide a well-structured, professional response appropriate for the selected template level.
     `);
 
     const estimatedTokens = estimateTokens(prompt);
-    const creditCost = calculateCredits(estimatedTokens);
+    const creditCost = calculateCredits(estimatedTokens, estimatedTokens * 0.5); // Using the proper function signature
 
     const user = await db.user.findUnique({
       where: { id: session.user.id },
-      select: { credits: true },
+      select: { aiCreditsUsed: true, aiCreditsLimit: true },
     });
 
-    if (!user || user.credits < creditCost) {
+    if (!user || (user.aiCreditsUsed + creditCost) > user.aiCreditsLimit) {
       return NextResponse.json({ error: "Insufficient credits" }, { status: 402 });
     }
 
-    const completion = await model.chat.completions.create({
-      messages: [{ role: "user", content: prompt }],
-      model: "gpt-4o",
-      max_tokens: 4000,
-      temperature: 0.7,
-    });
-
-    const proposal = completion.choices[0]?.message?.content;
+    const result = await model.generateContent(prompt);
+    const proposal = result.response.text();
     if (!proposal) {
       throw new Error("Failed to generate proposal");
     }
 
+    // Get user tier for expiration date calculation
+    const userWithTier = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { tier: true },
+    });
+
     const conversation = await db.aIConversation.create({
       data: {
         userId: session.user.id,
-        feature: "PROPOSAL",
+        feature: "PROPOSAL_WRITER", // Using the correct enum value
         prompt,
-        response: proposal,
-        tokenUsage: estimatedTokens,
-        creditCost,
-        expiresAt: getConversationExpirationDate(),
+        response: typeof proposal === 'string' ? proposal : Array.isArray(proposal) ? proposal.join(' ') : '',
+        tokensUsed: estimatedTokens, // Using correct field name
+        expiresAt: getConversationExpirationDate(userWithTier?.tier || 'FREE'), // Pass the tier parameter
       },
     });
 
     await db.user.update({
       where: { id: session.user.id },
-      data: { credits: { decrement: creditCost } },
+      data: { aiCreditsUsed: { increment: creditCost } },
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      proposal,
+    return NextResponse.json({
+      success: true,
+      proposal: typeof proposal === 'string' ? proposal : Array.isArray(proposal) ? proposal.join(' ') : '',
       conversationId: conversation.id,
       creditsUsed: creditCost,
-      remainingCredits: user.credits - creditCost
+      remainingCredits: user.aiCreditsLimit - (user.aiCreditsUsed + creditCost)
     });
   } catch (error) {
     console.error("[AI_PROPOSAL_ERROR]", error);
