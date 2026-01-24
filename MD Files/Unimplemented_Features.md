@@ -80,12 +80,6 @@ This document outlines the features that are mentioned in the project's README b
 - **Description**: The codebase includes tier-based systems (FREE/PREMIUM) and AI credit limits, but premium-specific features are not fully implemented.
 - **Evidence**: `Tier` enum and `aiCreditsLimit` field in User model in Prisma schema.
 
-### Email Templates
-
-- **Status**: Partially Implemented
-- **Description**: Email templates exist for welcome, verification, password reset, and team invites, but not all mentioned email types are implemented.
-- **Evidence**: Found email templates in `src/emails/` directory.
-
 ## Technical Implementation Notes
 
 ### AI Component Type Compatibility Issues
@@ -101,7 +95,6 @@ This document outlines the features that are mentioned in the project's README b
 
 Based on the Prisma schema, the following models lack corresponding API routes:
 
-- Template
 - DocumentVersion
 - NotificationPreference (partial implementation)
 

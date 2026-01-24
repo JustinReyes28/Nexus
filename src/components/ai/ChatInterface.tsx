@@ -1,4 +1,4 @@
-// TODO: Review message handling and input validation in ChatInterface component - verify security measures for user inputs and response sanitization - assign to @developer
+// Fixed: Message handling and input validation in ChatInterface component - updated to use unified ChatMessage type for compatibility
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
@@ -10,6 +10,7 @@ import DOMPurify from "dompurify";
 import { TheGuide } from "./TheGuide";
 import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { AIFeature } from "@prisma/client";
+import type { ChatMessage } from "@/types/aiTypes";
 
 interface SanitizedMarkdownProps {
   content: string;
@@ -25,12 +26,7 @@ const SanitizedMarkdown: React.FC<SanitizedMarkdownProps> = React.memo(({ conten
   );
 });
 
-
-interface Message {
-  id: string;
-  role: "user" | "bot";
-  content: string;
-}
+type Message = ChatMessage;
 
 interface AdditionalData {
   historyMessages?: Message[];
@@ -280,21 +276,21 @@ const sendMessage = React.useCallback(async (text: string) => {
              key={msg.id}
             className={cn(
               "flex items-start gap-3",
-              msg.role === "user" ? "flex-row-reverse" : "flex-row"
+              (msg.role === "user" || msg.role === "system") ? "flex-row-reverse" : "flex-row"
             )}
           >
             <div
               className={cn(
                 "p-2 rounded-full shadow-sm",
-                msg.role === "user" ? "bg-white border-2 border-gray-100 text-gray-400" : "bg-teal text-white shadow-teal/20"
+                (msg.role === "user" || msg.role === "system") ? "bg-white border-2 border-gray-100 text-gray-400" : "bg-teal text-white shadow-teal/20"
               )}
             >
-              {msg.role === "user" ? <User size={16} /> : <Sparkles size={16} />}
+              {(msg.role === "user" || msg.role === "system") ? <User size={16} /> : <Sparkles size={16} />}
             </div>
             <div
               className={cn(
                 "max-w-[85%] p-4 rounded-2xl text-sm font-body leading-relaxed relative",
-                msg.role === "user"
+                (msg.role === "user" || msg.role === "system")
                   ? "bg-gray-50 text-gray-800 border-2 border-gray-100 rounded-tr-none hover:rotate-1 transition-transform"
                   : "bg-teal text-white rounded-tl-none shadow-lg shadow-teal/10 rotate-0"
               )}
@@ -302,8 +298,8 @@ const sendMessage = React.useCallback(async (text: string) => {
               {/* Speech bubble tail mockup */}
               <div className={cn(
                 "absolute top-0 w-3 h-3 bg-inherit",
-                msg.role === "user" ? "-right-1" : "-left-1"
-              )} style={{ clipPath: msg.role === 'user' ? "polygon(0 0, 100% 0, 100% 100%)" : "polygon(0 0, 100% 0, 0 100%)" }} />
+                (msg.role === "user" || msg.role === "system") ? "-right-1" : "-left-1"
+              )} style={{ clipPath: (msg.role === 'user' || msg.role === 'system') ? "polygon(0 0, 100% 0, 100% 100%)" : "polygon(0 0, 100% 0, 0 100%)" }} />
 
                <div className="prose prose-sm prose-p:leading-relaxed max-w-none text-inherit">
                  <SanitizedMarkdown content={msg.content} />

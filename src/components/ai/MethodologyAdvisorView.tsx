@@ -1,8 +1,9 @@
-// TODO: Review type compatibility between ChatMessage and Message interfaces in MethodologyAdvisorView component - fix type mismatch for historyMessages prop in ChatInterface - assign to @developer
+// Fixed: Type compatibility between ChatMessage and Message interfaces in MethodologyAdvisorView component - fixed type mismatch for historyMessages prop in ChatInterface
 "use client";
 
 import React, { useState } from "react";
 import type { Conversation, ChatMessage } from "@/types/aiTypes";
+import { convertConversationToMessages } from "@/types/aiTypes";
 import { ChatInterface } from "./ChatInterface";
 import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { Button } from "@/components/ui/Button";
@@ -40,10 +41,7 @@ export const MethodologyAdvisorView: React.FC = () => {
 
 const handleHistorySelect = (conv: Conversation) => {
     setActiveHistoryId(conv.id);
-    setHistoryMessages([
-      { id: `hist-user-${conv.id}`, role: "user", content: conv.prompt },
-      { id: `hist-bot-${conv.id}`, role: "bot", content: conv.response }
-    ]);
+    setHistoryMessages(convertConversationToMessages(conv));
     setIsSubmitted(true);
     setIsHistoryOpen(false);
   };
