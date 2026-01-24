@@ -102,3 +102,5 @@ nul
 tsconfig.tsbuildinfo
 .coderabbit/vscode-settings.json
 .coderabbit.yaml
+.kilocode/mcp.json
+..kilocode/

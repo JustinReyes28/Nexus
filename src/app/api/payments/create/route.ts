@@ -2,8 +2,14 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { verifyAuthenticatedUser } from '@/lib/payments';
 import { BILLING_CONSTANTS } from '@/config/constants';
+import { csrfMiddleware } from '@/lib/csrf';
+import type { NextRequest } from 'next/server';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Apply CSRF protection
+  const csrfError = csrfMiddleware(request);
+  if (csrfError) return csrfError;
+
   try {
     const userId = await verifyAuthenticatedUser(request);
     

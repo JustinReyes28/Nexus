@@ -1,4 +1,3 @@
-// Test
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -8,6 +7,7 @@ import { model, sanitizePrompt, estimateTokens, calculateCredits } from "@/lib/a
 import { rateLimiter } from "@/lib/rate-limit";
 import { getConversationExpirationDate, CONVERSATION_RETENTION_POLICY } from "@/config/ai";
 import { logger } from "@/lib/logger";
+import { csrfMiddleware } from "@/lib/csrf";
 
 /**
  * Sanitizes text for logging by removing potential PII and sensitive content
@@ -33,195 +33,133 @@ function sanitizeForLogging(text: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  // Apply CSRF protection
+  const csrfError = csrfMiddleware(req);
+  if (csrfError) return csrfError;
+
   try {
-    logger.debug("[AI_CHAT_START] Request received");
-    // 1. Authentication Check
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Rate Limiting Check
-    const forwardedIp = req.headers.get("x-forwarded-for");
-    const rateLimitIdentifier = session.user?.id 
-      ? `${session.user.id}:${forwardedIp || 'no-ip'}` 
-      : forwardedIp || crypto.randomUUID();
-    
-    if (rateLimiter.isRateLimited(rateLimitIdentifier)) {
+    if (rateLimiter.isRateLimited(session.user.id)) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
-// 3. Input Validation
-    const body = await req.json();
-    logger.debug("[AI_CHAT_BODY] Request metadata:", {
-      hasTopic: !!body.topic,
-      hasMessage: !!body.message,
-      hasContext: !!body.context,
-      messageLength: body.message?.length || body.topic?.length || 0,
-      contextLength: body.context?.length || 0
-    });
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
 
-    // For chat, we just need a topic/message field
-    const { topic, message, context } = body;
-    if (!topic && !message) {
+    const { projectId, message, conversationHistory, feature = "CHAT" } = body;
+
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
-    // Validate against whitespace-only input
-    const hasValidContent = (topic?.trim() && topic.trim().length > 0) || 
-                           (message?.trim() && message.trim().length > 0);
-    if (!hasValidContent) {
-      return NextResponse.json({ error: "Message cannot be empty or whitespace only" }, { status: 400 });
+    if (message.length > 10000) {
+      return NextResponse.json({ error: "Message too long. Maximum 10,000 characters." }, { status: 400 });
     }
 
-    const userMessage = topic || message || "";
-    logger.debug("[AI_CHAT_VALIDATED] Message validated with length:", userMessage?.length || 0);
+    const project = projectId ? await db.project.findUnique({
+      where: { id: projectId, ownerId: session.user.id },
+    }) : null;
 
-    // 4. Generate Prompt
-    const sanitizedMessage = sanitizePrompt(userMessage);
-    const sanitizedContext = context ? sanitizePrompt(context) : "";
+    const sanitizedMessage = sanitizePrompt(message);
+    const conversationHistoryFormatted = conversationHistory?.map((msg: any) => ({
+      role: msg.role,
+      content: sanitizePrompt(msg.content)
+    })) || [];
 
-    const prompt = `
-      As "The Guide", an AI academic assistant, engage in a helpful conversation with the user about their capstone project or academic work.
+    const systemPrompt = project ? `
+      You are an AI assistant helping with project: ${project.title}
+      Project description: ${project.description || 'No description'}
+      Status: ${project.status}
+      ${project.discipline ? `Discipline: ${project.discipline}` : ''}
+      ${project.startDate ? `Start Date: ${project.startDate.toISOString().split('T')[0]}` : ''}
+      ${project.deadline ? `Deadline: ${project.deadline.toISOString().split('T')[0]}` : ''}
       
-      User message: "${sanitizedMessage}"
-      ${sanitizedContext ? `Additional context: ${sanitizedContext}` : ""}
-      
-      Provide a helpful, friendly, and informative response that addresses their question or continues the conversation naturally.
-      Keep responses concise but informative, and maintain a supportive tone appropriate for academic guidance.
-      If the user asks about a specific academic topic, provide insights that would be valuable for a student working on a capstone project.
-      
-      Format your response in clear markdown.
-    `;
+      Provide helpful, professional, and concise responses.
+    ` : "You are an AI assistant. Provide helpful, professional, and concise responses.";
 
-    // 5. Call AI
-    logger.metadata("[AI_CHAT_PROMPT]", prompt);
-    
-    // Set up timeout for AI call
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-    
-    let result;
-    try {
-      result = await model.generateContent(prompt);
-      clearTimeout(timeoutId);
-    } catch (error) {
-      clearTimeout(timeoutId);
-      throw error;
-    }
-    
-    // Defensively read response text without blind type assertion
-    const responseTextRaw = result.response.text();
-    // Handle both string and ContentChunk[] types
-    const responseText = Array.isArray(responseTextRaw) 
-      ? responseTextRaw.map(chunk => typeof chunk === 'string' ? chunk : '').join('')
-      : (responseTextRaw as string);
-      
-    if (!responseText || responseText.trim().length === 0) {
-      throw new Error("Empty response received from AI service");
-    }
-    
-    const safeResponseText = sanitizeForLogging(responseText);
-    logger.metadata("[AI_CHAT_RESPONSE]", safeResponseText);
-    
-    const usage = result.usage;
+    const fullPrompt = `${systemPrompt}\n\nConversation History:\n${conversationHistoryFormatted.map((msg: any) => `${msg.role}: ${msg.content}`).join('\n')}\n\nUser: ${sanitizedMessage}`;
 
-    const creditsToDeduct = usage 
-      ? calculateCredits(usage.promptTokens, usage.completionTokens)
-      : calculateCredits(estimateTokens(prompt), estimateTokens(responseText));
+    const estimatedTokens = estimateTokens(fullPrompt);
+    const creditCost = calculateCredits(estimatedTokens, 2000);
 
-    // Get user data for credit check and tier info
     const user = await db.user.findUnique({
-      where: { id: session.user.id as string },
-      select: { aiCreditsUsed: true, aiCreditsLimit: true, tier: true },
+      where: { id: session.user.id },
+      select: { aiCreditsLimit: true, aiCreditsUsed: true },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!user || (user.aiCreditsUsed + creditCost) > user.aiCreditsLimit) {
+      return NextResponse.json({ error: "Insufficient credits" }, { status: 402 });
     }
 
-    // 6. Deduct Credits & Log Interaction (Atomic Transaction with Credit Check)
-    try {
-      await db.$transaction(async (tx) => {
-        // Atomic update: increment credits only if within limit
-        const updateResult = await tx.user.updateMany({
-          where: {
-            id: session.user.id,
-            // Check that current usage + new deduction doesn't exceed limit
-            aiCreditsUsed: { lt: user.aiCreditsLimit }
-          },
-          data: {
-            aiCreditsUsed: { increment: creditsToDeduct }
-          }
-        });
+    logger.info(`AI Chat request`, {
+      userId: session.user.id,
+      projectId,
+      feature,
+      messageLength: sanitizedMessage.length,
+      estimatedTokens,
+      creditCost,
+      sanitized: sanitizeForLogging(sanitizedMessage)
+    });
 
-        // If no records were updated, it means the credit limit would be exceeded
-        if (updateResult.count === 0) {
-          throw new Error("AI credit limit reached");
-        }
-        
-        // Create AI conversation record with response size handling
-        const MAX_RESPONSE_LENGTH = 15 * 1024 * 1024; // 15MB safe threshold (MongoDB limit is 16MB)
-        let processedResponse = responseText as string;
-        
-        // If response exceeds the safe threshold, truncate and add summary
-        if ((responseText as string).length > MAX_RESPONSE_LENGTH) {
-          processedResponse = (responseText as string).substring(0, MAX_RESPONSE_LENGTH) + 
-            "\n\n---\n*Response truncated due to length. The full response was too long to store in the database.*";
-        }
+    const completion = await model.chat.completions.create({
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...conversationHistoryFormatted,
+        { role: "user", content: sanitizedMessage }
+      ],
+      model: "gpt-4o",
+      max_tokens: 2000,
+      temperature: 0.7,
+    });
 
-        await tx.aIConversation.create({
-          data: {
-            feature: "CHAT" as const,
-            prompt: sanitizedMessage as string,
-            response: processedResponse,
-            tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + (responseText as string)),
-            userId: session.user.id,
-            expiresAt: getConversationExpirationDate(user?.tier || 'FREE'),
-          },
-        });
-      });
-    } catch (dbError) {
-      // Check if it's a credit limit error
-      if (dbError instanceof Error && dbError.message === "AI credit limit reached") {
-        return NextResponse.json({ error: "AI credit limit reached" }, { status: 403 });
-      }
-      console.error("[AI_CHAT_DB_ERROR]", dbError);
-      throw dbError;
+    const response = completion.choices[0]?.message?.content;
+    if (!response) {
+      throw new Error("Failed to generate response");
     }
 
-return NextResponse.json({ response: responseText as string });
+    const conversation = await db.aIConversation.create({
+      data: {
+        userId: session.user.id,
+        feature,
+        prompt: fullPrompt,
+        response,
+        tokenUsage: estimatedTokens,
+        creditCost,
+        projectId: projectId || null,
+        expiresAt: getConversationExpirationDate(),
+      },
+    });
+
+    await db.user.update({
+      where: { id: session.user.id },
+      data: { aiCreditsUsed: { increment: creditCost } },
+    });
+
+    logger.info(`AI Chat response generated`, {
+      userId: session.user.id,
+      conversationId: conversation.id,
+      creditsUsed: creditCost,
+      remainingCredits: user.aiCreditsLimit - (user.aiCreditsUsed + creditCost)
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      response,
+      conversationId: conversation.id,
+      creditsUsed: creditCost,
+      remainingCredits: user.aiCreditsLimit - (user.aiCreditsUsed + creditCost)
+    });
   } catch (error) {
-    logger.error("[AI_CHAT_ERROR]", error);
-
-    if (error instanceof Error) {
-      // Use AI SDK canonical error identifiers when available
-      const errorCode = (error as any).code || (error as any).type || '';
-      const errorDetails = (error as any).body || {};
-      
-      // Check for canonical error codes first
-      if (errorCode === 'invalid_api_key' || errorCode === 'unauthorized' || 
-          errorDetails.code === 'invalid_api_key' || errorDetails.code === 'unauthorized') {
-        return NextResponse.json({ error: "Invalid AI API configuration" }, { status: 500 });
-      } else if (errorCode === 'network_error' || errorCode === 'timeout' ||
-                 errorDetails.code === 'network_error' || errorDetails.code === 'timeout') {
-        return NextResponse.json({ error: "AI service unavailable. Please try again later." }, { status: 503 });
-      } else if (errorCode === 'rate_limit_exceeded' || errorDetails.code === 'rate_limit_exceeded') {
-        return NextResponse.json({ error: "AI service rate limit exceeded. Please try again later." }, { status: 429 });
-      } else if (errorCode === 'quota_exceeded' || errorDetails.code === 'quota_exceeded') {
-        return NextResponse.json({ error: "AI service quota exceeded. Please upgrade your plan." }, { status: 402 });
-      }
-      
-      // Fallback to message-based checks for backward compatibility
-      if (error.message.includes("API key not valid") || error.message.includes("Invalid API key")) {
-        return NextResponse.json({ error: "Invalid AI API configuration" }, { status: 500 });
-      } else if (error.message.includes("network") || error.message.includes("fetch")) {
-        return NextResponse.json({ error: "AI service unavailable. Please try again later." }, { status: 503 });
-      } else if (error.message.includes("credit limit reached") || error.message.includes("AI credit limit reached")) {
-        return NextResponse.json({ error: "AI credit limit reached" }, { status: 403 });
-      }
-    }
-
+    logger.error("[AI_CHAT_ERROR]", { error: error instanceof Error ? error.message : String(error) });
+    console.error("[AI_CHAT_ERROR]", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

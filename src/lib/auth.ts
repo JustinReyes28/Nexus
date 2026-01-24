@@ -6,6 +6,11 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
 
+// Account lockout configuration
+const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MINUTES = 15;
+const LOCKOUT_DURATION_MS = LOCKOUT_DURATION_MINUTES * 60 * 1000;
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
   session: {
@@ -26,7 +31,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Invalid credentials");
         }
@@ -35,10 +40,39 @@ export const authOptions: NextAuthOptions = {
           where: {
             email: credentials.email,
           },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            password: true,
+            failedLoginAttempts: true,
+            accountLockedUntil: true,
+          },
         });
 
         if (!user || !user.password) {
           throw new Error("Invalid credentials");
+        }
+
+        // Check if account is locked
+        if (user.accountLockedUntil) {
+          const now = new Date();
+          const lockTimeRemaining = user.accountLockedUntil.getTime() - now.getTime();
+          
+          if (lockTimeRemaining > 0) {
+            const minutesRemaining = Math.ceil(lockTimeRemaining / (60 * 1000));
+            throw new Error(`Account temporarily locked. Try again in ${minutesRemaining} minutes.`);
+          } else {
+            // Lockout period has expired, reset attempts
+            await db.user.update({
+              where: { id: user.id },
+              data: {
+                failedLoginAttempts: 0,
+                accountLockedUntil: null,
+              },
+            });
+          }
         }
 
         const isPasswordCorrect = await bcrypt.compare(
@@ -47,7 +81,40 @@ export const authOptions: NextAuthOptions = {
         );
 
         if (!isPasswordCorrect) {
-          throw new Error("Invalid credentials");
+          // Increment failed login attempts
+          const newFailedAttempts = (user.failedLoginAttempts || 0) + 1;
+          let updateData: any = { failedLoginAttempts: newFailedAttempts };
+
+          if (newFailedAttempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
+            // Lock the account
+            const lockoutUntil = new Date(Date.now() + LOCKOUT_DURATION_MS);
+            updateData.accountLockedUntil = lockoutUntil;
+            await db.user.update({
+              where: { id: user.id },
+              data: updateData,
+            });
+            const minutesRemaining = Math.ceil(LOCKOUT_DURATION_MS / (60 * 1000));
+            throw new Error(`Too many failed login attempts. Account locked for ${minutesRemaining} minutes.`);
+          } else {
+            await db.user.update({
+              where: { id: user.id },
+              data: updateData,
+            });
+          }
+          
+          const attemptsRemaining = MAX_FAILED_LOGIN_ATTEMPTS - newFailedAttempts;
+          throw new Error(`Invalid credentials. ${attemptsRemaining} attempts remaining.`);
+        }
+
+        // Reset failed login attempts on successful login
+        if (user.failedLoginAttempts > 0) {
+          await db.user.update({
+            where: { id: user.id },
+            data: {
+              failedLoginAttempts: 0,
+              accountLockedUntil: null,
+            },
+          });
         }
 
         // Return a sanitized user object without sensitive data
@@ -99,5 +166,66 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
+
+async function checkAccountLockoutStatus(userId: string): Promise<{ isLocked: boolean; lockoutTimeRemaining: number | null }> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { accountLockedUntil: true, failedLoginAttempts: true },
+  });
+
+  if (!user?.accountLockedUntil) {
+    return { isLocked: false, lockoutTimeRemaining: null };
+  }
+
+  const now = new Date();
+  const lockTimeRemaining = user.accountLockedUntil.getTime() - now.getTime();
+
+  if (lockTimeRemaining > 0) {
+    return { isLocked: true, lockoutTimeRemaining: lockTimeRemaining };
+  } else {
+    // Lockout period has expired, reset the lockout
+    await db.user.update({
+      where: { id: userId },
+      data: { 
+        accountLockedUntil: null,
+        failedLoginAttempts: 0,
+      },
+    });
+    return { isLocked: false, lockoutTimeRemaining: null };
+  }
+}
+
+async function incrementFailedLoginAttempts(userId: string): Promise<void> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { failedLoginAttempts: true, accountLockedUntil: true },
+  });
+
+  if (!user) return;
+
+  const newFailedAttempts = (user.failedLoginAttempts || 0) + 1;
+  let updateData: any = { failedLoginAttempts: newFailedAttempts };
+
+  if (newFailedAttempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
+    // Lock the account
+    const lockoutUntil = new Date(Date.now() + LOCKOUT_DURATION_MS);
+    updateData.accountLockedUntil = lockoutUntil;
+  }
+
+  await db.user.update({
+    where: { id: userId },
+    data: updateData,
+  });
+}
+
+async function resetFailedLoginAttempts(userId: string): Promise<void> {
+  await db.user.update({
+    where: { id: userId },
+    data: {
+      failedLoginAttempts: 0,
+      accountLockedUntil: null,
+    },
+  });
+}
 
 export default NextAuth(authOptions);

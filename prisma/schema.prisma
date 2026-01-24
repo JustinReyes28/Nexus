@@ -49,6 +49,9 @@ model User {
   aiCreditsUsed  Int       @default(0)
   // Default is 25 for FREE users, updated to 1000 for PREMIUM users via application logic
   aiCreditsLimit Int       @default(25)
+  // Account lockout fields for security
+  failedLoginAttempts Int  @default(0)
+  accountLockedUntil DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

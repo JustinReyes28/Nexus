@@ -6,8 +6,13 @@ import { model, sanitizePrompt, estimateTokens, calculateCredits } from "@/lib/a
 import { rateLimiter } from "@/lib/rate-limit";
 import { proposalSchema } from "@/lib/validations/ai";
 import { getConversationExpirationDate } from "@/config/ai";
+import { csrfMiddleware } from "@/lib/csrf";
 
 export async function POST(req: NextRequest) {
+  // Apply CSRF protection
+  const csrfError = csrfMiddleware(req);
+  if (csrfError) return csrfError;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -18,118 +23,96 @@ export async function POST(req: NextRequest) {
     try {
       body = await req.json();
     } catch (parseError) {
-      console.error("[JSON_PARSE_ERROR] Failed to parse request body:", parseError);
-      return NextResponse.json(
-        { error: "Invalid or empty request body" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
-    const validatedData = proposalSchema.safeParse(body);
-    if (!validatedData.success) return NextResponse.json({ error: validatedData.error.errors[0].message }, { status: 400 });
+    const validationResult = proposalSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json({ error: "Invalid request data", details: validationResult.error.format() }, { status: 400 });
+    }
 
-    const { section, context, discipline, templateLevel = "Standard" } = validatedData.data;
+    const { projectId, requirements, features, additionalInfo } = validationResult.data;
     
-    // Get user with both credits and tier in a single query
-    const user = await db.user.findUnique({
-      where: { id: session.user.id as string },
-      select: { tier: true, aiCreditsUsed: true, aiCreditsLimit: true },
+    const project = await db.project.findUnique({
+      where: { id: projectId, userId: session.user.id },
     });
 
-    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-    // Sanitize all user-controlled fields
-    const sanitizedSection = sanitizePrompt(section || "");
-    const sanitizedDiscipline = sanitizePrompt(discipline || "");
-    const sanitizedContext = sanitizePrompt(context || "");
-    const sanitizedLevel = sanitizePrompt(templateLevel);
-
-    let levelInstruction = "";
-    if (templateLevel === "Advanced") {
-      levelInstruction = "Use sophisticated vocabulary and deeper technical analysis. Assume a knowledgeable audience.";
-    } else if (templateLevel === "Academic") {
-      levelInstruction = "Adhere to strict academic standards. Emphasize methodology, citation readiness, and formal structure.";
-    } else {
-      levelInstruction = "Maintain a balanced, professional tone suitable for general academic proposals.";
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    const prompt = `
-      As an academic writing expert, provide guidance and a drafted outline for the "${sanitizedSection}" section of a research proposal.
-      Discipline: ${sanitizedDiscipline || "General Academic"}
-      Template Level: ${sanitizedLevel}
-      Specific Instructions: ${levelInstruction}
-      Target Context: ${sanitizedContext}
-       
-      Structure your response:
-      1. Purpose of this section
-      2. Key elements to include
-      3. Draft Outline/Example Content
-      4. Tips for academic tone
-       
-      Format in clean markdown.
-    `;
+    const prompt = sanitizePrompt(`
+      Create a detailed project proposal based on:
+      Requirements: ${requirements}
+      Features: ${features}
+      Additional Information: ${additionalInfo}
+      
+      Project Details:
+      - Title: ${project.title}
+      - Description: ${project.description}
+      - Target Audience: ${project.targetAudience || 'Not specified'}
+      - Budget: ${project.budget || 'Not specified'}
+      - Timeline: ${project.timeline || 'Not specified'}
+      
+      Include:
+      1. Executive Summary
+      2. Problem Statement
+      3. Proposed Solution
+      4. Scope of Work
+      5. Timeline and Milestones
+      6. Budget Breakdown
+      7. Success Metrics
+      8. Risk Assessment
+    `);
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text() as string;
-    const usage = result.usage;
+    const estimatedTokens = estimateTokens(prompt);
+    const creditCost = calculateCredits(estimatedTokens);
 
-    const creditsToDeduct = usage 
-      ? calculateCredits(usage.promptTokens, usage.completionTokens)
-      : calculateCredits(estimateTokens(prompt), estimateTokens(responseText));
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { credits: true },
+    });
 
-    // Perform atomic credit check and deduction in a single transaction
-    try {
-      // Execute credit deduction and conversation creation in a single transaction
-      await db.$transaction(async (tx) => {
-        // Atomic update: increment credits only if within limit
-        const updateResult = await tx.user.updateMany({
-          where: {
-            id: session.user.id,
-          // Check that current usage + new deduction doesn't exceed limit
-          aiCreditsUsed: { lt: user.aiCreditsLimit }
-          },
-          data: {
-            aiCreditsUsed: { increment: creditsToDeduct }
-          }
-        });
-
-        // If no records were updated, it means the credit limit would be exceeded
-        if (updateResult.count === 0) {
-          throw new Error("AI credit limit reached");
-        }
-
-// Create AI conversation record with response size handling
-        const MAX_RESPONSE_LENGTH = 15 * 1024 * 1024; // 15MB safe threshold (MongoDB limit is 16MB)
-        let processedResponse = responseText;
-        
-        // If response exceeds the safe threshold, truncate and add summary
-        if (responseText.length > MAX_RESPONSE_LENGTH) {
-          processedResponse = responseText.substring(0, MAX_RESPONSE_LENGTH) + 
-            "\n\n---\n*Response truncated due to length. The full response was too long to store in the database.*";
-        }
-
-        // Create the conversation record
-        await tx.aIConversation.create({
-          data: {
-            feature: "PROPOSAL_WRITER",
-            prompt: `Section: ${section} | Level: ${templateLevel} | Context: ${context.substring(0, 50)}${context.length > 50 ? "..." : ""}`,
-            response: processedResponse,
-            tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
-            userId: session.user.id,
-            expiresAt: getConversationExpirationDate(user?.tier || 'FREE'),
-          },
-        });
-      });
-    } catch (dbError) {
-      // Check if it's a credit limit error
-      if (dbError instanceof Error && dbError.message === "AI credit limit reached") {
-        return NextResponse.json({ error: "AI credit limit reached" }, { status: 403 });
-      }
-      console.error("[AI_PROPOSAL_DB_ERROR]", dbError);
-      throw dbError;
+    if (!user || user.credits < creditCost) {
+      return NextResponse.json({ error: "Insufficient credits" }, { status: 402 });
     }
 
-    return NextResponse.json({ response: responseText });
+    const completion = await model.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "gpt-4o",
+      max_tokens: 4000,
+      temperature: 0.7,
+    });
+
+    const proposal = completion.choices[0]?.message?.content;
+    if (!proposal) {
+      throw new Error("Failed to generate proposal");
+    }
+
+    const conversation = await db.aIConversation.create({
+      data: {
+        userId: session.user.id,
+        feature: "PROPOSAL",
+        prompt,
+        response: proposal,
+        tokenUsage: estimatedTokens,
+        creditCost,
+        expiresAt: getConversationExpirationDate(),
+      },
+    });
+
+    await db.user.update({
+      where: { id: session.user.id },
+      data: { credits: { decrement: creditCost } },
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      proposal,
+      conversationId: conversation.id,
+      creditsUsed: creditCost,
+      remainingCredits: user.credits - creditCost
+    });
   } catch (error) {
     console.error("[AI_PROPOSAL_ERROR]", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
