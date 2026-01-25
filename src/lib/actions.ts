@@ -5,6 +5,9 @@ import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { recordActivity } from "./activities";
+import { Priority } from "@prisma/client";
+
+const ALLOWED_PRIORITIES = Object.values(Priority);
 
 export async function createProject(formData: FormData) {
   const session = await getServerSession(authOptions);
@@ -28,7 +31,7 @@ export async function createProject(formData: FormData) {
     throw new Error('Description is required');
   }
 
-const title = titleInput.trim();
+  const title = titleInput.trim();
   const description = descriptionInput.trim();
 
   // Validate and parse startDateInput
@@ -82,7 +85,7 @@ if (template && template.content) {
               return {
                 title: t.title.trim(),
                 description: t.description ? t.description.toString() : null,
-                priority: t.priority || "MEDIUM",
+                priority: ALLOWED_PRIORITIES.includes(t.priority) ? t.priority : "MEDIUM",
                 projectId: newProject.id,
                 dueDate: daysAfterStart !== null 
                   ? new Date(startDate.getTime() + daysAfterStart * 24 * 60 * 60 * 1000)

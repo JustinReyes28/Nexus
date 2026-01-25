@@ -64,9 +64,14 @@ export default function ProjectTasksPage() {
         // Try to read from localStorage first as fallback
         const cachedTasks = localStorage.getItem(`project_${projectId}_tasks`);
         if (cachedTasks) {
-          const parsedCachedTasks = JSON.parse(cachedTasks);
-          const tasksWithParsedDates = parsedCachedTasks.map(parseTaskDates);
-          setTasks(tasksWithParsedDates);
+          try {
+            const parsedCachedTasks = JSON.parse(cachedTasks);
+            const tasksWithParsedDates = parsedCachedTasks.map(parseTaskDates);
+            setTasks(tasksWithParsedDates);
+          } catch (error) {
+            console.error('Failed to parse cached tasks:', error);
+            localStorage.removeItem(`project_${projectId}_tasks`);
+          }
         }
         
         // Fetch fresh tasks from API
@@ -86,9 +91,14 @@ export default function ProjectTasksPage() {
         // Fallback to cached data if available
         const cachedTasks = localStorage.getItem(`project_${projectId}_tasks`);
         if (cachedTasks) {
-          const parsedCachedTasks = JSON.parse(cachedTasks);
-          const tasksWithParsedDates = parsedCachedTasks.map(parseTaskDates);
-          setTasks(tasksWithParsedDates);
+          try {
+            const parsedCachedTasks = JSON.parse(cachedTasks);
+            const tasksWithParsedDates = parsedCachedTasks.map(parseTaskDates);
+            setTasks(tasksWithParsedDates);
+          } catch (error) {
+            console.error('Failed to parse cached tasks:', error);
+            localStorage.removeItem(`project_${projectId}_tasks`);
+          }
         }
       }
     };
@@ -173,8 +183,8 @@ export default function ProjectTasksPage() {
           // Validate response and result before using
           // Check if result has task property, otherwise use result directly
           const createdTask = result?.task ? result.task : result;
-          if (!createdTask) {
-            throw new Error('Invalid response format: no task returned');
+          if (typeof createdTask !== 'object' || createdTask === null || !('id' in createdTask) || !createdTask.id) {
+            throw new Error('Invalid response format: task object must have a valid id');
           }
           const updatedTasks = [...tasks, { ...newTask, id: createdTask.id }];
           setTasks(updatedTasks);
@@ -285,6 +295,10 @@ export default function ProjectTasksPage() {
                       onEdit={(id) => { setEditingTask(tasks.find(t => t.id === id) || null); setShowForm(true); }}
                        onStatusChange={async (id, newStatus) => {
                          try {
+                           // Capture original task before optimistic update
+                           const originalTask = tasks.find(t => t.id === id);
+                           if (!originalTask) return;
+                           
                            // Optimistically update the UI using functional state updates
                            const now = new Date();
                            setTasks(prevTasks => {
@@ -310,7 +324,7 @@ export default function ProjectTasksPage() {
                              // Rollback on failure using functional state updates
                              setTasks(prevTasks => {
                                const revertedTasks = prevTasks.map(t =>
-                                 t.id === id ? { ...t, status: t.status, updatedAt: t.updatedAt } : t
+                                 t.id === id ? { ...t, status: originalTask.status, updatedAt: originalTask.updatedAt } : t
                                );
                                // Update localStorage with the reverted tasks state
                                localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(revertedTasks));

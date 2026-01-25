@@ -33,8 +33,9 @@ export function verifyCsrfToken(token: string): boolean {
     const tokenTime = parseInt(timestamp, 10);
     if (isNaN(tokenTime)) return false;
     
-    // Check expiry (1 hour)
+    // Check expiry (1 hour) and reject future timestamps
     const now = Date.now();
+    if (tokenTime > now) return false; // Reject future timestamps
     if (now - tokenTime > 3600000) return false;
     
     // Compute expected signature

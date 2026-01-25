@@ -111,7 +111,7 @@ try {
                 description: t.description || "",
                 priority: t.priority,
                 projectId: newProject.id,
-                dueDate: t.daysAfterStart
+                dueDate: t.daysAfterStart != null
                   ? new Date(baseDate.getTime() + t.daysAfterStart * 24 * 60 * 60 * 1000)
                   : null,
               }))

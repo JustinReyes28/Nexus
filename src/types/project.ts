@@ -10,7 +10,7 @@ export interface ProjectData {
   deadline: Date | string | null;
   status: ProjectStatus;
   ownerId: string;
-  team?: {
+team?: {
     id: string;
     role: string;
     user: {
@@ -20,7 +20,7 @@ export interface ProjectData {
       image: string | null;
     };
   }[];
-invitations?: {
+  invitations?: {
     id: string;
     email: string | null;  // Contains PII - sanitize before exposing publicly
     role?: string;

@@ -55,7 +55,7 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  accounts                Account[]
+accounts                Account[]
   sessions                Session[]
   projects                Project[]
   tasks                   Task[]
@@ -67,6 +67,7 @@ model User {
   activities              Activity[]
   passwordResetTokens     PasswordResetToken[]
   payments                Payment[]
+  templates               Template[]
 }
 
 model NotificationPreference {
@@ -251,7 +252,10 @@ model Template {
   
   // Authorization fields
   ownerId     String?  @db.ObjectId  // Optional owner ID for user-specific templates
+  owner       User?    @relation(fields: [ownerId], references: [id])
   visibility  Visibility @default(PUBLIC)  // PUBLIC or PRIVATE
+  
+  @@index([ownerId])
 }
 
 enum Visibility {

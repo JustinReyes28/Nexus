@@ -81,7 +81,25 @@ Provide a helpful, accurate, and concise response. Focus on being informative wh
     });
 
     // 7. Call AI after credit verification
-    const result = await model.generateContent(prompt);
+    let result;
+    try {
+      result = await model.generateContent(prompt);
+    } catch (error) {
+      // If AI call fails, refund the reserved credits
+      await db.$transaction(async (tx) => {
+        await tx.user.updateMany({
+          where: {
+            id: session.user.id,
+            aiCreditsUsed: { gte: estimatedCreditsToDeduct },
+          },
+          data: {
+            aiCreditsUsed: { decrement: estimatedCreditsToDeduct }
+          },
+        });
+      });
+      throw error; // Re-throw the error after refunding credits
+    }
+
     const responseTextRaw = result.response?.text();
     const responseText = typeof responseTextRaw === 'string' ? responseTextRaw : Array.isArray(responseTextRaw) ? responseTextRaw.join(' ') : '';
     const usage = result.usage;

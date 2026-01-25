@@ -86,17 +86,8 @@ export async function processCreditPurchase(
       finalCreditsLimit
     );
 
-    // Update user
-    const updatedUser = await tx.user.update({
-      where: { id: userId },
-      data: {
-        tier: finalTier,
-        aiCreditsLimit: finalCreditsLimit,
-        aiCreditsUsed: finalCreditsUsed,
-      },
-    });
-
-    // Create payment record with error handling for race conditions
+    // Create payment record BEFORE user update to prevent double-crediting
+    // on concurrent requests (P2002 errors)
     let payment;
     try {
       payment = await tx.payment.create({
@@ -114,33 +105,23 @@ export async function processCreditPurchase(
     } catch (error: any) {
       // Handle unique constraint violation for paymentIntentId
       if (error.code === 'P2002' && error.meta?.target?.includes('paymentIntentId')) {
-        // Another request created the payment concurrently, fetch and return it
-        const existingPayment = await tx.payment.findUnique({
-          where: { paymentIntentId },
-        });
-        
-        if (existingPayment) {
-          // Return the same idempotent response as the existingPayment branch
-          return {
-            success: true,
-            user: {
-              id: user.id,
-              tier: user.tier,
-              aiCreditsUsed: user.aiCreditsUsed,
-              aiCreditsLimit: user.aiCreditsLimit,
-            },
-            payment: {
-              id: existingPayment.id,
-              creditsPurchased: existingPayment.creditsPurchased,
-              amount: existingPayment.amount / 100, // Convert back to dollars
-              bundleType: existingPayment.bundleType,
-            },
-          };
-        }
+        // Another request created the payment concurrently
+        // Re-throw to abort the transaction and let outer logic handle it
+        throw error;
       }
       // Re-throw other errors
       throw error;
     }
+
+    // Update user with credits after successful payment creation
+    const updatedUser = await tx.user.update({
+      where: { id: userId },
+      data: {
+        tier: finalTier,
+        aiCreditsLimit: finalCreditsLimit,
+        aiCreditsUsed: finalCreditsUsed,
+      },
+    });
 
     return {
       success: true,

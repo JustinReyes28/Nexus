@@ -44,8 +44,8 @@ export async function POST(req: NextRequest) {
     const estimatedTokens = estimateTokens(prompt);
     const creditCost = calculateCredits(estimatedTokens, estimatedTokens * 0.5); // Using the proper function signature
 
-    // Perform credit check and AI generation in a single transaction to ensure atomicity
-    const result = await db.$transaction(async (tx) => {
+    // Perform credit check and deduction in transaction first
+    const transactionResult = await db.$transaction(async (tx) => {
       // Atomic credit check and deduction
       const user = await tx.user.findUnique({
         where: { id: session.user.id },
@@ -69,34 +69,52 @@ export async function POST(req: NextRequest) {
         throw new Error("Insufficient credits");
       }
 
-      // Call AI after successful credit deduction
+      return { 
+        user, 
+        remainingCredits: user.aiCreditsLimit - (user.aiCreditsUsed + creditCost) 
+      };
+    });
+
+    // Call AI outside the transaction to avoid timeouts
+    let proposal;
+    try {
       const result = await model.generateContent(prompt);
-      const proposal = result.response.text();
+      proposal = result.response.text();
       if (!proposal) {
         throw new Error("Failed to generate proposal");
       }
-
-      // Create conversation record
-      const conversation = await tx.aIConversation.create({
+    } catch (error) {
+      // If AI call fails, refund the deducted credits
+      await db.user.updateMany({
+        where: {
+          id: session.user.id,
+          aiCreditsUsed: { gte: creditCost },
+        },
         data: {
-          userId: session.user.id,
-          feature: "PROPOSAL_WRITER", // Using the correct enum value
-          prompt,
-          response: typeof proposal === 'string' ? proposal : Array.isArray(proposal) ? proposal.join(' ') : '',
-          tokensUsed: result.usage?.totalTokens ?? estimatedTokens, // Use actual token count if available
-          expiresAt: getConversationExpirationDate(user.tier || 'FREE'), // Use the tier from the user query
+          aiCreditsUsed: { decrement: creditCost }
         },
       });
+      throw error; // Re-throw the error after refunding credits
+    }
 
-      return { proposal, conversation, remainingCredits: user.aiCreditsLimit - (user.aiCreditsUsed + creditCost) };
+    // Create conversation record after successful AI call
+    const conversation = await db.aIConversation.create({
+      data: {
+        userId: session.user.id,
+        feature: "PROPOSAL_WRITER",
+        prompt,
+        response: typeof proposal === 'string' ? proposal : Array.isArray(proposal) ? proposal.join(' ') : '',
+        tokensUsed: estimatedTokens, // Use estimated tokens since we don't have actual usage outside transaction
+        expiresAt: getConversationExpirationDate(transactionResult.user.tier || 'FREE'),
+      },
     });
 
     return NextResponse.json({
       success: true,
-      proposal: typeof result.proposal === 'string' ? result.proposal : Array.isArray(result.proposal) ? result.proposal.join(' ') : '',
-      conversationId: result.conversation.id,
+      proposal: typeof proposal === 'string' ? proposal : Array.isArray(proposal) ? proposal.join(' ') : '',
+      conversationId: conversation.id,
       creditsUsed: creditCost,
-      remainingCredits: result.remainingCredits
+      remainingCredits: transactionResult.remainingCredits
     });
   } catch (error) {
     console.error("[AI_PROPOSAL_ERROR]", error);
