@@ -85,16 +85,24 @@ export async function POST(req: NextRequest) {
       }
     } catch (error) {
       // If AI call fails, refund the deducted credits
-      await db.user.updateMany({
-        where: {
-          id: session.user.id,
-          aiCreditsUsed: { gte: creditCost },
-        },
-        data: {
-          aiCreditsUsed: { decrement: creditCost }
-        },
-      });
-      throw error; // Re-throw the error after refunding credits
+      const origErr = error;
+      try {
+        const result = await db.user.updateMany({
+          where: {
+            id: session.user.id,
+            aiCreditsUsed: { gte: creditCost },
+          },
+          data: {
+            aiCreditsUsed: { decrement: creditCost }
+          },
+        });
+        if (result.count === 0) {
+          console.warn(`Failed to refund credits for user ${session.user.id}: no records updated (creditCost: ${creditCost})`);
+        }
+      } catch (refundError) {
+        console.error(`Failed to refund credits for user ${session.user.id} (creditCost: ${creditCost}):`, refundError);
+      }
+      throw origErr; // Re-throw the original error after refunding credits
     }
 
     // Create conversation record after successful AI call

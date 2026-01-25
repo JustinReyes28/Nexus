@@ -86,18 +86,26 @@ Provide a helpful, accurate, and concise response. Focus on being informative wh
       result = await model.generateContent(prompt);
     } catch (error) {
       // If AI call fails, refund the reserved credits
-      await db.$transaction(async (tx) => {
-        await tx.user.updateMany({
-          where: {
-            id: session.user.id,
-            aiCreditsUsed: { gte: estimatedCreditsToDeduct },
-          },
-          data: {
-            aiCreditsUsed: { decrement: estimatedCreditsToDeduct }
-          },
+      const origErr = error;
+      try {
+        await db.$transaction(async (tx) => {
+          const result = await tx.user.updateMany({
+            where: {
+              id: session.user.id,
+              aiCreditsUsed: { gte: estimatedCreditsToDeduct },
+            },
+            data: {
+              aiCreditsUsed: { decrement: estimatedCreditsToDeduct }
+            },
+          });
+          if (result.count === 0) {
+            console.warn(`Failed to refund credits for user ${session.user.id}: no records updated (concurrent modification)`);
+          }
         });
-      });
-      throw error; // Re-throw the error after refunding credits
+      } catch (refundError) {
+        console.error(`Failed to refund credits for user ${session.user.id} (estimatedCreditsToDeduct: ${estimatedCreditsToDeduct}):`, refundError);
+      }
+      throw origErr; // Re-throw the original error after refunding credits
     }
 
     const responseTextRaw = result.response?.text();

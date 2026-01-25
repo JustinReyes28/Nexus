@@ -68,7 +68,7 @@ export default function ProjectTasksPage() {
             const parsedCachedTasks = JSON.parse(cachedTasks);
             const tasksWithParsedDates = parsedCachedTasks.map(parseTaskDates);
             setTasks(tasksWithParsedDates);
-          } catch (error) {
+          } catch (parseError) {
             console.error('Failed to parse cached tasks:', error);
             localStorage.removeItem(`project_${projectId}_tasks`);
           }
@@ -95,7 +95,7 @@ export default function ProjectTasksPage() {
             const parsedCachedTasks = JSON.parse(cachedTasks);
             const tasksWithParsedDates = parsedCachedTasks.map(parseTaskDates);
             setTasks(tasksWithParsedDates);
-          } catch (error) {
+          } catch (parseError) {
             console.error('Failed to parse cached tasks:', error);
             localStorage.removeItem(`project_${projectId}_tasks`);
           }
