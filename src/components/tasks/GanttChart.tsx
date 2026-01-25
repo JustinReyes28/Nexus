@@ -20,9 +20,11 @@ interface GanttChartProps {
 
 export default function GanttChart({ tasks }: GanttChartProps) {
   // Simple Gantt implementation for visualization
-  const sortedTasks = [...tasks].sort((a, b) =>
-    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-  );
+  const sortedTasks = [...tasks].sort((a, b) => {
+    const dateA = new Date(a.createdAt);
+    const dateB = new Date(b.createdAt);
+    return (!isNaN(dateA.getTime()) ? dateA.getTime() : 0) - (!isNaN(dateB.getTime()) ? dateB.getTime() : 0);
+  });
 
   const getPriorityColor = (priority: GanttChartProps["tasks"][number]["priority"]) => {
     switch (priority) {
@@ -41,10 +43,20 @@ export default function GanttChart({ tasks }: GanttChartProps) {
 
   const getBarPosition = (task: GanttChartProps["tasks"][number], timelineStart: Date, timelineEnd: Date) => {
     const taskStart = task.startDate ?? task.createdAt;
-    const taskEnd = task.endDate ?? task.dueDate ?? new Date(taskStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const taskStartValid = !isNaN(new Date(taskStart).getTime()) ? new Date(taskStart) : new Date();
+    
+    let taskEnd: Date;
+    if (task.endDate && !isNaN(new Date(task.endDate).getTime())) {
+      taskEnd = new Date(task.endDate);
+    } else if (task.dueDate && !isNaN(new Date(task.dueDate).getTime())) {
+      taskEnd = new Date(task.dueDate);
+    } else {
+      taskEnd = new Date(taskStartValid.getTime() + 7 * 24 * 60 * 60 * 1000);
+    }
+    
     const totalDuration = timelineEnd.getTime() - timelineStart.getTime();
-    const duration = taskEnd.getTime() - taskStart.getTime();
-    const left = ((taskStart.getTime() - timelineStart.getTime()) / totalDuration) * 100;
+    const duration = taskEnd.getTime() - taskStartValid.getTime();
+    const left = ((taskStartValid.getTime() - timelineStart.getTime()) / totalDuration) * 100;
     const width = (duration / totalDuration) * 100;
     return {
       left: Math.max(0, Math.min(100, left)),
@@ -52,8 +64,33 @@ export default function GanttChart({ tasks }: GanttChartProps) {
     };
   };
 
-  const timelineStart = new Date(Math.min(...sortedTasks.map(task => new Date(task.startDate ?? task.createdAt).getTime())));
-  const timelineEnd = new Date(Math.max(...sortedTasks.map(task => new Date(task.endDate ?? task.dueDate ?? new Date((task.startDate ?? task.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000)).getTime())));
+  const validDates = sortedTasks
+    .map(task => {
+      const startDate = task.startDate ?? task.createdAt;
+      const date = new Date(startDate);
+      return isNaN(date.getTime()) ? null : date.getTime();
+    })
+    .filter(time => time !== null) as number[];
+  
+  const timelineStart = validDates.length > 0 ? new Date(Math.min(...validDates)) : new Date();
+
+  const timelineEndDates = sortedTasks
+    .map(task => {
+      if (task.endDate) {
+        const date = new Date(task.endDate);
+        return isNaN(date.getTime()) ? null : date.getTime();
+      } else if (task.dueDate) {
+        const date = new Date(task.dueDate);
+        return isNaN(date.getTime()) ? null : date.getTime();
+      } else {
+        const startDate = task.startDate ?? task.createdAt;
+        const start = new Date(startDate);
+        return isNaN(start.getTime()) ? null : start.getTime() + 7 * 24 * 60 * 60 * 1000;
+      }
+    })
+    .filter(time => time !== null) as number[];
+
+  const timelineEnd = timelineEndDates.length > 0 ? new Date(Math.max(...timelineEndDates)) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
   return (
     <div className="bg-canvas p-6 rounded-3xl border-2 border-gray-100 shadow-xl relative overflow-hidden">

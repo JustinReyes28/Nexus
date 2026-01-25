@@ -87,6 +87,9 @@ Thumbs.db
 debug.log
 *.log
 
+# Backup files
+*.backup
+
 # Local storage
 storage/
 
@@ -97,3 +100,7 @@ storage/
 nul
 # TypeScript build info
 tsconfig.tsbuildinfo
+.coderabbit/vscode-settings.json
+.coderabbit.yaml
+.kilocode/mcp.json
+.kilocode/

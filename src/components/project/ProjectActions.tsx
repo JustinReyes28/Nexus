@@ -9,7 +9,8 @@ import {
   ListTodo,
   Sparkles,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  UserPlus
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -19,9 +20,10 @@ interface ProjectActionsProps {
   projectId: string;
   status: ProjectStatus;
   onEdit: () => void;
+  onInvite?: () => void;
 }
 
-export default function ProjectActions({ projectId, status, onEdit }: ProjectActionsProps) {
+export default function ProjectActions({ projectId, status, onEdit, onInvite }: ProjectActionsProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const router = useRouter();
@@ -112,6 +114,17 @@ export default function ProjectActions({ projectId, status, onEdit }: ProjectAct
              <Pencil className="w-5 h-5" />
              Edit Details
           </Button>
+
+          {onInvite && (
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 h-12"
+              onClick={onInvite}
+            >
+               <UserPlus className="w-5 h-5" />
+               Invite Team
+            </Button>
+          )}
 
           {isDraft && (
             <Button 

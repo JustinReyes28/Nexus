@@ -8,7 +8,9 @@ export const renderTeamInviteEmail = (inviterName: string, projectName: string, 
   const escapedProjectName = escapeHtml(projectName);
   
   // Validate and sanitize the inviteLink
-  const sanitizedInviteLink = validateAndSanitizeUrl(inviteLink);
+  const isDev = process.env.NODE_ENV === "development";
+  const allowedProtocols = isDev ? ["https:", "http:"] : ["https:"];
+  const sanitizedInviteLink = validateAndSanitizeUrl(inviteLink, allowedProtocols);
   if (!sanitizedInviteLink) {
     throw new Error("Invalid inviteLink provided to renderTeamInviteEmail");
   }

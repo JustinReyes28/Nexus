@@ -6,108 +6,168 @@ import { model, sanitizePrompt, estimateTokens, calculateCredits } from "@/lib/a
 import { rateLimiter } from "@/lib/rate-limit";
 import { proposalSchema } from "@/lib/validations/ai";
 import { getConversationExpirationDate } from "@/config/ai";
+import { csrfMiddleware } from "@/lib/csrf";
 
 export async function POST(req: NextRequest) {
+  // Apply CSRF protection
+  const csrfError = csrfMiddleware(req);
+  if (csrfError) return csrfError;
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     if (rateLimiter.isRateLimited(session.user.id)) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
-    const body = await req.json();
-    const validatedData = proposalSchema.safeParse(body);
-    if (!validatedData.success) return NextResponse.json({ error: validatedData.error.errors[0].message }, { status: 400 });
-
-    const { section, context, discipline } = validatedData.data;
-    
-    // Get user with both credits and tier in a single query
-    const user = await db.user.findUnique({
-      where: { id: session.user.id as string },
-      select: { tier: true, aiCreditsUsed: true, aiCreditsLimit: true },
-    });
-
-    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-    // Sanitize all user-controlled fields
-    const sanitizedSection = sanitizePrompt(section || "");
-    const sanitizedDiscipline = sanitizePrompt(discipline || "");
-    const sanitizedContext = sanitizePrompt(context || "");
-
-    const prompt = `
-      As an academic writing expert, provide guidance and a drafted outline for the "${sanitizedSection}" section of a research proposal.
-      Discipline: ${sanitizedDiscipline || "General Academic"}
-      Target Context: ${sanitizedContext}
-       
-      Structure your response:
-      1. Purpose of this section
-      2. Key elements to include
-      3. Draft Outline/Example Content
-      4. Tips for academic tone
-       
-      Format in clean markdown.
-    `;
-
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text() as string;
-    const usage = result.usage;
-
-    const creditsToDeduct = usage 
-      ? calculateCredits(usage.promptTokens, usage.completionTokens)
-      : calculateCredits(estimateTokens(prompt), estimateTokens(responseText));
-
-    // Perform atomic credit check and deduction in a single transaction
+    let body;
     try {
-      // Execute credit deduction and conversation creation in a single transaction
-      await db.$transaction(async (tx) => {
-        // Atomic update: increment credits only if within limit
-        const updateResult = await tx.user.updateMany({
-          where: {
-            id: session.user.id,
-          // Check that current usage + new deduction doesn't exceed limit
-          aiCreditsUsed: { lt: user.aiCreditsLimit }
-          },
-          data: {
-            aiCreditsUsed: { increment: creditsToDeduct }
-          }
-        });
-
-        // If no records were updated, it means the credit limit would be exceeded
-        if (updateResult.count === 0) {
-          throw new Error("AI credit limit reached");
-        }
-
-// Create AI conversation record with response size handling
-        const MAX_RESPONSE_LENGTH = 15 * 1024 * 1024; // 15MB safe threshold (MongoDB limit is 16MB)
-        let processedResponse = responseText;
-        
-        // If response exceeds the safe threshold, truncate and add summary
-        if (responseText.length > MAX_RESPONSE_LENGTH) {
-          processedResponse = responseText.substring(0, MAX_RESPONSE_LENGTH) + 
-            "\n\n---\n*Response truncated due to length. The full response was too long to store in the database.*";
-        }
-
-        // Create the conversation record
-        await tx.aIConversation.create({
-          data: {
-            feature: "PROPOSAL_WRITER",
-            prompt: `Section: ${section} | Context: ${context.substring(0, 50)}${context.length > 50 ? "..." : ""}`,
-            response: processedResponse,
-            tokensUsed: usage?.totalTokens ?? estimateTokens(prompt + responseText),
-            userId: session.user.id,
-            expiresAt: getConversationExpirationDate(user?.tier || 'FREE'),
-          },
-        });
-      });
-    } catch (dbError) {
-      // Check if it's a credit limit error
-      if (dbError instanceof Error && dbError.message === "AI credit limit reached") {
-        return NextResponse.json({ error: "AI credit limit reached" }, { status: 403 });
-      }
-      console.error("[AI_PROPOSAL_DB_ERROR]", dbError);
-      throw dbError;
+      body = await req.json();
+    } catch (parseError) {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
-    return NextResponse.json({ response: responseText });
+    const validationResult = proposalSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json({ error: "Invalid request data", details: validationResult.error.format() }, { status: 400 });
+    }
+
+    const { section, context, discipline, templateLevel } = validationResult.data;
+
+    const prompt = sanitizePrompt(`
+      As an expert in ${discipline || 'general'} field, create a ${templateLevel.toLowerCase()} level proposal for the ${section} section.
+      
+      Context: ${context}
+      
+      Provide a well-structured, professional response appropriate for the selected template level.
+    `);
+
+    const estimatedTokens = estimateTokens(prompt);
+    const creditCost = calculateCredits(estimatedTokens, estimatedTokens * 0.5); // Using the proper function signature
+
+    // Perform credit check and deduction in transaction first
+    const transactionResult = await db.$transaction(async (tx) => {
+      // Atomic credit check and deduction
+      const user = await tx.user.findUnique({
+        where: { id: session.user.id },
+        select: { aiCreditsUsed: true, aiCreditsLimit: true, tier: true },
+      });
+
+      if (!user || (user.aiCreditsUsed + creditCost) > user.aiCreditsLimit) {
+        throw new Error("Insufficient credits");
+      }
+
+      // Deduct credits atomically
+      const updateResult = await tx.user.updateMany({
+        where: {
+          id: session.user.id,
+          aiCreditsUsed: { lte: user.aiCreditsLimit - creditCost },
+        },
+        data: { aiCreditsUsed: { increment: creditCost } },
+      });
+
+      if (updateResult.count === 0) {
+        throw new Error("Insufficient credits");
+      }
+
+      return { 
+        user, 
+        remainingCredits: user.aiCreditsLimit - (user.aiCreditsUsed + creditCost) 
+      };
+    });
+
+    // Call AI outside the transaction to avoid timeouts
+    let proposal;
+    try {
+      const result = await model.generateContent(prompt);
+      proposal = result.response.text();
+      if (!proposal) {
+        throw new Error("Failed to generate proposal");
+      }
+    } catch (error) {
+      // If AI call fails, refund the deducted credits
+      const origErr = error;
+      try {
+        const result = await db.user.updateMany({
+          where: {
+            id: session.user.id,
+            aiCreditsUsed: { gte: creditCost },
+          },
+          data: {
+            aiCreditsUsed: { decrement: creditCost }
+          },
+        });
+        if (result.count === 0) {
+          console.warn(`Failed to refund credits for user ${session.user.id}: no records updated (creditCost: ${creditCost})`);
+          // Emit monitoring metric for failed refund
+          // await metrics.emit('credits.refund.failed', { userId: session.user.id, creditCost, reason: 'no_records_updated' });
+          
+          // Persist failed refund to retry queue
+          // await db.failedRefund.create({
+          //   data: {
+          //     userId: session.user.id,
+          //     creditAmount: creditCost,
+          //     errorDetails: 'No records updated during refund - concurrent modification or insufficient credits',
+          //     feature: 'PROPOSAL_WRITER'
+          //   }
+          // });
+          
+          // Attach refund error to original error without replacing it
+          const refundErrorMessage = `Credits may require manual reconciliation for user ${session.user.id}`;
+          if (origErr instanceof Error) {
+            (origErr as any).refundError = refundErrorMessage;
+          }
+        }
+      } catch (refundError) {
+        const errorMessage = refundError instanceof Error ? refundError.message : String(refundError);
+        console.error(`Failed to refund credits for user ${session.user.id} (creditCost: ${creditCost}):`, refundError);
+        // Emit monitoring metric for refund error
+        // await metrics.emit('credits.refund.error', { userId: session.user.id, creditCost, error: errorMessage });
+        
+        // Persist failed refund to retry queue
+        // await db.failedRefund.create({
+        //   data: {
+        //     userId: session.user.id,
+        //     creditAmount: creditCost,
+        //     errorDetails: errorMessage,
+        //     feature: 'PROPOSAL_WRITER'
+        //   }
+        // });
+        
+        // Attach refund error to original error without replacing it
+        const refundErrorMessage = `Credits may require manual reconciliation for user ${session.user.id}: ${errorMessage}`;
+        if (origErr instanceof Error) {
+          (origErr as any).refundError = refundErrorMessage;
+        }
+      }
+      throw origErr; // Re-throw the original error after attempting refund
+    }
+
+    // Create conversation record after successful AI call
+    let conversation;
+    try {
+      conversation = await db.aIConversation.create({
+        data: {
+          userId: session.user.id,
+          feature: "PROPOSAL_WRITER",
+          prompt,
+          response: typeof proposal === 'string' ? proposal : Array.isArray(proposal) ? proposal.join(' ') : '',
+          tokensUsed: estimatedTokens, // Use estimated tokens since we don't have actual usage outside transaction
+          expiresAt: getConversationExpirationDate(transactionResult.user.tier || 'FREE'),
+        },
+      });
+    } catch (error) {
+      console.error(`Failed to create conversation for user ${session.user.id} (prompt: ${prompt.substring(0, 100)}...):`, error);
+      // Continue with response even if conversation persistence fails
+    }
+
+    return NextResponse.json({
+      success: true,
+      proposal: typeof proposal === 'string' ? proposal : Array.isArray(proposal) ? proposal.join(' ') : '',
+      conversationId: conversation?.id,
+      conversationSaved: !!conversation,
+      creditsUsed: creditCost,
+      remainingCredits: transactionResult.remainingCredits
+    });
   } catch (error) {
     console.error("[AI_PROPOSAL_ERROR]", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

@@ -15,7 +15,7 @@ export const ChatModeButton = React.forwardRef<HTMLButtonElement, ChatModeButton
     return (
       <button
         ref={ref}
-        onClick={onClick}
+        onClick={props.onClick}
         className={cn(
           "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-semibold transition-all relative",
           isActive

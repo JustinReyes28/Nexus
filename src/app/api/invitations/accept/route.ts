@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
+import { recordActivity } from "@/lib/activities";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -72,6 +73,15 @@ export async function GET(req: Request) {
         projectId: invitation.projectId,
         role: "MEMBER", // Default role for invited members
       },
+    });
+
+    // Log activity
+    await recordActivity({
+      type: "MEMBER_ADDED",
+      userId: session.user.id,
+      projectId: invitation.projectId,
+      targetId: session.user.id,
+      targetName: session.user.name || session.user.email || "New Member",
     });
 
     // Mark invitation as used

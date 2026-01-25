@@ -13,13 +13,10 @@ export interface ActivityItem {
   user: {
     name: string;
   };
-  target: string;
+  target: string | null;
   timestamp: Date;
 }
 
-interface ActivityFeedProps {
-  activities: ActivityItem[];
-}
 
 const icons: Record<ActivityType, React.ReactNode> = {
   TASK_CREATED: <PlusCircle className="w-4 h-4" />,
@@ -81,7 +78,7 @@ export default function ActivityFeed({ activities, onViewHistory }: ActivityFeed
       
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-8 border-b border-gray-100 border-dashed pb-4">
-          <h3 className="font-heading font-extrabold text-gray-900 text-lg">Activity Feed</h3>
+          <h3 className="font-heading font-extrabold text-gray-900 text-lg">Activity Feed ({activities.length})</h3>
           <div className="px-2 py-0.5 bg-sunny/20 border border-sunny/30 rounded-full">
              <span className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">Live Feed</span>
           </div>
@@ -108,10 +105,10 @@ export default function ActivityFeed({ activities, onViewHistory }: ActivityFeed
                       className="font-bold text-crimson group-hover:underline underline-offset-4 cursor-pointer bg-transparent border-none p-0"
                       onClick={() => handleTargetClick(activity)}
                       onKeyDown={(e) => e.key === 'Enter' && handleTargetClick(activity)}
-                      aria-label={`View ${activity.target}`}
+                      aria-label={activity.target ? `View ${activity.target}` : "View activity"}
                       tabIndex={0}
                     >
-                      {activity.target}
+                      {activity.target || "something"}
                     </button>
                   </div>
                   <div className="flex items-center gap-2">

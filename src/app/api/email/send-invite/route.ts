@@ -9,8 +9,9 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { randomBytes } from "crypto";
 
 const inviteSchema = z.object({
-  projectId: z.string().cuid(), // Require CUID format for projectId
+  projectId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid project ID format"),
   email: z.string().email(),
+  role: z.enum(["ADMIN", "MEMBER", "VIEWER"]).default("MEMBER"),
 });
 
 export async function POST(req: Request) {
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { projectId, email } = inviteSchema.parse(body);
+    const { projectId, email, role } = inviteSchema.parse(body);
 
     // Verify inviter is project owner
     const project = await db.project.findFirst({
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
         projectId,
         email,
         token,
+        role,
         invitedBy: session.user.id,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days expiry
       }

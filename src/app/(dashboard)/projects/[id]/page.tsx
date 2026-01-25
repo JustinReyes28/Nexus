@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 
+import TeamSection from "@/components/project/TeamSection";
+
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
 
@@ -21,7 +23,6 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const project = await db.project.findUnique({
     where: {
       id: params.id,
-      ownerId: session.user.id,
     },
     include: {
       _count: {
@@ -30,11 +31,36 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
       tasks: {
         orderBy: { updatedAt: "desc" },
         take: 5
+      },
+      team: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+            }
+          }
+        }
+      },
+      invitations: {
+        where: {
+          used: false
+        }
       }
     }
   });
 
   if (!project) {
+    notFound();
+  }
+
+  // Check if user is owner or team member
+  const isOwner = project.ownerId === session.user.id;
+  const isTeamMember = project.team.some(tm => tm.userId === session.user.id);
+
+  if (!isOwner && !isTeamMember) {
     notFound();
   }
 
@@ -121,6 +147,14 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
 
         {/* Sidebar Actions */}
         <div className="space-y-10">
+          <TeamSection 
+            projectId={project.id}
+            projectName={project.title}
+            initialMembers={project.team}
+            initialInvitations={project.invitations}
+            isOwner={isOwner}
+          />
+
           <ProjectManagement project={project} />
           
           <section className="space-y-4">

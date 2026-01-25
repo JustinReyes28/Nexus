@@ -1,7 +1,7 @@
 // Test
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -31,45 +31,17 @@ interface Task {
   updatedAt: Date;
 }
 
-// Mock data for initial implementation
-const MOCK_TASKS: Task[] = [
-  {
-    id: "1",
-    title: "Research existing solutions",
-    description: "Analyze competitors and existing academic papers on the topic.",
-    status: "COMPLETED",
-    priority: "HIGH",
-    dueDate: new Date(Date.now() - 86400000 * 2),
-    startDate: new Date(Date.now() - 86400000 * 5),
-    endDate: new Date(Date.now() - 86400000 * 2),
-    createdAt: new Date(Date.now() - 86400000 * 7),
-    updatedAt: new Date(Date.now() - 86400000 * 2),
-  },
-  {
-    id: "2",
-    title: "Draft project proposal",
-    description: "Prepare the initial proposal for advisor review.",
-    status: "IN_PROGRESS",
-    priority: "MEDIUM",
-    dueDate: new Date(Date.now() + 86400000 * 3),
-    startDate: new Date(Date.now()),
-    endDate: new Date(Date.now() + 86400000 * 3),
-    createdAt: new Date(Date.now() - 86400000 * 1),
-    updatedAt: new Date(Date.now()),
-  },
-  {
-    id: "3",
-    title: "Setup development environment",
-    description: "Initialize git repo, install dependencies, and configure CI/CD.",
-    status: "TODO",
-    priority: "LOW",
-    dueDate: new Date(Date.now() + 86400000 * 7),
-    startDate: new Date(Date.now() + 86400000 * 4),
-    endDate: new Date(Date.now() + 86400000 * 7),
-    createdAt: new Date(Date.now()),
-    updatedAt: new Date(Date.now()),
-  }
-];
+// Helper function to parse date fields in a task object
+const parseTaskDates = (task: any): Task => {
+  return {
+    ...task,
+    dueDate: task.dueDate ? new Date(task.dueDate) : null,
+    startDate: task.startDate ? new Date(task.startDate) : null,
+    endDate: task.endDate ? new Date(task.endDate) : null,
+    createdAt: task.createdAt ? new Date(task.createdAt) : new Date(),
+    updatedAt: task.updatedAt ? new Date(task.updatedAt) : new Date()
+  };
+};
 
 export default function ProjectTasksPage() {
   const params = useParams();
@@ -80,17 +52,68 @@ export default function ProjectTasksPage() {
   }
 
   const [view, setView] = useState<"list" | "kanban" | "gantt">("kanban");
-  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Load tasks when component mounts or projectId changes
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        // Try to read from localStorage first as fallback
+        const cachedTasks = localStorage.getItem(`project_${projectId}_tasks`);
+if (cachedTasks) {
+          try {
+            const parsedCachedTasks = JSON.parse(cachedTasks);
+            const tasksWithParsedDates = parsedCachedTasks.map(parseTaskDates);
+            setTasks(tasksWithParsedDates);
+          } catch (parseError) {
+            console.error('Failed to parse cached tasks:', parseError);
+            localStorage.removeItem(`project_${projectId}_tasks`);
+          }
+        }
+        
+        // Fetch fresh tasks from API
+        const response = await fetch(`/api/projects/${projectId}/tasks`);
+        if (response.ok) {
+          const fetchedTasks = await response.json();
+          const tasksWithParsedDates = fetchedTasks.map(parseTaskDates);
+          setTasks(tasksWithParsedDates);
+          // Cache in localStorage
+          localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(fetchedTasks));
+        } else {
+          // If API fails, we already have cached data, or use empty array
+          console.error('Failed to fetch tasks:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Error loading tasks:', error);
+// Fallback to cached data if available
+        const cachedTasks = localStorage.getItem(`project_${projectId}_tasks`);
+        if (cachedTasks) {
+          try {
+            const parsedCachedTasks = JSON.parse(cachedTasks);
+            const tasksWithParsedDates = parsedCachedTasks.map(parseTaskDates);
+            setTasks(tasksWithParsedDates);
+          } catch (parseError) {
+            console.error('Failed to parse cached tasks:', parseError);
+            localStorage.removeItem(`project_${projectId}_tasks`);
+          }
+        }
+      }
+    };
+
+    if (projectId) {
+      loadTasks();
+    }
+  }, [projectId]);
 
   const filteredTasks = tasks.filter(t =>
     t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     t.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSaveTask = (data: {
+  const handleSaveTask = async (data: {
     title: string;
     description: string;
     status: "TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED";
@@ -98,36 +121,85 @@ export default function ProjectTasksPage() {
     dueDate: string;
   }) => {
     const now = new Date();
-    if (editingTask) {
-      setTasks(tasks.map(t => t.id === editingTask.id ? {
-        id: t.id,
-        title: data.title,
-        description: data.description,
-        status: data.status,
-        priority: data.priority,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        startDate: t.startDate,
-        endDate: t.endDate,
-        createdAt: t.createdAt,
-        updatedAt: now
-      } : t));
-    } else {
-      const newTask: Task = {
-        id: crypto.randomUUID(),
-        title: data.title,
-        description: data.description,
-        status: data.status,
-        priority: data.priority,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        startDate: null,
-        endDate: null,
-        createdAt: now,
-        updatedAt: now
-      };
-      setTasks([...tasks, newTask]);
+    try {
+      if (editingTask) {
+        // Update existing task
+        const response = await fetch(`/api/projects/${projectId}/tasks`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            taskId: editingTask.id,
+            ...data,
+            dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null
+          })
+        });
+
+        if (response.ok) {
+          const updatedTask = {
+            ...editingTask,
+            title: data.title,
+            description: data.description,
+            status: data.status,
+            priority: data.priority,
+            dueDate: data.dueDate ? new Date(data.dueDate) : null,
+            updatedAt: now
+          };
+          
+          const updatedTasks = tasks.map(t =>
+            t.id === editingTask.id ? updatedTask : t
+          );
+          setTasks(updatedTasks);
+          // Update localStorage
+          localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(updatedTasks));
+        } else {
+          throw new Error('Failed to update task');
+        }
+      } else {
+        // Create new task
+        const response = await fetch(`/api/projects/${projectId}/tasks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...data,
+            dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null
+          })
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          const newTask = {
+            id: crypto.randomUUID(), // This will be replaced by the API response
+            title: data.title,
+            description: data.description,
+            status: data.status,
+            priority: data.priority,
+            dueDate: data.dueDate ? new Date(data.dueDate) : null,
+            startDate: null,
+            endDate: null,
+            createdAt: now,
+            updatedAt: now
+          };
+          
+          // Validate response and result before using
+          // Check if result has task property, otherwise use result directly
+          const createdTask = result?.task ? result.task : result;
+          if (typeof createdTask !== 'object' || createdTask === null || !('id' in createdTask) || !createdTask.id) {
+            throw new Error('Invalid response format: task object must have a valid id');
+          }
+          const updatedTasks = [...tasks, { ...newTask, id: createdTask.id }];
+          setTasks(updatedTasks);
+          // Update localStorage
+          localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(updatedTasks));
+        } else {
+          throw new Error('Failed to create task');
+        }
+      }
+      setShowForm(false);
+      setEditingTask(null);
+    } catch (error) {
+      console.error('Error saving task:', error);
+      alert('Failed to save task. Please try again.');
     }
-    setShowForm(false);
-    setEditingTask(null);
   };
 
   const statusColumns: ("TODO" | "IN_PROGRESS" | "REVIEW" | "COMPLETED")[] = ["TODO", "IN_PROGRESS", "REVIEW", "COMPLETED"];
@@ -221,8 +293,49 @@ export default function ProjectTasksPage() {
                       key={task.id}
                       task={task}
                       onEdit={(id) => { setEditingTask(tasks.find(t => t.id === id) || null); setShowForm(true); }}
-                       onStatusChange={(id, newStatus) => {
-                         setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus, updatedAt: new Date() } : t));
+                       onStatusChange={async (id, newStatus) => {
+                         try {
+                           // Capture original task before optimistic update
+                           const originalTask = tasks.find(t => t.id === id);
+                           if (!originalTask) return;
+                           
+                           // Optimistically update the UI using functional state updates
+                           const now = new Date();
+                           setTasks(prevTasks => {
+                             const updatedTasks = prevTasks.map(t =>
+                               t.id === id ? { ...t, status: newStatus, updatedAt: now } : t
+                             );
+                             // Update localStorage with the new tasks state
+                             localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(updatedTasks));
+                             return updatedTasks;
+                           });
+                           
+                           // Persist to backend
+                           const response = await fetch(`/api/projects/${projectId}/tasks`, {
+                             method: 'PUT',
+                             headers: { 'Content-Type': 'application/json' },
+                             body: JSON.stringify({
+                               taskId: id,
+                               status: newStatus
+                             })
+                           });
+                           
+                           if (!response.ok) {
+                             // Rollback on failure using functional state updates
+                             setTasks(prevTasks => {
+                               const revertedTasks = prevTasks.map(t =>
+                                 t.id === id ? { ...t, status: originalTask.status, updatedAt: originalTask.updatedAt } : t
+                               );
+                               // Update localStorage with the reverted tasks state
+                               localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(revertedTasks));
+                               return revertedTasks;
+                             });
+                             throw new Error('Failed to update task status');
+                           }
+                         } catch (error) {
+                           console.error('Error updating task status:', error);
+                           alert('Failed to update task status. Please try again.');
+                         }
                        }}
                     />
 
@@ -265,7 +378,7 @@ export default function ProjectTasksPage() {
                          </td>
                           <td className="px-6 py-4">
                              <span className="text-xs text-gray-500">
-                                {task.dueDate ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(task.dueDate) : "N/A"}
+                                {task.dueDate && !isNaN(new Date(task.dueDate).getTime()) ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(task.dueDate)) : "N/A"}
                              </span>
                           </td>
                       </tr>

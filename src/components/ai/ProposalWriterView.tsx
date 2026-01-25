@@ -1,4 +1,4 @@
-// TODO: Review type compatibility between different Message interfaces in ProposalWriterView component - fix role type mismatch between \"assistant\"|\"system\" and \"bot\" roles - assign to @developer
+// Fixed: Type compatibility between different Message interfaces in ProposalWriterView component - fixed role type mismatch between \"assistant\"|\"system\" and \"bot\" roles
 "use client";
 
 import React, { useState } from "react";
@@ -6,13 +6,8 @@ import { ChatInterface } from "./ChatInterface";
 import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { Button } from "@/components/ui/Button";
 import { FileEdit, ClipboardList, CheckCircle, Info, Sparkles, History } from "lucide-react";
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp?: string;
-}
+import type { ChatMessage } from "@/types/aiTypes";
+import { convertConversationToMessages } from "@/types/aiTypes";
 
 interface Conversation {
   id: string;
@@ -34,18 +29,21 @@ const SECTIONS = [
 
 export const ProposalWriterView: React.FC = () => {
   const [section, setSection] = useState<typeof SECTIONS[number]>("Introduction");
+  const [templateLevel, setTemplateLevel] = useState<"Standard" | "Advanced" | "Academic">("Standard");
   const [context, setContext] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [historyMessages, setHistoryMessages] = useState<Message[] | undefined>();
+  const [historyMessages, setHistoryMessages] = useState<ChatMessage[] | undefined>();
   const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
 
 const handleHistorySelect = (conv: Conversation) => {
     setActiveHistoryId(conv.id);
-    setHistoryMessages([
-      { id: Date.now().toString(), role: "user", content: conv.prompt },
-      { id: (Date.now() + 1).toString(), role: "assistant", content: conv.response }
-    ]);
+    
+    // Convert conversation to messages using utility function
+    const convertedMessages = convertConversationToMessages(conv);
+    
+    setHistoryMessages(convertedMessages);
+    
     if (conv.section) setSection(conv.section as typeof SECTIONS[number]);
     if (conv.context) setContext(conv.context);
     setIsSubmitted(true);
@@ -100,12 +98,25 @@ const handleHistorySelect = (conv: Conversation) => {
                   </select>
                </div>
                
-               <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Template Level</label>
-                  <div className="flex gap-2">
-                     <span className="flex-1 bg-white border-2 border-gray-100 rounded-xl px-4 py-3 text-xs font-bold text-gray-400 text-center uppercase tracking-widest opacity-50">Standard</span>
-                  </div>
-               </div>
+                <div className="space-y-2">
+                   <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Template Level</label>
+                   <div className="flex gap-2">
+                      {["Standard", "Advanced", "Academic"].map((level) => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => setTemplateLevel(level as any)}
+                          className={`flex-1 border-2 rounded-xl py-3 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                            templateLevel === level
+                              ? "border-crimson bg-crimson/5 text-crimson shadow-sm"
+                              : "border-gray-100 bg-white text-gray-400 hover:border-gray-200"
+                          }`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                   </div>
+                </div>
             </div>
 
             <div className="space-y-2">
@@ -184,14 +195,22 @@ const handleHistorySelect = (conv: Conversation) => {
 
           {/* Chat Interface */}
           <div className="lg:col-span-8">
-            <ChatInterface 
+<ChatInterface
               endpoint="/api/ai/proposal"
               feature="PROPOSAL_WRITER"
               placeholder="Ask for revisions or specific improvements..."
               submitOnMount={!historyMessages || historyMessages.length === 0}
               initialInput={`Draft the ${section} section based on this context.`}
               loadedHistoryId={activeHistoryId}
-              additionalData={{ section, context, historyMessages }}
+              additionalData={{
+                section,
+                context,
+                templateLevel,
+                // Only include historyMessages if it's a valid array
+                ...(historyMessages && Array.isArray(historyMessages) && historyMessages.length > 0 && {
+                  historyMessages
+                })
+              }}
             />
           </div>
         </div>

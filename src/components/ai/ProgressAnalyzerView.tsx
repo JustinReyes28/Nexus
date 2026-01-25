@@ -1,4 +1,4 @@
-// TODO: Review type compatibility between ConversationHistory and Message interfaces in ProgressAnalyzerView component - fix type mismatch for historyMessages prop in ChatInterface - assign to @developer
+// Fixed: Type compatibility between ConversationHistory and Message interfaces in ProgressAnalyzerView component - fixed type mismatch for historyMessages prop in ChatInterface
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -6,6 +6,8 @@ import { ChatInterface } from "./ChatInterface";
 import { ChatHistoryPanel } from "./ChatHistoryPanel";
 import { Button } from "@/components/ui/Button";
 import { TrendingUp, Activity, CheckCircle2, Clock, AlertCircle, Sparkles, History } from "lucide-react";
+import type { ChatMessage } from "@/types/aiTypes";
+import { convertHistoryToMessages } from "@/types/aiTypes";
 
 interface Project {
   id: string;
@@ -26,15 +28,14 @@ export const ProgressAnalyzerView: React.FC = () => {
   const [currentStatus, setCurrentStatus] = useState<string>("");
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
-  const [historyMessages, setHistoryMessages] = useState<ConversationHistory[] | undefined>();
+  const [historyMessages, setHistoryMessages] = useState<ChatMessage[] | undefined>();
+  
   const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>();
   const [isLoadingProjects, setIsLoadingProjects] = useState<boolean>(true);
 
 const handleHistorySelect = (conv: ConversationHistory) => {
     setActiveHistoryId(conv.id);
-    setHistoryMessages([
-      { id: conv.id, prompt: conv.prompt, response: conv.response }
-    ]);
+    setHistoryMessages(convertHistoryToMessages([conv]));
     setIsSubmitted(true);
     setIsHistoryOpen(false);
   };
@@ -263,16 +264,16 @@ const handleSubmit = (e: React.FormEvent) => {
 
           {/* Chat Interface */}
           <div className="lg:col-span-8">
-<ChatInterface 
+<ChatInterface
               endpoint="/api/ai/progress"
               feature="PROGRESS_ANALYZER"
               placeholder="Ask for next steps or deadline checks..."
               submitOnMount={!historyMessages || historyMessages.length === 0}
               initialInput={`Analyze the progress for ${selectedProject?.title ?? 'the project'}.`}
               loadedHistoryId={activeHistoryId}
-              additionalData={{ 
-                projectId: selectedProjectId, 
-                currentStatus, 
+              additionalData={{
+                projectId: selectedProjectId,
+                currentStatus,
                 historyMessages,
                 fromHistory: !!historyMessages && historyMessages.length > 0
               }}

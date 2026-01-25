@@ -33,8 +33,8 @@ export const WritingAssistantView: React.FC = () => {
   const handleHistorySelect = (conv: Conversation) => {
     setActiveHistoryId(conv.id);
     setHistoryMessages([
-      { role: "user", content: conv.prompt },
-      { role: "bot", content: conv.response }
+      { id: `user-${conv.id}`, role: "user", content: conv.prompt },
+      { id: `bot-${conv.id}`, role: "bot", content: conv.response }
     ]);
     setIsSubmitted(true);
     setIsHistoryOpen(false);

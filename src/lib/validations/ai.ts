@@ -16,6 +16,7 @@ export const proposalSchema = z.object({
   section: z.string().min(1, "Section is required").max(100, "Section must be at most 100 characters"),
   context: z.string().min(10, "Context must be at least 10 characters").max(2000, "Context must be at most 2000 characters"),
   discipline: z.string().max(100, "Discipline must be at most 100 characters").optional(),
+  templateLevel: z.enum(["Standard", "Advanced", "Academic"]).default("Standard"),
 });
 
 export const methodologySchema = z.object({
@@ -121,4 +122,9 @@ export const writingSchema = z.object({
   content: z.string().min(10, "Content is too short").max(5000, "Content is too long"),
   style: z.enum(["academic", "professional", "simplified"]).default("academic"),
   type: z.enum(["grammar", "tone", "summarize", "expand"]).default("grammar"),
+});
+
+export const chatSchema = z.object({
+  topic: z.string().min(3, "Topic must be at least 3 characters").max(500, "Topic is too long"),
+  discipline: z.string().max(100, "Discipline must be at most 100 characters").optional(),
 });

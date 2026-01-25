@@ -1,10 +1,12 @@
-// Test
+
 import { db } from "@/lib/db";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { recordActivity } from "@/lib/activities";
+import { sanitizeProjectData } from "@/lib/sanitize-project-data";
 
 const projectUpdateSchema = z.object({
   title: z.string().min(1, "Title is required").max(100).optional(),
@@ -59,7 +61,7 @@ export async function GET(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    return NextResponse.json(project);
+    return NextResponse.json(sanitizeProjectData(project));
   } catch (error) {
     console.error("[PROJECT_GET]", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -101,8 +103,26 @@ export async function PATCH(
       data: updatedData,
     });
 
-    return NextResponse.json(updatedProject);
+    // Log activity if status changed
+    if (validatedData.status && validatedData.status !== project.status) {
+      try {
+        await recordActivity({
+          type: "STATUS_CHANGE",
+          userId: session.user.id,
+          projectId: params.id,
+          targetId: params.id,
+          targetName: updatedProject.status.replace(/_/g, " "),
+        });
+      } catch (activityError) {
+        console.error("[ACTIVITY_LOG]", activityError);
+      }
+    }
+
+    return NextResponse.json(sanitizeProjectData(updatedProject));
   } catch (error) {
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Invalid JSON format" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid input data" }, { status: 400 });
     }
@@ -147,6 +167,9 @@ export async function DELETE(
         where: { projectId: params.id }
       }),
       db.teamMember.deleteMany({
+        where: { projectId: params.id }
+      }),
+      db.activity.deleteMany({
         where: { projectId: params.id }
       }),
       db.project.delete({

@@ -104,16 +104,16 @@ export const FeaturesSection: React.FC = () => {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link href="/register" passHref legacyBehavior>
-              <Button asChild size="lg" className="w-full sm:w-auto">
-                <a>Get Started for Free</a>
-              </Button>
-            </Link>
-            <Link href="/demo" passHref legacyBehavior>
-              <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
-                <a>Watch Demo</a>
-              </Button>
-            </Link>
+             <Link href="/register" passHref legacyBehavior>
+               <Button asChild size="lg" className="w-full sm:w-auto">
+                 <a href="/register">Get Started for Free</a>
+               </Button>
+             </Link>
+             <Link href="/demo" passHref legacyBehavior>
+               <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
+                 <a href="/demo">Watch Demo</a>
+               </Button>
+             </Link>
           </div>
         </div>
       </div>

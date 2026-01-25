@@ -8,6 +8,7 @@ import { Sparkles, ArrowLeft, BookOpen, Target, Lightbulb, Calendar, Flag } from
 import Link from "next/link";
 import { createProject } from "@/lib/actions";
 import { ProjectStatus } from "@prisma/client";
+import { TemplateSelector } from "@/components/templates/TemplateSelector";
 
 interface NewProjectPageProps {
   session: {
@@ -27,6 +28,7 @@ export default function NewProjectPage({ session }: NewProjectPageProps) {
     status: ProjectStatus.IDEATION,
     startDate: "",
     deadline: "",
+    templateId: null as string | null,
   });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -60,6 +62,7 @@ export default function NewProjectPage({ session }: NewProjectPageProps) {
       formDataToSend.append("status", formData.status);
       if (formData.startDate) formDataToSend.append("startDate", formData.startDate);
       if (formData.deadline) formDataToSend.append("deadline", formData.deadline);
+      if (formData.templateId) formDataToSend.append("templateId", formData.templateId);
       formDataToSend.append("userId", session.user.id);
 
       await createProject(formDataToSend);
@@ -182,7 +185,17 @@ export default function NewProjectPage({ session }: NewProjectPageProps) {
               <p className="text-sm text-gray-500 font-body">What field of study does this project belong to?</p>
             </div>
 
+            {/* Template Selector */}
+            <div className="pt-4 border-t border-gray-100">
+              <TemplateSelector 
+                selectedTemplateId={formData.templateId || null}
+                onSelect={(id) => setFormData(prev => ({ ...prev, templateId: id }))}
+                discipline={formData.discipline}
+              />
+            </div>
+
             {/* Project Status */}
+
             <div className="space-y-2">
               <label htmlFor="status" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1 flex items-center gap-2">
                 <Flag className="w-3 h-3 text-crimson" />
