@@ -63,13 +63,13 @@ export default function ProjectTasksPage() {
       try {
         // Try to read from localStorage first as fallback
         const cachedTasks = localStorage.getItem(`project_${projectId}_tasks`);
-        if (cachedTasks) {
+if (cachedTasks) {
           try {
             const parsedCachedTasks = JSON.parse(cachedTasks);
             const tasksWithParsedDates = parsedCachedTasks.map(parseTaskDates);
             setTasks(tasksWithParsedDates);
           } catch (parseError) {
-            console.error('Failed to parse cached tasks:', error);
+            console.error('Failed to parse cached tasks:', parseError);
             localStorage.removeItem(`project_${projectId}_tasks`);
           }
         }
@@ -88,7 +88,7 @@ export default function ProjectTasksPage() {
         }
       } catch (error) {
         console.error('Error loading tasks:', error);
-        // Fallback to cached data if available
+// Fallback to cached data if available
         const cachedTasks = localStorage.getItem(`project_${projectId}_tasks`);
         if (cachedTasks) {
           try {
@@ -96,7 +96,7 @@ export default function ProjectTasksPage() {
             const tasksWithParsedDates = parsedCachedTasks.map(parseTaskDates);
             setTasks(tasksWithParsedDates);
           } catch (parseError) {
-            console.error('Failed to parse cached tasks:', error);
+            console.error('Failed to parse cached tasks:', parseError);
             localStorage.removeItem(`project_${projectId}_tasks`);
           }
         }

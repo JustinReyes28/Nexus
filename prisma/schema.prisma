@@ -251,8 +251,8 @@ model Template {
   updatedAt   DateTime @updatedAt
   
   // Authorization fields
-  ownerId     String?  @db.ObjectId  // Optional owner ID for user-specific templates
-  owner       User?    @relation(fields: [ownerId], references: [id])
+ownerId     String?  @db.ObjectId  // Optional owner ID for user-specific templates
+   owner       User?    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   visibility  Visibility @default(PUBLIC)  // PUBLIC or PRIVATE
   
   @@index([ownerId])

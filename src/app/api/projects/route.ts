@@ -124,7 +124,7 @@ try {
           } catch (e) {
             // Rethrow the error to cause transaction rollback
             if (e instanceof z.ZodError) {
-              throw new Error(`Template validation failed: ${e.message}`);
+              throw e;
             }
             throw new Error(`Failed to parse template content or create tasks: ${e instanceof Error ? e.message : String(e)}`);
           }

@@ -98,29 +98,73 @@ export async function POST(req: NextRequest) {
         });
         if (result.count === 0) {
           console.warn(`Failed to refund credits for user ${session.user.id}: no records updated (creditCost: ${creditCost})`);
+          // Emit monitoring metric for failed refund
+          // await metrics.emit('credits.refund.failed', { userId: session.user.id, creditCost, reason: 'no_records_updated' });
+          
+          // Persist failed refund to retry queue
+          // await db.failedRefund.create({
+          //   data: {
+          //     userId: session.user.id,
+          //     creditAmount: creditCost,
+          //     errorDetails: 'No records updated during refund - concurrent modification or insufficient credits',
+          //     feature: 'PROPOSAL_WRITER'
+          //   }
+          // });
+          
+          // Attach refund error to original error without replacing it
+          const refundErrorMessage = `Credits may require manual reconciliation for user ${session.user.id}`;
+          if (origErr instanceof Error) {
+            (origErr as any).refundError = refundErrorMessage;
+          }
         }
       } catch (refundError) {
+        const errorMessage = refundError instanceof Error ? refundError.message : String(refundError);
         console.error(`Failed to refund credits for user ${session.user.id} (creditCost: ${creditCost}):`, refundError);
+        // Emit monitoring metric for refund error
+        // await metrics.emit('credits.refund.error', { userId: session.user.id, creditCost, error: errorMessage });
+        
+        // Persist failed refund to retry queue
+        // await db.failedRefund.create({
+        //   data: {
+        //     userId: session.user.id,
+        //     creditAmount: creditCost,
+        //     errorDetails: errorMessage,
+        //     feature: 'PROPOSAL_WRITER'
+        //   }
+        // });
+        
+        // Attach refund error to original error without replacing it
+        const refundErrorMessage = `Credits may require manual reconciliation for user ${session.user.id}: ${errorMessage}`;
+        if (origErr instanceof Error) {
+          (origErr as any).refundError = refundErrorMessage;
+        }
       }
-      throw origErr; // Re-throw the original error after refunding credits
+      throw origErr; // Re-throw the original error after attempting refund
     }
 
     // Create conversation record after successful AI call
-    const conversation = await db.aIConversation.create({
-      data: {
-        userId: session.user.id,
-        feature: "PROPOSAL_WRITER",
-        prompt,
-        response: typeof proposal === 'string' ? proposal : Array.isArray(proposal) ? proposal.join(' ') : '',
-        tokensUsed: estimatedTokens, // Use estimated tokens since we don't have actual usage outside transaction
-        expiresAt: getConversationExpirationDate(transactionResult.user.tier || 'FREE'),
-      },
-    });
+    let conversation;
+    try {
+      conversation = await db.aIConversation.create({
+        data: {
+          userId: session.user.id,
+          feature: "PROPOSAL_WRITER",
+          prompt,
+          response: typeof proposal === 'string' ? proposal : Array.isArray(proposal) ? proposal.join(' ') : '',
+          tokensUsed: estimatedTokens, // Use estimated tokens since we don't have actual usage outside transaction
+          expiresAt: getConversationExpirationDate(transactionResult.user.tier || 'FREE'),
+        },
+      });
+    } catch (error) {
+      console.error(`Failed to create conversation for user ${session.user.id} (prompt: ${prompt.substring(0, 100)}...):`, error);
+      // Continue with response even if conversation persistence fails
+    }
 
     return NextResponse.json({
       success: true,
       proposal: typeof proposal === 'string' ? proposal : Array.isArray(proposal) ? proposal.join(' ') : '',
-      conversationId: conversation.id,
+      conversationId: conversation?.id,
+      conversationSaved: !!conversation,
       creditsUsed: creditCost,
       remainingCredits: transactionResult.remainingCredits
     });

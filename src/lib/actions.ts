@@ -55,12 +55,12 @@ export async function createProject(formData: FormData) {
       },
     });
 
-    if (templateId) {
+if (templateId) {
       const template = await tx.template.findUnique({
         where: { id: templateId }
       });
 
-if (template && template.content) {
+      if (template && template.content) {
         try {
           const parsedTasks = JSON.parse(template.content);
           

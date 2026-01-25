@@ -48,13 +48,34 @@ function generateCsrfToken(): string {
 }
 
 /**
- * Add CSRF token to fetch options
+ * Result type for CSRF token addition
  */
-export function addCsrfTokenToFetchOptions(options: RequestInit = {}): RequestInit {
+export type CsrfFetchOptionsResult = {
+  options: RequestInit;
+  tokenMissing: boolean;
+};
+
+/**
+ * Add CSRF token to fetch options
+ * @returns An object containing the updated options and a tokenMissing flag to indicate if the CSRF token was missing
+ * Usage:
+ *   const result = addCsrfTokenToFetchOptions(options);
+ *   if (result.tokenMissing) {
+ *     // Handle missing token case
+ *   }
+ *   return fetch(url, result.options);
+ */
+export function addCsrfTokenToFetchOptions(options: RequestInit = {}): CsrfFetchOptionsResult {
   const token = getCsrfToken();
   if (!token) {
-    // No token available, return options unchanged
-    return options;
+    // No token available, return options unchanged but indicate token is missing
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('CSRF token is missing. Requests may fail due to CSRF protection.');
+    }
+    return {
+      options,
+      tokenMissing: true
+    };
   }
   
   const headers = new Headers(options.headers);
@@ -63,8 +84,11 @@ export function addCsrfTokenToFetchOptions(options: RequestInit = {}): RequestIn
   headers.set('X-CSRF-Token', token);
   
   return {
-    ...options,
-    headers,
+    options: {
+      ...options,
+      headers,
+    },
+    tokenMissing: false
   };
 }
 
@@ -95,9 +119,16 @@ export function useCsrfToken() {
 
     // Otherwise generate a new client-side token
     const newToken = generateCsrfToken();
-    // Store in sessionStorage for better security
-    sessionStorage.setItem(CSRF_TOKEN_KEY, newToken);
+    
+    // Update component state with the new token
     setToken(newToken);
+    
+    // Only store in sessionStorage on the client side to avoid SSR errors
+    if (typeof window !== 'undefined' && typeof sessionStorage !== 'undefined') {
+      // Store in sessionStorage for better security
+      sessionStorage.setItem(CSRF_TOKEN_KEY, newToken);
+    }
+    
     return newToken;
   };
 
@@ -106,11 +137,30 @@ export function useCsrfToken() {
 
 /**
  * Add CSRF token to FormData
+ * @returns An object containing the updated formData and a tokenMissing flag to indicate if the CSRF token was missing
+ * Usage:
+ *   const result = addCsrfTokenToFormData(formData);
+ *   if (result.tokenMissing) {
+ *     // Handle missing token case
+ *   }
+ *   // Use result.formData for submission
  */
-export function addCsrfTokenToFormData(formData: FormData): FormData {
+export function addCsrfTokenToFormData(formData: FormData): { formData: FormData, tokenMissing: boolean } {
   const token = getCsrfToken();
-  if (token) {
-    formData.append('csrf-token', token);
+  if (!token) {
+    // No token available, return formData unchanged but indicate token is missing
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('CSRF token is missing. Requests may fail due to CSRF protection.');
+    }
+    return {
+      formData,
+      tokenMissing: true
+    };
   }
-  return formData;
+  
+  formData.append('csrf-token', token);
+  return {
+    formData,
+    tokenMissing: false
+  };
 }

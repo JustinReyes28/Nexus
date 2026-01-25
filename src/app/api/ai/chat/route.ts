@@ -46,7 +46,7 @@ Provide a helpful, accurate, and concise response. Focus on being informative wh
     const estimatedCreditsToDeduct = calculateCredits(estimatedPromptTokens, estimatedCompletionTokens);
 
     // 6. Transactionally get user tier, verify and deduct credits before calling AI
-    const transactionResult = await db.$transaction(async (tx) => {
+    await db.$transaction(async (tx) => {
       // First, get user data to access tier for retention policy
       const user = await tx.user.findUnique({
         where: { id: session.user.id as string },
@@ -76,8 +76,6 @@ Provide a helpful, accurate, and concise response. Focus on being informative wh
       if (updateResult.count === 0) {
         throw new Error("AI credit limit reached");
       }
-
-      return { tier: user.tier, user };
     });
 
     // 7. Call AI after credit verification
@@ -123,7 +121,7 @@ Provide a helpful, accurate, and concise response. Focus on being informative wh
     
     try {
       // Transactionally create conversation and adjust credits if needed
-      const transactionResult = await db.$transaction(async (tx) => {
+      const finalTransactionResult = await db.$transaction(async (tx) => {
         // Get user data to access tier for retention policy
         const user = await tx.user.findUnique({
           where: { id: session.user.id as string },
@@ -145,7 +143,9 @@ Provide a helpful, accurate, and concise response. Focus on being informative wh
           const updateResult = await tx.user.updateMany({
             where: {
               id: session.user.id,
-              aiCreditsUsed: { lte: user.aiCreditsLimit - creditAdjustment },
+              aiCreditsUsed: creditAdjustment < 0 
+                ? { gte: Math.abs(creditAdjustment) } // For negative adjustments, ensure we have enough credits to decrement
+                : { lte: user.aiCreditsLimit - creditAdjustment }, // For positive adjustments, ensure we won't exceed limit
             },
             data: {
               aiCreditsUsed: { increment: creditAdjustment }

@@ -47,6 +47,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create idempotency key from purchase identifier
+    const purchaseId = body.purchaseId;
+    const idempotencyKey = purchaseId 
+      ? `purchase_${purchaseId}`
+      : `user_${userId}_bundle_${bundleType}`;
+
     // Create actual Stripe payment intent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount * 100, // Convert to cents
@@ -58,6 +64,8 @@ export async function POST(request: NextRequest) {
       automatic_payment_methods: {
         enabled: true,
       },
+    }, {
+      idempotencyKey: idempotencyKey,
     });
 
     return NextResponse.json({
