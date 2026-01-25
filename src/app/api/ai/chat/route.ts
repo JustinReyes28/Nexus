@@ -40,21 +40,65 @@ ${discipline ? `Context: ${sanitizePrompt(discipline)}` : ""}
 
 Provide a helpful, accurate, and concise response. Focus on being informative while maintaining a conversational tone.`;
 
-    // 5. Call AI
+    // 5. Pre-calculate credits needed and verify user has sufficient credits
+    const estimatedPromptTokens = estimateTokens(prompt);
+    const estimatedCompletionTokens = 1000; // Reasonable estimate for completion
+    const estimatedCreditsToDeduct = calculateCredits(estimatedPromptTokens, estimatedCompletionTokens);
+
+    // 6. Transactionally get user tier, verify and deduct credits before calling AI
+    const transactionResult = await db.$transaction(async (tx) => {
+      // First, get user data to access tier for retention policy
+      const user = await tx.user.findUnique({
+        where: { id: session.user.id as string },
+        select: { aiCreditsUsed: true, aiCreditsLimit: true, tier: true },
+      });
+
+      if (!user) {
+        throw new Error("USER_NOT_FOUND");
+      }
+
+      // Check if user has sufficient credits and will not exceed the limit
+      if (user.aiCreditsUsed + estimatedCreditsToDeduct > user.aiCreditsLimit) {
+        throw new Error("AI credit limit reached");
+      }
+
+      // Attempt to reserve credits (will be finalized after AI call)
+      const updateResult = await tx.user.updateMany({
+        where: {
+          id: session.user.id,
+          aiCreditsUsed: { lte: user.aiCreditsLimit - estimatedCreditsToDeduct },
+        },
+        data: {
+          aiCreditsUsed: { increment: estimatedCreditsToDeduct }
+        },
+      });
+
+      if (updateResult.count === 0) {
+        throw new Error("AI credit limit reached");
+      }
+
+      return { tier: user.tier, user };
+    });
+
+    // 7. Call AI after credit verification
     const result = await model.generateContent(prompt);
     const responseTextRaw = result.response?.text();
     const responseText = typeof responseTextRaw === 'string' ? responseTextRaw : Array.isArray(responseTextRaw) ? responseTextRaw.join(' ') : '';
     const usage = result.usage;
 
-    // 6. Calculate credits needed
-    const creditsToDeduct = usage
+    // 8. Calculate actual credits needed and adjust if different from estimate
+    const actualCreditsToDeduct = usage
       ? calculateCredits(usage.promptTokens, usage.completionTokens)
       : calculateCredits(estimateTokens(prompt), estimateTokens(typeof responseText === 'string' ? responseText : ''));
 
+    // Now we need to adjust the final transaction to handle the conversation creation and credit adjustment
+    // Since we already deducted estimated credits, we may need to adjust if the actual usage differs
+    const creditAdjustment = actualCreditsToDeduct - estimatedCreditsToDeduct;
+    
     try {
-      // 7. Transactionally get user tier, deduct credits and log interaction
+      // Transactionally create conversation and adjust credits if needed
       const transactionResult = await db.$transaction(async (tx) => {
-        // First, get user data to access tier for retention policy
+        // Get user data to access tier for retention policy
         const user = await tx.user.findUnique({
           where: { id: session.user.id as string },
           select: { aiCreditsUsed: true, aiCreditsLimit: true, tier: true },
@@ -64,19 +108,27 @@ Provide a helpful, accurate, and concise response. Focus on being informative wh
           throw new Error("USER_NOT_FOUND");
         }
 
-        // Attempt to deduct credits
-        const updateResult = await tx.user.updateMany({
-          where: {
-            id: session.user.id,
-            aiCreditsUsed: { lt: user.aiCreditsLimit },
-          },
-          data: {
-            aiCreditsUsed: { increment: creditsToDeduct }
-          },
-        });
+        // If we need to adjust credits (actual vs estimated), do it now
+        if (creditAdjustment !== 0) {
+          // Check if the adjustment would exceed the limit
+          if (user.aiCreditsUsed + creditAdjustment > user.aiCreditsLimit) {
+            throw new Error("AI credit limit reached after adjustment");
+          }
 
-        if (updateResult.count === 0) {
-          throw new Error("AI credit limit reached");
+          // Adjust credits based on actual usage
+          const updateResult = await tx.user.updateMany({
+            where: {
+              id: session.user.id,
+              aiCreditsUsed: { lte: user.aiCreditsLimit - creditAdjustment },
+            },
+            data: {
+              aiCreditsUsed: { increment: creditAdjustment }
+            },
+          });
+
+          if (updateResult.count === 0) {
+            throw new Error("AI credit limit reached after adjustment");
+          }
         }
 
         // Create AI conversation record with response size handling
@@ -84,11 +136,11 @@ Provide a helpful, accurate, and concise response. Focus on being informative wh
         let processedResponse = responseText;
         
         if (responseText.length > MAX_RESPONSE_LENGTH) {
-          processedResponse = responseText.substring(0, MAX_RESPONSE_LENGTH) + 
+          processedResponse = responseText.substring(0, MAX_RESPONSE_LENGTH) +
             "\n\n---\n*Response truncated due to length.*";
         }
 
-        await tx.aIConversation.create({
+        const conversation = await tx.aIConversation.create({
           data: {
             feature: "CHAT",
             prompt: prompt,
@@ -99,10 +151,10 @@ Provide a helpful, accurate, and concise response. Focus on being informative wh
           },
         });
 
-        return { tier: user.tier };
+        return { tier: user.tier, conversation };
       });
     } catch (error) {
-      if (error instanceof Error && error.message === "AI credit limit reached") {
+      if (error instanceof Error && error.message.includes("AI credit limit reached")) {
         return NextResponse.json({ error: "AI credit limit reached" }, { status: 403 });
       }
       if (error instanceof Error && error.message === "USER_NOT_FOUND") {

@@ -24,24 +24,42 @@ export function TemplateSelector({ selectedTemplateId, onSelect, discipline }: T
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function fetchTemplates() {
       try {
+        setError(null); // Clear previous error
         setIsLoading(true);
-        const url = discipline 
-          ? `/api/templates?discipline=${encodeURIComponent(discipline)}` 
+        const url = discipline
+          ? `/api/templates?discipline=${encodeURIComponent(discipline)}`
           : "/api/templates";
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: controller.signal });
         if (!response.ok) throw new Error("Failed to fetch templates");
         const data = await response.json();
-        setTemplates(data);
+        
+        // Only update state if the request wasn't cancelled
+        if (!controller.signal.aborted) {
+          setTemplates(data);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
+        // Only update error state if the request wasn't cancelled
+        if (!controller.signal.aborted && err instanceof Error) {
+          setError(err.name === 'AbortError' ? null : err.message);
+        }
       } finally {
-        setIsLoading(false);
+        // Only update loading state if the request wasn't cancelled
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     }
 
     fetchTemplates();
+
+    // Cleanup function to abort the request when component unmounts or discipline changes
+    return () => {
+      controller.abort();
+    };
   }, [discipline]);
 
   if (isLoading) {

@@ -72,7 +72,7 @@ export default function NewProjectForm() {
         </div>
 
         {/* Template Selector */}
-        <div className="pt-4 border-t border-gray-100 italic font-body">
+        <div className="pt-4 border-t border-gray-100 font-body">
             <TemplateSelector 
                 selectedTemplateId={selectedTemplateId} 
                 onSelect={setSelectedTemplateId}

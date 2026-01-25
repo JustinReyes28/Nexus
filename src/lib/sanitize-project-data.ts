@@ -14,11 +14,10 @@ export const sanitizeProjectData = (projectData: ProjectData): ProjectData => {
         email: null // Remove email to prevent PII exposure
       }
     })),
-    // Keep other fields intact but ensure no PII is exposed
+// Keep other fields intact but ensure no PII is exposed
     invitations: projectData.invitations?.map(invitation => ({
       ...invitation,
-      // For invitations, the email field is necessary as it represents who was invited
-      // But we still expose the rest of the data safely
+      email: null, // Remove email to prevent PII exposure - preserved structure but sanitized content
     }))
   };
 };

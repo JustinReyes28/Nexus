@@ -72,6 +72,9 @@ async authorize(credentials) {
                 accountLockedUntil: null,
               },
             });
+            // Update local user object to reflect the reset
+            user.failedLoginAttempts = 0;
+            user.accountLockedUntil = null;
           }
         }
 

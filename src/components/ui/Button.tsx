@@ -23,7 +23,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       outline: "bg-white border-2 border-crimson text-crimson hover:bg-crimson/5 shadow-sm",
       ghost: "bg-transparent text-gray-600 hover:bg-gray-100",
       ai: "bg-teal text-white hover:bg-teal/90 shadow-md border-2 border-teal animate-pulse-organic",
-      popular: "bg-crimson hover:bg-crimson/90 border-crimson text-white shadow-lg shadow-crimson/20",
+      popular: "bg-crimson hover:bg-crimson/90 border-2 border-crimson text-white shadow-lg shadow-crimson/20",
     };
  
     const sizes = {

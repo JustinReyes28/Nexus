@@ -45,7 +45,9 @@ async function main() {
         { title: "Testing & QA", description: "Perform unit, integration, and user acceptance testing.", priority: "MEDIUM", daysAfterStart: 60 },
         { title: "Final Documentation", description: "Complete the technical report and user manual.", priority: "MEDIUM", daysAfterStart: 80 },
         { title: "Presentation Preparation", description: "Prepare slides and demo for the final defense.", priority: "MEDIUM", daysAfterStart: 90 }
-      ])
+      ]),
+      ownerId: null, // Public template
+      visibility: "PUBLIC"
     },
     {
       title: "Business Venture Plan",
@@ -60,7 +62,9 @@ async function main() {
         { title: "Financial Projections", description: "Develop income statements, balance sheets, and cash flow.", priority: "HIGH", daysAfterStart: 60 },
         { title: "Risk Management", description: "Identify potential risks and mitigation strategies.", priority: "MEDIUM", daysAfterStart: 70 },
         { title: "Final Pitch Deck", description: "Create a compelling presentation for investors or judges.", priority: "HIGH", daysAfterStart: 85 }
-      ])
+      ]),
+      ownerId: null, // Public template
+      visibility: "PUBLIC"
     },
     {
       title: "Engineering Design Project",
@@ -75,7 +79,9 @@ async function main() {
         { title: "Prototype Construction", description: "Build the first physical or functional prototype.", priority: "HIGH", daysAfterStart: 75 },
         { title: "Performance Testing", description: "Verify prototype against design requirements.", priority: "MEDIUM", daysAfterStart: 85 },
         { title: "Final Report & Demo", description: "Document design process and demonstrate the prototype.", priority: "HIGH", daysAfterStart: 100 }
-      ])
+      ]),
+      ownerId: null, // Public template
+      visibility: "PUBLIC"
     }
   ];
 
@@ -87,7 +93,15 @@ async function main() {
     if (existing) {
       await prisma.template.update({
         where: { id: existing.id },
-        data: template
+        data: {
+          title: template.title,
+          description: template.description,
+          category: template.category,
+          discipline: template.discipline,
+          content: template.content,
+          ownerId: template.ownerId,
+          visibility: template.visibility
+        }
       });
     } else {
       await prisma.template.create({

@@ -6,6 +6,15 @@ import { z } from "zod";
 import { recordActivity } from "@/lib/activities";
 import { sanitizeProjectData, sanitizeProjectDataArray } from "@/lib/sanitize-project-data";
 
+const templateTaskSchema = z.object({
+  title: z.string().min(1, "Task title is required"),
+  description: z.string().optional(),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional().default("MEDIUM"),
+  daysAfterStart: z.number().int().nonnegative().optional().default(0),
+});
+
+const templateContentSchema = z.array(templateTaskSchema);
+
 const projectSchema = z.object({
   title: z.string().min(1, "Title is required").max(100),
   description: z.string().max(500).optional(),
@@ -80,21 +89,29 @@ try {
 
       if (validatedData.templateId) {
         const template = await tx.template.findUnique({
-          where: { id: validatedData.templateId }
-        });
+          where: {
+           id: validatedData.templateId,
+           // Add authorization check - only allow access to public templates or templates owned by the user
+           OR: [
+             { visibility: "PUBLIC" }, // Public templates
+             { ownerId: session.user.id }, // Templates owned by the user
+           ]
+         }
+       });
 
         if (template && template.content) {
           try {
-            const tasks = JSON.parse(template.content);
+            const parsedTasks = JSON.parse(template.content);
+            const validatedTasks = templateContentSchema.parse(parsedTasks);
             const baseDate = validatedData.startDate ? new Date(validatedData.startDate) : new Date();
 
             await tx.task.createMany({
-              data: tasks.map((t: any) => ({
+              data: validatedTasks.map((t) => ({
                 title: t.title,
-                description: t.description,
-                priority: t.priority || "MEDIUM",
+                description: t.description || "",
+                priority: t.priority,
                 projectId: newProject.id,
-                dueDate: t.daysAfterStart 
+                dueDate: t.daysAfterStart
                   ? new Date(baseDate.getTime() + t.daysAfterStart * 24 * 60 * 60 * 1000)
                   : null,
               }))
@@ -105,8 +122,15 @@ try {
               data: { usageCount: { increment: 1 } }
             });
           } catch (e) {
-            console.error("Failed to parse template content or create tasks", e);
+            // Rethrow the error to cause transaction rollback
+            if (e instanceof z.ZodError) {
+              throw new Error(`Template validation failed: ${e.message}`);
+            }
+            throw new Error(`Failed to parse template content or create tasks: ${e instanceof Error ? e.message : String(e)}`);
           }
+        } else if (validatedData.templateId && !template) {
+          // If a templateId was provided but template wasn't found or unauthorized, throw an error
+          throw new Error("Template not found or unauthorized access to template");
         }
       }
 

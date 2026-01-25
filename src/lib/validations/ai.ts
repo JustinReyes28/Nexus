@@ -125,6 +125,6 @@ export const writingSchema = z.object({
 });
 
 export const chatSchema = z.object({
-  topic: z.string().min(3, "Message must be at least 3 characters").max(500, "Message is too long"),
+  topic: z.string().min(3, "Topic must be at least 3 characters").max(500, "Topic is too long"),
   discipline: z.string().max(100, "Discipline must be at most 100 characters").optional(),
 });

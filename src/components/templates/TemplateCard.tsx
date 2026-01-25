@@ -17,6 +17,14 @@ export function TemplateCard({ template, isSelected, onSelect }: TemplateCardPro
   return (
     <div
       onClick={() => onSelect(template.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(template.id);
+        }
+      }}
       className={cn(
         "group relative bg-white border-2 rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:shadow-lg",
         isSelected 

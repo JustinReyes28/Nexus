@@ -28,8 +28,17 @@ export async function createProject(formData: FormData) {
     throw new Error('Description is required');
   }
 
-  const title = titleInput.trim();
+const title = titleInput.trim();
   const description = descriptionInput.trim();
+
+  // Validate and parse startDateInput
+  let startDate: Date;
+  if (startDateInput) {
+    const parsedDate = new Date(startDateInput);
+    startDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+  } else {
+    startDate = new Date();
+  }
 
   // Create project within a transaction to ensure tasks are also created
   const project = await db.$transaction(async (tx) => {
@@ -39,7 +48,7 @@ export async function createProject(formData: FormData) {
         description,
         discipline,
         ownerId: session.user.id,
-        startDate: startDateInput ? new Date(startDateInput) : new Date(),
+        startDate,
       },
     });
 
@@ -48,21 +57,38 @@ export async function createProject(formData: FormData) {
         where: { id: templateId }
       });
 
-      if (template && template.content) {
+if (template && template.content) {
         try {
-          const tasks = JSON.parse(template.content);
-          const baseDate = startDateInput ? new Date(startDateInput) : new Date();
+          const parsedTasks = JSON.parse(template.content);
+          
+          // Validate that tasks is an array
+          if (!Array.isArray(parsedTasks)) {
+            throw new Error("Template content must be an array of tasks");
+          }
 
+          // Filter and validate tasks
+          const validTasks = parsedTasks.filter((t: any) => {
+            return t && typeof t.title === 'string' && t.title.trim().length > 0;
+          });
+
+          if (validTasks.length === 0 && parsedTasks.length > 0) {
+            throw new Error("No valid tasks found in template - all tasks missing titles");
+          }
+
+          // Create tasks with validated data
           await tx.task.createMany({
-            data: tasks.map((t: any) => ({
-              title: t.title,
-              description: t.description,
-              priority: t.priority || "MEDIUM",
-              projectId: newProject.id,
-              dueDate: t.daysAfterStart 
-                ? new Date(baseDate.getTime() + t.daysAfterStart * 24 * 60 * 60 * 1000)
-                : null,
-            }))
+            data: validTasks.map((t: any) => {
+              const daysAfterStart = typeof t.daysAfterStart === 'number' ? t.daysAfterStart : null;
+              return {
+                title: t.title.trim(),
+                description: t.description ? t.description.toString() : null,
+                priority: t.priority || "MEDIUM",
+                projectId: newProject.id,
+                dueDate: daysAfterStart !== null 
+                  ? new Date(startDate.getTime() + daysAfterStart * 24 * 60 * 60 * 1000)
+                  : null,
+              };
+            })
           });
           
           // Increment usage count
@@ -71,7 +97,7 @@ export async function createProject(formData: FormData) {
             data: { usageCount: { increment: 1 } }
           });
         } catch (e) {
-          console.error("Failed to parse template content or create tasks", e);
+          throw new Error(`Failed to process template: ${e instanceof Error ? e.message : 'Unknown error'}`);
         }
       }
     }

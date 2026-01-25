@@ -3,7 +3,16 @@ import { db } from '@/lib/db';
 import { verifyAuthenticatedUser } from '@/lib/payments';
 import { BILLING_CONSTANTS } from '@/config/constants';
 import { csrfMiddleware } from '@/lib/csrf';
+import Stripe from 'stripe';
 import type { NextRequest } from 'next/server';
+
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeSecretKey) {
+  throw new Error('Missing STRIPE_SECRET_KEY environment variable');
+}
+const stripe = new Stripe(stripeSecretKey, {
+  apiVersion: '2025-12-15.clover',
+});
 
 export async function POST(request: NextRequest) {
   // Apply CSRF protection
@@ -23,12 +32,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate mock payment intent ID
-    const paymentIntentId = `pi_${Math.random().toString(36).substring(2, 15)}${Date.now()}`;
+    // Get bundle price based on type
+    const bundlePrices: Record<string, number> = {
+      starter: BILLING_CONSTANTS.CREDIT_BUNDLES.starter.price,
+      pro: BILLING_CONSTANTS.CREDIT_BUNDLES.pro.price,
+      power: BILLING_CONSTANTS.CREDIT_BUNDLES.power.price,
+    };
+
+    const amount = bundlePrices[bundleType];
+    if (!amount) {
+      return NextResponse.json(
+        { error: 'Invalid bundle type' },
+        { status: 400 }
+      );
+    }
+
+    // Create actual Stripe payment intent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amount * 100, // Convert to cents
+      currency: 'usd',
+      metadata: {
+        userId: userId,
+        bundleType: bundleType,
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
 
     return NextResponse.json({
-      paymentIntentId,
-      clientSecret: `secret_${paymentIntentId}`,
+      paymentIntentId: paymentIntent.id,
+      clientSecret: paymentIntent.client_secret,
     });
   } catch (error) {
     console.error('Error creating payment:', error);

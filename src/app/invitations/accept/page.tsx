@@ -89,8 +89,8 @@ export default async function AcceptInvitationPage({
   }
 
    if (!session || !session.user?.id) {
-    const callbackPath = `/invitations/accept?token=${encodeURIComponent(token)}`;
-    redirect(`/login?callbackUrl=${encodeURIComponent(callbackPath)}`);
+     const callbackPath = `/invitations/accept?token=${encodeURIComponent(token)}`;
+     redirect(`/login?callbackUrl=${encodeURIComponent(callbackPath)}`);
    }
 
   // Check if user is already a member of the project

@@ -163,6 +163,14 @@ export default function BillingSettings() {
   // Fetch payment history on component mount
   useEffect(() => {
     fetchPaymentHistory();
+    
+    // Cleanup function to clear notification timeout on unmount
+    return () => {
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+        notificationTimeoutRef.current = null;
+      }
+    };
   }, []);
 
   return (

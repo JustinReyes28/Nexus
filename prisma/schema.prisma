@@ -248,6 +248,15 @@ model Template {
   usageCount  Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  // Authorization fields
+  ownerId     String?  @db.ObjectId  // Optional owner ID for user-specific templates
+  visibility  Visibility @default(PUBLIC)  // PUBLIC or PRIVATE
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
 }
 
 enum Role {

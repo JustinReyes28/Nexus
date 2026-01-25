@@ -89,9 +89,9 @@ export async function DELETE(
         return NextResponse.json({ error: "Invalid invitation for this project" }, { status: 400 });
     }
 
-    if (invitation.project.ownerId !== session.user.id && invitation.invitedBy !== session.user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+   if (invitation.project.ownerId !== session.user.id && invitation.invitedBy !== session.user.id) {
+     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+   }
 
     await db.invitation.delete({
       where: { id: invitationId },

@@ -31,6 +31,18 @@ interface Task {
   updatedAt: Date;
 }
 
+// Helper function to parse date fields in a task object
+const parseTaskDates = (task: any): Task => {
+  return {
+    ...task,
+    dueDate: task.dueDate ? new Date(task.dueDate) : null,
+    startDate: task.startDate ? new Date(task.startDate) : null,
+    endDate: task.endDate ? new Date(task.endDate) : null,
+    createdAt: task.createdAt ? new Date(task.createdAt) : new Date(),
+    updatedAt: task.updatedAt ? new Date(task.updatedAt) : new Date()
+  };
+};
+
 export default function ProjectTasksPage() {
   const params = useParams();
   const projectId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -52,14 +64,17 @@ export default function ProjectTasksPage() {
         // Try to read from localStorage first as fallback
         const cachedTasks = localStorage.getItem(`project_${projectId}_tasks`);
         if (cachedTasks) {
-          setTasks(JSON.parse(cachedTasks));
+          const parsedCachedTasks = JSON.parse(cachedTasks);
+          const tasksWithParsedDates = parsedCachedTasks.map(parseTaskDates);
+          setTasks(tasksWithParsedDates);
         }
         
         // Fetch fresh tasks from API
         const response = await fetch(`/api/projects/${projectId}/tasks`);
         if (response.ok) {
           const fetchedTasks = await response.json();
-          setTasks(fetchedTasks);
+          const tasksWithParsedDates = fetchedTasks.map(parseTaskDates);
+          setTasks(tasksWithParsedDates);
           // Cache in localStorage
           localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(fetchedTasks));
         } else {
@@ -71,7 +86,9 @@ export default function ProjectTasksPage() {
         // Fallback to cached data if available
         const cachedTasks = localStorage.getItem(`project_${projectId}_tasks`);
         if (cachedTasks) {
-          setTasks(JSON.parse(cachedTasks));
+          const parsedCachedTasks = JSON.parse(cachedTasks);
+          const tasksWithParsedDates = parsedCachedTasks.map(parseTaskDates);
+          setTasks(tasksWithParsedDates);
         }
       }
     };
@@ -138,6 +155,7 @@ export default function ProjectTasksPage() {
           })
         });
 
+        const result = await response.json();
         if (response.ok) {
           const newTask = {
             id: crypto.randomUUID(), // This will be replaced by the API response
@@ -152,9 +170,13 @@ export default function ProjectTasksPage() {
             updatedAt: now
           };
           
-          const result = await response.json();
-          // Use the task returned from the API which includes the proper ID
-          const updatedTasks = [...tasks, { ...newTask, id: result.task.id }];
+          // Validate response and result before using
+          // Check if result has task property, otherwise use result directly
+          const createdTask = result?.task ? result.task : result;
+          if (!createdTask) {
+            throw new Error('Invalid response format: no task returned');
+          }
+          const updatedTasks = [...tasks, { ...newTask, id: createdTask.id }];
           setTasks(updatedTasks);
           // Update localStorage
           localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(updatedTasks));
@@ -263,15 +285,16 @@ export default function ProjectTasksPage() {
                       onEdit={(id) => { setEditingTask(tasks.find(t => t.id === id) || null); setShowForm(true); }}
                        onStatusChange={async (id, newStatus) => {
                          try {
-                           // Optimistically update the UI
+                           // Optimistically update the UI using functional state updates
                            const now = new Date();
-                           const updatedTasks = tasks.map(t =>
-                             t.id === id ? { ...t, status: newStatus, updatedAt: now } : t
-                           );
-                           setTasks(updatedTasks);
-                           
-                           // Update localStorage
-                           localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(updatedTasks));
+                           setTasks(prevTasks => {
+                             const updatedTasks = prevTasks.map(t =>
+                               t.id === id ? { ...t, status: newStatus, updatedAt: now } : t
+                             );
+                             // Update localStorage with the new tasks state
+                             localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(updatedTasks));
+                             return updatedTasks;
+                           });
                            
                            // Persist to backend
                            const response = await fetch(`/api/projects/${projectId}/tasks`, {
@@ -284,12 +307,15 @@ export default function ProjectTasksPage() {
                            });
                            
                            if (!response.ok) {
-                             // Rollback on failure
-                             const revertedTasks = tasks.map(t =>
-                               t.id === id ? { ...t, status: t.status, updatedAt: t.updatedAt } : t
-                             );
-                             setTasks(revertedTasks);
-                             localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(revertedTasks));
+                             // Rollback on failure using functional state updates
+                             setTasks(prevTasks => {
+                               const revertedTasks = prevTasks.map(t =>
+                                 t.id === id ? { ...t, status: t.status, updatedAt: t.updatedAt } : t
+                               );
+                               // Update localStorage with the reverted tasks state
+                               localStorage.setItem(`project_${projectId}_tasks`, JSON.stringify(revertedTasks));
+                               return revertedTasks;
+                             });
                              throw new Error('Failed to update task status');
                            }
                          } catch (error) {

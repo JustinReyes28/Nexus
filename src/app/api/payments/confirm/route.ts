@@ -3,6 +3,14 @@ import { db } from '@/lib/db';
 import { processCreditPurchase, verifyAuthenticatedUser } from '@/lib/payments';
 import Stripe from 'stripe';
 
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeSecretKey) {
+  throw new Error('Missing STRIPE_SECRET_KEY environment variable');
+}
+const stripe = new Stripe(stripeSecretKey, {
+  apiVersion: '2025-12-15.clover',
+});
+
 export async function POST(request: Request) {
   try {
     const userId = await verifyAuthenticatedUser(request);
@@ -18,8 +26,15 @@ export async function POST(request: Request) {
     }
 
     // Verify payment with Stripe
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    // Verify that the payment intent belongs to the authenticated user
+    if (paymentIntent.metadata?.userId !== userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Payment intent does not belong to the authenticated user' },
+        { status: 403 }
+      );
+    }
 
     if (paymentIntent.status !== 'succeeded') {
       return NextResponse.json(
